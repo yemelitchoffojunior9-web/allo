@@ -1,0 +1,21 @@
+{
+  "name": "Allo — Tout devient possible",
+  "short_name": "Allo",
+  "description": "Allo — plateforme e-commerce multi-espace. Boutiques, entreprises et clients.",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B0B12",
+  "theme_color": "#8B5CF6",
+  "lang": "fr",
+  "dir": "ltr",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"icon-512-maskable.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ],
+  "categories": ["shopping", "business"],
+  "prefer_related_applications": false
+}
