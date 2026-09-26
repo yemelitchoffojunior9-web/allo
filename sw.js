@@ -1,5 +1,5 @@
 /* Allo PWA Service Worker — static/offline shell only */
-const CACHE = 'allo-pwa-v4';
+const CACHE = 'allo-pwa-v5';
 const PRECACHE = [
   './',
   './index.html',
