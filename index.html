@@ -4321,7 +4321,10 @@ const alloEphemeralStorage = {
 
 // Nettoyage des anciens stockages ALLO sur cet appareil (sans jamais les lire comme données métier).
 (function purgeLegacyBrowserStorage(){
-  try { ['allora_lang','allora_auth_cache','allora_admin_config','allora_users','allora_app_data','allora_products','allora_wishlist','allora_interactions','allora_catalog_purged_v12'].forEach(k=>{ try{ window.localStorage.removeItem(k); }catch(e){} }); } catch(e){}
+  try {
+    // Ne jamais effacer allo_ui_lang (préférence de langue de l'interface).
+    ['allora_lang','allora_auth_cache','allora_admin_config','allora_users','allora_app_data','allora_products','allora_wishlist','allora_interactions','allora_catalog_purged_v12'].forEach(k=>{ try{ window.localStorage.removeItem(k); }catch(e){} });
+  } catch(e){}
   try { if(window.indexedDB && indexedDB.deleteDatabase) indexedDB.deleteDatabase('allo_media_v1'); } catch(e){}
 })();
 
@@ -4486,7 +4489,7 @@ function mapShopRow(r) {
     description: r.description,
     coverImage: r.cover_image_url,
     deliveryZones: r.delivery_zones || [],
-    deliveryHours: r.delivery_hours || 48,
+    deliveryHours: (r.delivery_hours != null && r.delivery_hours !== '') ? Number(r.delivery_hours) : 48,
     private: !!r.private,
     isCompanyCatalog: !!r.is_company_catalog,
     certified: !!r.certified,
@@ -5654,7 +5657,7 @@ async function sbSaveShop(s) {
     description: s.description || null,
     cover_image_url: cover || null,
     delivery_zones: s.deliveryZones || [],
-    delivery_hours: s.deliveryHours || 48,
+    delivery_hours: (s.deliveryHours != null && s.deliveryHours !== '') ? Number(s.deliveryHours) : 48,
     private: !!s.private,
     is_company_catalog: !!s.isCompanyCatalog,
     certified: !!s.certified,
@@ -5807,7 +5810,13 @@ function readStaffFeaturesFromForm() {
 }
 
 // ===== I18N =====
-let lang = 'fr';
+let lang = (function(){
+  try {
+    const saved = localStorage.getItem('allo_ui_lang');
+    if (saved === 'en' || saved === 'fr') return saved;
+  } catch (_) {}
+  return 'fr';
+})();
 const I18N = {
   fr: {
     login: 'Connexion', register: 'Créer un compte', connect: 'Se connecter',
@@ -6195,6 +6204,37 @@ const EXTRA_I18N_PAIRS = {
   'Nom': 'Name',
   'Rôle': 'Role',
   'Déconnexion': 'Log out',
+  'Solde disponible': 'Available balance',
+  'Recharger': 'Top up',
+  'Retrait': 'Withdraw',
+  'Portefeuille': 'Wallet',
+  'Modifier mon profil': 'Edit my profile',
+  'Choisir la langue de l’application': 'Choose app language',
+  'Choisir la langue de l\'application': 'Choose app language',
+  'Langue / Language': 'Language',
+  'Historique des revenus': 'Revenue history',
+  'Mes commandes': 'My orders',
+  'Aucune notification': 'No notifications',
+  'Voir tout': 'See all',
+  'Explorer': 'Explore',
+  'Populaire': 'Popular',
+  'Nouveau': 'New',
+  'Ajouter au panier': 'Add to cart',
+  'Vider le panier': 'Clear cart',
+  'Passer la commande': 'Place order',
+  'Confirmer': 'Confirm',
+  'Annuler': 'Cancel',
+  'Fermer': 'Close',
+  'Enregistrer les modifications': 'Save changes',
+  'Enregistrement…': 'Saving…',
+  'Profil mis à jour avec succès.': 'Profile updated successfully.',
+  'Délai de livraison': 'Delivery delay',
+  'Livraison sous': 'Delivery within',
+  'jours': 'days',
+  'Paramètres': 'Settings',
+  'Mon compte': 'My account',
+  'Se déconnecter': 'Log out',
+  'Classement': 'Ranking',
   'Bienvenue,': 'Welcome,',
   "Découvrez les boutiques d'Allo": "Discover Allo shops",
   'Commandes': 'Orders',
@@ -6374,7 +6414,12 @@ function translateGlobalDOM() {
     const raw = node.nodeValue || '';
     const trimmed = raw.trim();
     if (!trimmed) return;
-    const translated = map[trimmed];
+    let translated = map[trimmed];
+    // Variantes courantes (espaces insécables, points de suspension)
+    if (!translated) {
+      const norm = trimmed.replace(/\u00a0/g, ' ').replace(/…/g, '...').replace(/\s+/g, ' ');
+      translated = map[norm] || map[norm.replace(/\.$/, '')];
+    }
     if (translated && translated !== trimmed) {
       node.nodeValue = raw.replace(trimmed, translated);
     }
@@ -6397,38 +6442,97 @@ function translateGlobalDOMSoon() {
 }
 
 function setLang(l) {
+  if (l !== 'en' && l !== 'fr') l = 'fr';
   lang = l;
-  alloEphemeralStorage.setItem('allora_lang', l);
+  try { localStorage.setItem('allo_ui_lang', l); } catch (_) {}
+  try { alloEphemeralStorage.setItem('allora_lang', l); } catch (_) {}
   document.documentElement.lang = l;
   document.querySelectorAll('.lang-btn').forEach(b => {
-    b.classList.toggle('active', (b.dataset.lang || b.getAttribute('data-lang')) === lang);
+    const bl = b.dataset.lang || b.getAttribute('data-lang');
+    b.classList.toggle('active', bl === lang);
   });
-  const al = document.getElementById('accountLangLabel');
-  if (al) al.textContent = lang === 'en' ? '🌐 Language' : '🌐 Langue / Language';
-  const ah = document.getElementById('accountLangHint');
-  if (ah) ah.textContent = lang === 'en' ? 'Choose app language' : 'Choisir la langue de l’application';
+  applyUiLanguage();
+}
+
+/** Applique la langue courante à toute l'interface (statique + dynamique). */
+function applyUiLanguage() {
+  // Libellés fixes connus
+  try {
+    const al = document.getElementById('accountLangLabel');
+    if (al) al.textContent = lang === 'en' ? '🌐 Language' : '🌐 Langue / Language';
+    const ah = document.getElementById('accountLangHint');
+    if (ah) ah.textContent = lang === 'en' ? 'Choose app language' : 'Choisir la langue de l’application';
+    const btnEditLbl = document.getElementById('btnEditProfileLabel');
+    if (btnEditLbl) btnEditLbl.textContent = lang === 'en' ? 'Edit my profile' : 'Modifier mon profil';
+    const balLabel = document.getElementById('balLabelMain');
+    if (balLabel) balLabel.textContent = lang === 'en' ? 'Available balance' : 'Solde disponible';
+    const top = document.getElementById('btnAccountTopUp');
+    if (top) top.innerHTML = lang === 'en' ? '➕ Top up' : '➕ Recharger';
+    const wit = document.getElementById('btnAccountWithdraw');
+    if (wit) wit.innerHTML = lang === 'en' ? '📤 Withdraw' : '📤 Retrait';
+    const wal = document.getElementById('btnAccountWallet');
+    if (wal) wal.innerHTML = lang === 'en' ? '💼 Wallet' : '💼 Portefeuille';
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) btnLogout.textContent = t('logout');
+  } catch (_) {}
+
+  // data-i18n="key" → texte depuis le dictionnaire
+  try {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (key) el.textContent = t(key);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (key) el.setAttribute('placeholder', t(key));
+    });
+  } catch (_) {}
+
   applyStaticI18n();
-  if (currentUser) {
-    const active = document.querySelector('.view.active');
-    const view = active ? active.id.replace('view-', '') : 'home';
-    // refresh role chip + nav + all content without forcing home
-    const chip = document.getElementById('roleChip');
-    if (chip) {
-      const roleLabels = lang === 'en' ? ROLE_LABELS_EN : ROLE_LABELS;
-      chip.textContent = roleLabels[currentUser.role] || currentUser.role.toUpperCase();
+
+  if (typeof currentUser !== 'undefined' && currentUser) {
+    try {
+      const active = document.querySelector('.view.active');
+      const view = active ? active.id.replace('view-', '') : 'home';
+      const chip = document.getElementById('roleChip');
+      if (chip) {
+        const roleLabels = lang === 'en' ? ROLE_LABELS_EN : ROLE_LABELS;
+        chip.textContent = roleLabels[currentUser.role] || String(currentUser.role || '').toUpperCase();
+      }
+      const wt = document.getElementById('welcomeText');
+      if (wt) wt.textContent = t('welcome');
+      const subs = {
+        user: t('discover'),
+        boutique: t('manageShop'),
+        entreprise: t('companyDash'),
+        client: t('privateClient'),
+        employe: t('staffSpace'),
+        admin: t('adminHome')
+      };
+      const ws = document.getElementById('welcomeSub');
+      if (ws) ws.textContent = subs[currentUser.role] || '';
+      if (typeof buildNav === 'function') buildNav();
+      if (typeof buildSidebarNav === 'function') {
+        try { buildSidebarNav(); } catch (_) {}
+      }
+      if (typeof renderAll === 'function') renderAll();
+      if (typeof updateSectionHeads === 'function') updateSectionHeads();
+      if (typeof switchView === 'function') switchView(view);
+      if (typeof refreshProfileUI === 'function') refreshProfileUI();
+    } catch (e) {
+      console.warn('[Allo] applyUiLanguage', e);
     }
-    document.getElementById('welcomeText') && (document.getElementById('welcomeText').textContent = t('welcome'));
-    const subs = { user: t('discover'), boutique: t('manageShop'), entreprise: t('companyDash'), client: t('privateClient') };
-    document.getElementById('welcomeSub') && (document.getElementById('welcomeSub').textContent = subs[currentUser.role] || '');
-    buildNav();
-    renderAll();
-    updateSectionHeads();
-    switchView(view);
-    translateGlobalDOMSoon();
   } else {
-    applyLoginI18n();
-    translateGlobalDOMSoon();
+    try { applyLoginI18n(); } catch (_) {}
   }
+  translateGlobalDOMSoon();
+  // 2e passe après rendu async des listes
+  setTimeout(() => {
+    try { translateGlobalDOM(); } catch (_) {}
+  }, 200);
+  setTimeout(() => {
+    try { translateGlobalDOM(); } catch (_) {}
+  }, 600);
 }
 function applyLoginI18n() {
   const tabL = document.getElementById('tabLogin');
@@ -6702,6 +6806,21 @@ function init() {
           const pr = await sb.from('profiles').select('*').eq('id', sess.user.id).maybeSingle();
           if (pr && pr.data) {
             currentUser = mapProfileToUser(pr.data);
+            // Fusion cache local si le cloud a des champs vides (sync multi-téléphone)
+            try {
+              const raw = localStorage.getItem('allo_current_user_profile');
+              if (raw) {
+                const cached = JSON.parse(raw);
+                if (cached && String(cached.id) === String(currentUser.id)) {
+                  if (!currentUser.name && cached.name) currentUser.name = cached.name;
+                  if (!currentUser.country && cached.country) currentUser.country = cached.country;
+                  if (!currentUser.city && cached.city) currentUser.city = cached.city;
+                  if (!currentUser.neighborhood && cached.neighborhood) currentUser.neighborhood = cached.neighborhood;
+                  if (!currentUser.phone && cached.phone) currentUser.phone = cached.phone;
+                  if (!currentUser.avatar_url && cached.avatar_url) currentUser.avatar_url = cached.avatar_url;
+                }
+              }
+            } catch (_) {}
             cart = [];
           }
         }
@@ -6748,7 +6867,14 @@ function init() {
     repairPersistence();
   }
   document.documentElement.lang = lang;
+  try {
+    document.querySelectorAll('.lang-btn').forEach(b => {
+      const bl = b.dataset.lang || b.getAttribute('data-lang');
+      b.classList.toggle('active', bl === lang);
+    });
+  } catch (_) {}
   applyLoginI18n();
+  try { translateGlobalDOMSoon(); } catch (_) {}
   // Pas de Service Worker offline : ALLO dépend de Supabase en ligne.
   try { loadWishlistFromStorage(); } catch(e) {}
   setInterval(tickPromoCountdowns, 1000);
@@ -12567,8 +12693,11 @@ function nextSellerStatus(st) {
   return flow[i + 1];
 }
 function getShopDeliveryHours(shopId) {
-  const shop = data.shops.find(s => s.id === shopId);
-  return (shop && shop.deliveryHours) ? Number(shop.deliveryHours) : 48;
+  if (shopId == null || shopId === '') return 48;
+  const shop = (data.shops || []).find(s => String(s.id) === String(shopId));
+  if (!shop) return 48;
+  const h = Number(shop.deliveryHours);
+  return (Number.isFinite(h) && h > 0) ? h : 48;
 }
 function getShopDeliveryLabel(shopId) {
   const h = getShopDeliveryHours(shopId);
@@ -12576,6 +12705,147 @@ function getShopDeliveryLabel(shopId) {
   const d = Math.round(h / 24);
   return t('withinDays') + ' ' + d + ' ' + t('deliveryDays');
 }
+
+/**
+ * Enregistre le délai de livraison boutique pour TOUS les téléphones.
+ * Source de vérité = colonne Supabase shops.delivery_hours (lue par chaque client au chargement).
+ */
+async function saveShopDeliveryHours() {
+  try {
+    const input = document.getElementById('mDeliveryHours');
+    let hours = input ? Number(input.value) : NaN;
+    if (!Number.isFinite(hours) || hours < 1) {
+      alert(lang === 'en' ? 'Enter a valid delay (min 1 hour).' : 'Indiquez un délai valide (min. 1 heure).');
+      return;
+    }
+    hours = Math.min(720, Math.max(1, Math.round(hours)));
+
+    // Toutes les boutiques du vendeur (boutique ou catalogue entreprise)
+    const shopIds = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String);
+    let shops = (data.shops || []).filter(s => shopIds.includes(String(s.id)));
+    if (!shops.length && currentUser && currentUser.shopId) {
+      const one = (data.shops || []).find(s => String(s.id) === String(currentUser.shopId));
+      if (one) shops = [one];
+    }
+    if (!shops.length && typeof ensureBoutiqueShop === 'function') {
+      try {
+        const one = ensureBoutiqueShop();
+        if (one) shops = [one];
+      } catch (_) {}
+    }
+    if (!shops.length) {
+      alert(lang === 'en' ? 'Shop not found.' : 'Boutique introuvable.');
+      return;
+    }
+
+    // 1) Mise à jour mémoire (tous appareils du même compte après reload)
+    shops.forEach(sh => { sh.deliveryHours = hours; });
+    try {
+      if (typeof saveAppData === 'function') saveAppData();
+    } catch (e) { console.warn('[Allo] local save deliveryHours', e); }
+
+    // 2) Écriture Supabase — visible par tous les autres téléphones
+    let remoteOk = 0;
+    let remoteErr = null;
+    const canRemote = (typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb);
+
+    if (canRemote) {
+      for (const shop of shops) {
+        if (typeof alloUuid === 'function' && !alloUuid(shop.id)) {
+          // Boutique pas encore synchronisée : créer/mettre à jour via sbSaveShop
+          if (typeof sbSaveShop === 'function') {
+            try {
+              shop.deliveryHours = hours;
+              const remote = await sbSaveShop(shop);
+              if (remote && remote.id) {
+                shop.id = remote.id;
+                if (remote.delivery_hours != null) shop.deliveryHours = Number(remote.delivery_hours);
+                remoteOk++;
+              }
+            } catch (e) {
+              remoteErr = e;
+              console.warn('[Allo] sbSaveShop deliveryHours', e);
+            }
+          }
+          continue;
+        }
+        // Update ciblé delivery_hours (léger + fiable)
+        let res = await sb.from('shops').update({
+          delivery_hours: hours,
+          updated_at: new Date().toISOString()
+        }).eq('id', shop.id).select('id,delivery_hours').maybeSingle();
+
+        if (res.error) {
+          console.warn('[Allo] delivery_hours update', res.error);
+          remoteErr = res.error;
+          // Repli : sbSaveShop complet
+          if (typeof sbSaveShop === 'function') {
+            try {
+              shop.deliveryHours = hours;
+              const remote = await sbSaveShop(shop);
+              if (remote) {
+                remoteOk++;
+                if (remote.delivery_hours != null) shop.deliveryHours = Number(remote.delivery_hours);
+                res = { data: remote, error: null };
+              }
+            } catch (e2) {
+              remoteErr = e2;
+            }
+          }
+        }
+
+        if (res && res.data) {
+          remoteOk++;
+          const dh = res.data.delivery_hours != null ? Number(res.data.delivery_hours) : hours;
+          shop.deliveryHours = dh;
+          const idx = (data.shops || []).findIndex(s => String(s.id) === String(shop.id));
+          if (idx >= 0) data.shops[idx].deliveryHours = dh;
+        }
+      }
+
+      // 3) Vérification lecture (comme un autre téléphone)
+      try {
+        const ids = shops.map(s => s.id).filter(id => typeof alloUuid === 'function' && alloUuid(id));
+        if (ids.length) {
+          const check = await sb.from('shops').select('id,delivery_hours').in('id', ids);
+          if (!check.error && check.data) {
+            check.data.forEach(row => {
+              const idx = (data.shops || []).findIndex(s => String(s.id) === String(row.id));
+              if (idx >= 0 && row.delivery_hours != null) {
+                data.shops[idx].deliveryHours = Number(row.delivery_hours);
+              }
+            });
+          }
+        }
+      } catch (e) { console.warn('[Allo] delivery_hours verify', e); }
+    }
+
+    try { closeModal(); } catch (_) {
+      const ov = document.getElementById('modalOverlay');
+      if (ov) ov.classList.remove('show');
+    }
+    try { if (typeof renderSellerDashboard === 'function') renderSellerDashboard(); } catch (_) {}
+    try { if (typeof renderShop === 'function') renderShop(); } catch (_) {}
+    try { if (typeof renderHome === 'function') renderHome(); } catch (_) {}
+    try { if (typeof renderProducts === 'function') renderProducts(); } catch (_) {}
+    try { if (typeof renderExplore === 'function') renderExplore(); } catch (_) {}
+
+    const label = hours < 24 ? (hours + 'h') : (Math.round(hours / 24) + (lang === 'en' ? ' day(s)' : ' j'));
+    if (canRemote && remoteOk === 0) {
+      alert(lang === 'en'
+        ? ('Saved on this device only. Cloud sync failed — other phones may still show the old delay.' + (remoteErr && remoteErr.message ? ('\n' + remoteErr.message) : ''))
+        : ('Enregistré sur cet appareil uniquement. La sync cloud a échoué — les autres téléphones peuvent encore afficher l’ancien délai.' + (remoteErr && remoteErr.message ? ('\n' + remoteErr.message) : '')));
+    } else {
+      alert(lang === 'en'
+        ? ('Delivery delay set to ' + label + '. All phones will see it after refresh.')
+        : ('Délai de livraison défini : ' + label + '. Visible sur tous les téléphones après actualisation.'));
+    }
+  } catch (e) {
+    console.error('[Allo] saveShopDeliveryHours', e);
+    alert(lang === 'en' ? 'Could not save delivery delay.' : 'Impossible d’enregistrer le délai de livraison.');
+  }
+}
+
 function generateDeliveryCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -15729,6 +15999,52 @@ async function uploadProfilePhoto(uid, value) {
   return url;
 }
 
+/** Rafraîchit immédiatement nom / email / avatar affichés (Compte + header). */
+function refreshProfileUI() {
+  if (!currentUser) return;
+  try {
+    const pn = document.getElementById('profileName');
+    if (pn) pn.textContent = currentUser.name || (lang === 'en' ? 'Guest' : 'Visiteur');
+  } catch (_) {}
+  try {
+    const pe = document.getElementById('profileEmail');
+    if (pe) {
+      pe.textContent = (typeof isLoggedIn === 'function' && isLoggedIn())
+        ? (currentUser.email || currentUser.phone || currentUser.identifier || '')
+        : (lang === 'en' ? 'Browsing as guest' : 'Navigation en invité');
+    }
+  } catch (_) {}
+  try {
+    const pAvatar = document.getElementById('profileAvatar');
+    if (pAvatar) {
+      const letter = String(currentUser.name || 'A').charAt(0).toUpperCase();
+      pAvatar.innerHTML = currentUser.avatar_url
+        ? `<img class="profile-avatar-img" src="${String(currentUser.avatar_url).replace(/"/g,'&quot;')}" alt="">`
+        : letter;
+      pAvatar.style.cursor = currentUser.avatar_url ? 'pointer' : 'default';
+    }
+  } catch (_) {}
+  try {
+    const wn = document.getElementById('welcomeName');
+    if (wn) wn.textContent = (typeof isLoggedIn === 'function' && isLoggedIn())
+      ? String(currentUser.name || '').split(' ')[0]
+      : (lang === 'en' ? 'there' : 'visiteur');
+  } catch (_) {}
+  try {
+    const sAvatar = document.getElementById('sidebarAvatar');
+    if (sAvatar) {
+      const letter = String(currentUser.name || 'A').charAt(0).toUpperCase();
+      sAvatar.innerHTML = currentUser.avatar_url
+        ? `<img class="profile-avatar-img" src="${String(currentUser.avatar_url).replace(/"/g,'&quot;')}" alt="">`
+        : letter;
+    }
+  } catch (_) {}
+  try {
+    const sName = document.getElementById('sidebarName');
+    if (sName) sName.textContent = currentUser.name || '';
+  } catch (_) {}
+}
+
 function openEditProfile() {
   if (!currentUser) return;
   if (currentUser.role === 'admin') {
@@ -15741,108 +16057,216 @@ function openEditProfile() {
 }
 
 async function saveCompleteProfile() {
-  if (!currentUser || !USE_SUPABASE || !sb || !alloUuid(currentUser.id)) {
-    // Mode local : mise à jour en mémoire
-    if (!currentUser) return;
-    const err = document.getElementById('profileError');
-    const name = (document.getElementById('mProfileName')?.value || '').trim();
-    const country = (document.getElementById('mProfileCountry')?.value || '').trim();
-    const city = (document.getElementById('mProfileCity')?.value || '').trim();
-    const neighborhood = (document.getElementById('mProfileNeighborhood')?.value || '').trim();
-    const phone = (document.getElementById('mProfilePhone')?.value || '').trim();
-    let avatar = window._profilePhotoData || currentUser.avatar_url || '';
-    if (!name || !country || !city || !neighborhood || !phone) {
-      if (err) { err.textContent = lang==='en' ? 'Please fill all required fields.' : 'Veuillez remplir tous les champs obligatoires.'; err.classList.add('show'); }
-      return;
-    }
-    currentUser.name = name;
-    currentUser.country = country;
-    currentUser.city = city;
-    currentUser.neighborhood = neighborhood;
-    currentUser.phone = phone;
-    if (avatar) currentUser.avatar_url = avatar;
-    currentUser.profile_completed = true;
-    const reg = (registeredUsers || []).find(u => String(u.id) === String(currentUser.id));
-    if (reg) Object.assign(reg, { name, country, city, neighborhood, phone, avatar_url: currentUser.avatar_url, profile_completed: true });
-    try { saveRegisteredUsers(); } catch (e) {}
-    window._profileCompletionRequired = false;
-    window._profileEditMode = false;
-    document.getElementById('modalOverlay').classList.remove('show');
-    try { renderAccount(); } catch (e) {}
-    try { enterApp(); } catch (e) {}
-    alert(lang==='en' ? 'Profile updated.' : 'Profil mis à jour.');
-    return;
-  }
+  if (!currentUser) return;
   const err = document.getElementById('profileError');
   const btn = document.getElementById('btnSaveCompleteProfile');
-  if (err) err.classList.remove('show');
+  if (err) { err.classList.remove('show'); err.textContent = ''; }
+
   const isEdit = !!window._profileEditMode && !window._profileCompletionRequired;
   const name = (document.getElementById('mProfileName')?.value || '').trim();
   const country = (document.getElementById('mProfileCountry')?.value || '').trim();
   const city = (document.getElementById('mProfileCity')?.value || '').trim();
   const neighborhood = (document.getElementById('mProfileNeighborhood')?.value || '').trim();
   const phone = (document.getElementById('mProfilePhone')?.value || '').trim();
-  const newPass = (document.getElementById('mProfileNewPass')?.value || '');
-  const newPass2 = (document.getElementById('mProfileNewPass2')?.value || '');
   let avatar = window._profilePhotoData || currentUser.avatar_url || '';
-  if (!name || !country || !city || !neighborhood || !phone || (!isEdit && !avatar)) {
+  const newPass = (document.getElementById('mProfileNewPass')?.value || '').trim();
+  const newPass2 = (document.getElementById('mProfileNewPass2')?.value || '').trim();
+
+  if (!name || !country || !city || !neighborhood || !phone) {
     if (err) {
-      err.textContent = lang==='en'
-        ? 'Please complete all required fields' + (isEdit ? '.' : ' and add a profile photo.')
-        : 'Veuillez remplir tous les champs obligatoires' + (isEdit ? '.' : ' et ajouter une photo de profil.');
+      err.textContent = lang === 'en' ? 'Please fill all required fields.' : 'Veuillez remplir tous les champs obligatoires.';
       err.classList.add('show');
     }
     return;
   }
-  if (newPass || newPass2) {
+  if (newPass) {
     if (newPass.length < 6) {
-      if (err) { err.textContent = t('passwordShort') || (lang==='en'?'Minimum 6 characters':'Minimum 6 caractères'); err.classList.add('show'); }
+      if (err) {
+        err.textContent = (typeof t === 'function' && t('passwordShort')) || (lang === 'en' ? 'Minimum 6 characters' : 'Minimum 6 caractères');
+        err.classList.add('show');
+      }
       return;
     }
     if (newPass !== newPass2) {
-      if (err) { err.textContent = t('passwordMismatch') || (lang==='en'?'Passwords do not match':'Les mots de passe ne correspondent pas'); err.classList.add('show'); }
+      if (err) {
+        err.textContent = (typeof t === 'function' && t('passwordMismatch')) || (lang === 'en' ? 'Passwords do not match' : 'Les mots de passe ne correspondent pas');
+        err.classList.add('show');
+      }
       return;
     }
   }
-  if (btn) { btn.disabled = true; btn.textContent = lang==='en' ? 'Saving…' : 'Enregistrement…'; }
+
+  if (btn) { btn.disabled = true; btn.textContent = lang === 'en' ? 'Saving…' : 'Enregistrement…'; }
+
+  const persistLocal = (avatarFinal) => {
+    currentUser.name = name;
+    currentUser.country = country;
+    currentUser.city = city;
+    currentUser.neighborhood = neighborhood;
+    currentUser.phone = phone;
+    if (avatarFinal) currentUser.avatar_url = avatarFinal;
+    currentUser.profile_completed = true;
+    try {
+      const regIdx = (registeredUsers || []).findIndex(u => String(u.id) === String(currentUser.id));
+      if (regIdx >= 0) {
+        Object.assign(registeredUsers[regIdx], {
+          name, country, city, neighborhood, phone,
+          avatar_url: currentUser.avatar_url,
+          profile_completed: true
+        });
+      }
+    } catch (_) {}
+    try { if (typeof saveRegisteredUsers === 'function') saveRegisteredUsers(); } catch (_) {}
+    try {
+      localStorage.setItem('allo_current_user_profile', JSON.stringify({
+        id: currentUser.id, name, country, city, neighborhood, phone,
+        avatar_url: currentUser.avatar_url || null,
+        profile_completed: true,
+        updatedAt: new Date().toISOString()
+      }));
+    } catch (_) {}
+  };
+
   try {
-    if (String(avatar).startsWith('data:image/')) {
-      const uploaded = await uploadProfilePhoto(currentUser.id, avatar);
-      if (!uploaded) throw new Error(lang==='en' ? 'Photo upload failed' : 'Échec de l’envoi de la photo');
-      avatar = uploaded;
+    // Upload photo si data-URL
+    if (String(avatar).startsWith('data:image/') && typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb) {
+      if (typeof uploadProfilePhoto === 'function') {
+        const uploaded = await uploadProfilePhoto(currentUser.id, avatar);
+        if (uploaded) avatar = uploaded;
+        else console.warn('[Allo] photo upload failed, keeping local data URL temporarily');
+      }
     }
-    const payload = { name, country, city, neighborhood, phone, avatar_url: avatar || currentUser.avatar_url || null, profile_completed: true, updated_at: new Date().toISOString() };
-    const { data, error } = await sb.from('profiles').update(payload).eq('id', currentUser.id).select('*').maybeSingle();
-    if (error) throw error;
-    if (newPass) {
-      const { error: passErr } = await sb.auth.updateUser({ password: newPass });
-      if (passErr) throw passErr;
+
+    // 1) Toujours appliquer en local d'abord (l'UI doit refléter la saisie tout de suite)
+    persistLocal(avatar);
+    try { if (typeof refreshProfileUI === 'function') refreshProfileUI(); } catch (_) {}
+
+    // 2) Sync Supabase
+    let remoteOk = false;
+    let remoteMsg = '';
+    if (typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb && currentUser.id) {
+      const basePayload = {
+        name,
+        phone,
+        updated_at: new Date().toISOString()
+      };
+      // Champs adresse + photo (peuvent manquer selon schéma)
+      const fullPayload = Object.assign({}, basePayload, {
+        country,
+        city,
+        neighborhood,
+        avatar_url: (avatar && String(avatar).startsWith('http')) ? avatar : (currentUser.avatar_url || null),
+        profile_completed: true
+      });
+
+      async function tryUpdate(payload) {
+        return await sb.from('profiles').update(payload).eq('id', currentUser.id).select('*').maybeSingle();
+      }
+
+      let res = await tryUpdate(fullPayload);
+      if (res.error) {
+        console.warn('[Allo] profile full update failed', res.error);
+        remoteMsg = String(res.error.message || '');
+        // Réduire progressivement les colonnes
+        const attempts = [
+          { name, phone, country, city, neighborhood, profile_completed: true, updated_at: fullPayload.updated_at },
+          { name, phone, country, city, profile_completed: true, updated_at: fullPayload.updated_at },
+          { name, phone, profile_completed: true, updated_at: fullPayload.updated_at },
+          { name, phone, updated_at: fullPayload.updated_at }
+        ];
+        for (const p of attempts) {
+          res = await tryUpdate(p);
+          if (!res.error) break;
+          remoteMsg = String(res.error.message || '');
+          console.warn('[Allo] profile retry', p, res.error);
+        }
+      }
+
+      if (!res.error) {
+        remoteOk = true;
+        if (res.data) {
+          try {
+            const mapped = mapProfileToUser(res.data);
+            if (mapped) {
+              // Ne jamais écraser les valeurs fraîchement saisies par des vides du serveur
+              currentUser = Object.assign({}, currentUser, mapped, {
+                name: name,
+                country: country || mapped.country || '',
+                city: city || mapped.city || '',
+                neighborhood: neighborhood || mapped.neighborhood || '',
+                phone: phone || mapped.phone || '',
+                avatar_url: (mapped.avatar_url || avatar || currentUser.avatar_url || null),
+                profile_completed: true
+              });
+            }
+          } catch (_) {}
+        }
+      } else {
+        // Dernier recours : upsert
+        try {
+          const up = await sb.from('profiles').upsert(
+            Object.assign({ id: currentUser.id }, fullPayload),
+            { onConflict: 'id' }
+          );
+          if (!up.error) remoteOk = true;
+          else remoteMsg = String(up.error.message || remoteMsg);
+        } catch (e) {
+          remoteMsg = e && e.message ? e.message : String(e);
+        }
+      }
+
+      if (newPass) {
+        const { error: passErr } = await sb.auth.updateUser({ password: newPass });
+        if (passErr) throw passErr;
+      }
     }
-    currentUser = mapProfileToUser(data || Object.assign({}, currentUser, payload));
-    const regIdx = (registeredUsers || []).findIndex(u => String(u.id) === String(currentUser.id));
-    if (regIdx >= 0) registeredUsers[regIdx] = Object.assign({}, registeredUsers[regIdx], currentUser);
+
+    // 3) Fermer modal + rafraîchir l'écran Compte
     window._profileCompletionRequired = false;
     window._profileEditMode = false;
     window._profilePhotoData = currentUser.avatar_url || '';
-    document.getElementById('modalOverlay').classList.remove('show');
-    try { await sbLoadAllIntoData(); } catch(e) {}
-    try { renderAccount(); } catch (e) {}
-    try { if (typeof updateHeader === 'function') updateHeader(); } catch (e) {}
+    try {
+      const ov = document.getElementById('modalOverlay');
+      if (ov) ov.classList.remove('show');
+    } catch (_) {}
+    try { if (typeof refreshProfileUI === 'function') refreshProfileUI(); } catch (_) {}
+    try { if (typeof renderAccount === 'function') renderAccount(); } catch (_) {}
+    try {
+      // Forcer le libellé nom visible même si renderAccount ne le touche pas
+      const pn = document.getElementById('profileName');
+      if (pn) pn.textContent = currentUser.name || '';
+    } catch (_) {}
+
     if (!isEdit) {
-      try { enterApp(); } catch (e) {}
-      alert(lang==='en' ? 'Profile completed. Your delivery details are now ready.' : 'Profil complété. Vos informations de livraison sont maintenant prêtes.');
+      try { if (typeof enterApp === 'function') enterApp(); } catch (_) {}
+      alert(lang === 'en'
+        ? 'Profile completed successfully.'
+        : 'Profil enregistré avec succès.');
+    } else if (typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb && !remoteOk) {
+      alert(lang === 'en'
+        ? ('Changes applied on this phone. Cloud sync failed: ' + (remoteMsg || 'unknown error'))
+        : ('Modifications appliquées sur ce téléphone. Sync cloud échouée : ' + (remoteMsg || 'erreur inconnue')));
     } else {
-      alert(lang==='en' ? 'Profile updated successfully.' : 'Profil mis à jour avec succès.');
+      alert(lang === 'en'
+        ? 'Profile updated successfully.'
+        : 'Profil mis à jour avec succès.');
     }
   } catch (e) {
     console.error('[Allo] saveCompleteProfile', e);
-    if (err) { err.textContent = e?.message || (lang==='en'?'Could not save your profile.':'Impossible d’enregistrer votre profil.'); err.classList.add('show'); }
+    // Même en erreur, garder la saisie locale
+    try { persistLocal(avatar); refreshProfileUI(); } catch (_) {}
+    if (err) {
+      err.textContent = (e && e.message) || (lang === 'en' ? 'Could not save your profile.' : 'Impossible d’enregistrer votre profil.');
+      err.classList.add('show');
+    } else {
+      alert((e && e.message) || (lang === 'en' ? 'Could not save your profile.' : 'Impossible d’enregistrer votre profil.'));
+    }
   } finally {
     if (btn) {
       btn.disabled = false;
       btn.textContent = isEdit
-        ? (lang==='en' ? 'Save changes' : 'Enregistrer les modifications')
-        : (lang==='en' ? 'Save and continue' : 'Enregistrer et continuer');
+        ? (lang === 'en' ? 'Save changes' : 'Enregistrer les modifications')
+        : (lang === 'en' ? 'Save and continue' : 'Enregistrer et continuer');
     }
   }
 }
