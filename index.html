@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#8B5CF6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -316,10 +316,19 @@ header.top {
 }
 .header-nav-btn.show { display: inline-flex; }
 .header-nav-btn:hover { border-color: var(--accent); color: var(--accent-bright); }
-.header-nav-btn .hico { font-size: 14px; line-height: 1; }
+.header-nav-btn .hico { font-size: 15px; line-height: 1; }
+/* Navigation haute compacte : Boutique/Entreprise en icône pour que
+   toutes les actions restent visibles simultanément sur mobile. */
+.header-nav-btn .hlbl { display: none; }
+.header-nav-btn { width: 34px; min-width: 34px; padding: 0; gap: 0; }
+.header-right { gap: 4px; overflow-x: hidden; }
+.header-icon-btn { width: 34px; min-width: 34px; height: 34px; padding: 0; }
+.wallet-chip { min-width: 58px; padding: 0 7px; justify-content: center; font-size: 11px; }
 @media (max-width: 380px) {
-  .header-nav-btn .hlbl { display: inline; font-size: 10px; }
-  .header-nav-btn { padding: 0 8px; min-width: 34px; }
+  .header-nav-btn { width: 32px; min-width: 32px; }
+  .header-icon-btn { width: 32px; min-width: 32px; height: 32px; }
+  .header-nav-btn .hico { font-size: 14px; }
+  .wallet-chip { min-width: 52px; padding: 0 5px; }
 }
 .role-chip {
   display: flex; align-items: center; gap: 6px;
@@ -419,7 +428,6 @@ header.top {
   font-size: 12.5px; line-height: 1.4; color: var(--cyan);
 }
 .msg-translated .lbl { font-size: 10px; font-weight: 700; opacity: .7; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .4px; }
-
 
 
 /* ===== MAIN ===== */
@@ -679,7 +687,6 @@ main::-webkit-scrollbar { display: none; }
   letter-spacing: .6px; margin: 6px 0 10px;
 }
 
-
 /* List rows */
 .list-row {
   display: flex; align-items: center; gap: 11px;
@@ -871,7 +878,6 @@ nav.bottom {
   font-weight: 700; color: var(--accent-bright); margin-bottom: 3px;
 }
 
-
 .account-products-panel {
   margin: 12px 0 14px;
 }
@@ -996,7 +1002,6 @@ nav.bottom {
 }
 .catalog-search:focus { outline: none; border-color: var(--accent-bright); }
 
-
 /* Commission list — stable */
 .comm-list {
   max-height: 50vh;
@@ -1045,7 +1050,6 @@ nav.bottom {
   border-top: 1px solid var(--border);
   font-size: 13px;
 }
-
 
 /* Admin inputs — always readable */
 .admin-search-input {
@@ -1108,7 +1112,6 @@ nav.bottom {
   font-size: 13px;
   padding: 4px 2px;
 }
-
 
 /* Advanced features */
 .pay-methods { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
@@ -1181,7 +1184,6 @@ body.is-pwa-standalone .install-banner { display:none !important; }
   .app-shell { max-width: 460px; margin: 0 auto; height: 100vh; height: 100dvh; border-radius: 0; }
 }
 
-
 .cart-invoice {
   background: linear-gradient(160deg, var(--surface), var(--surface-2));
   border: 1px solid var(--border);
@@ -1236,7 +1238,6 @@ body.is-pwa-standalone .install-banner { display:none !important; }
   margin-top: 4px;
 }
 
-
 .catalog-search {
   width: 100%;
   background: var(--bg) !important;
@@ -1255,7 +1256,6 @@ body.is-pwa-standalone .install-banner { display:none !important; }
   border-color: var(--accent-bright);
   box-shadow: 0 0 0 3px rgba(139,92,246,.15);
 }
-
 
 /* =========================================================
    STYLE v2 — 10 améliorations visuelles (CSS only)
@@ -1442,7 +1442,6 @@ input[type="email"], input[type="number"], input[type="tel"], textarea, select {
   border-color: rgba(180,160,255,.3) !important;
   color: var(--text);
 }
-
 
 /* Multi-catégories type hashtags */
 .cat-check-grid {
@@ -1729,7 +1728,6 @@ main {
   box-shadow: 0 0 100px rgba(139,92,246,.14), 0 0 0 1px rgba(255,255,255,.05) !important;
 }
 
-
 .delivery-badge {
   font-size: 11px;
   color: var(--cyan);
@@ -1737,7 +1735,6 @@ main {
   margin-top: 3px;
   opacity: .95;
 }
-
 
 /* Fix nav stable */
 #appContent {
@@ -1772,7 +1769,6 @@ nav.bottom, #bottomNav {
   bottom: 78px !important;
   z-index: 35 !important;
 }
-
 
 /* ===== LAYOUT STABLE (tous comptes) ===== */
 .app-shell {
@@ -1833,7 +1829,6 @@ nav.bottom, #bottomNav {
   transform: none !important;
 }
 
-
 .password-wrap { position: relative; display: block; }
 .password-wrap input { width: 100%; padding-right: 48px !important; }
 .pw-toggle {
@@ -1864,7 +1859,6 @@ nav.bottom, #bottomNav {
 .variant-card .v-body { padding: 12px; }
 .status-wait { background: rgba(251,191,36,.16); color: var(--gold); }
 .status-refused { background: rgba(248,113,113,.16); color: var(--red); }
-
 
 /* ===== CARTE PRODUIT YAMAL COMPACTE (2 colonnes, ~4 à l'écran) ===== */
 .product-card.ycard-wrap {
@@ -2100,7 +2094,6 @@ nav.bottom, #bottomNav {
   min-width: 22px; text-align: center; font-family: 'JetBrains Mono', monospace;
   font-size: 13px; font-weight: 700;
 }
-
 
 
 /* ===== ADMIN CLASSEMENT UTILISATEURS (style DLS) ===== */
@@ -2361,7 +2354,6 @@ nav.bottom, #bottomNav {
   background: linear-gradient(90deg, #22D3EE, #8B5CF6, #F472B6);
   transition: width .3s ease;
 }
-
 
 
 
@@ -3826,7 +3818,6 @@ nav.bottom,
 }
 </style>
 
-
 <style id="allo-tiktok-profile-page">
 /* Profil vendeur plein écran — inspiration réseau social, sans reprendre une interface externe */
 .seller-profile-page{position:fixed;inset:0;z-index:10050;background:var(--bg,#080b12);color:var(--text,#f8fafc);display:none;overflow:hidden}
@@ -3886,7 +3877,6 @@ nav.bottom,
         <button class="auth-tab" id="tabRegister" onclick="showRegister()">Créer un compte</button>
       </div>
 
-
       <!-- LOGIN FORM -->
       <div id="loginFormCard">
         <p class="sub" style="margin-top:-4px">Accédez à votre espace Allo</p>
@@ -3905,7 +3895,6 @@ nav.bottom,
         <p class="auth-gate-hint hidden" id="authGateHint" style="font-size:12px;color:var(--text-muted);text-align:center;margin:10px 0 0;line-height:1.4"></p>
         <button class="btn btn-ghost btn-block hidden" id="btnContinueGuest" type="button" style="margin-top:10px" onclick="closeAuthGateContinueBrowsing()">Continuer sans compte</button>
         <p class="error-msg" id="loginError">Identifiants incorrects</p>
-
 
       </div>
 
@@ -3964,7 +3953,6 @@ nav.bottom,
     </div>
   </div>
 
-
   <!-- APP CONTENT -->
   <div id="appContent" class="hidden" style="display:none;flex-direction:column;height:100%;min-height:0">
     <header class="top">
@@ -3983,7 +3971,6 @@ nav.bottom,
         <div class="header-icon-btn" id="msgHeaderBtn" onclick="switchView('messages')" title="Messages">💬</div>
 <div class="wallet-chip" id="walletChip" onclick="switchView('wallet')">💰 <span id="walletChipAmount">0</span></div>
       </div>
-
 
     </header>
 
@@ -4010,7 +3997,6 @@ nav.bottom,
 
     </aside>
 
-    
     <div id="catPickerOverlay" class="cat-picker-overlay hidden" onclick="if(event.target===this)closeCategoryPicker()">
       <div class="cat-picker-panel" onclick="event.stopPropagation()">
         <div class="cph">
@@ -4080,18 +4066,6 @@ nav.bottom,
           
         </div>
         <div id="clientsList"></div>
-      </div>
-
-      <!-- EMPLOYÉS (for Entreprise role) -->
-      <div class="view" id="view-employees">
-        <div class="section-head">
-          <h2><span class="bar"></span> <span id="employeesTitle">Mes employés</span></h2>
-          <button class="link" onclick="openModal('addEmployee')">+ Employé</button>
-        </div>
-        <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.45" id="employeesHint">
-          Créez des comptes pour vos employés (magasinier, secrétaire, comptable, livreur…). Ils se connectent avec leur identifiant.
-        </p>
-        <div id="employeesList"></div>
       </div>
 
       <!-- ENTREPRISE (for Entreprise role) -->
@@ -4280,7 +4254,6 @@ nav.bottom,
         <div id="adminCompaniesStatusList"></div>
       </div>
 
-      
       <div class="view" id="view-admin-notifs">
         <div class="section-head"><h2><span class="bar"></span> Notifications</h2></div>
         <div class="card" style="margin-bottom:12px">
@@ -4312,39 +4285,8 @@ nav.bottom,
           <div class="field"><label>Confirmer</label><input type="password" id="adminNewPass2"></div>
           <button class="btn btn-accent btn-block" onclick="saveAdminCredentials()">Enregistrer</button>
         </div>
-        <div class="card" style="margin-top:12px;border-color:rgba(34,211,238,.3)">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-            <b>💵 Paiement à la livraison</b>
-            <span class="status-pill status-ok">TARIFS</span>
-          </div>
-          <p style="font-size:12px;color:var(--text-muted);line-height:1.45;margin:7px 0 14px">
-            Définissez séparément les tarifs des boutiques et des entreprises. Chaque espace choisit ensuite une durée : jour, semaine, mois ou année.
-          </p>
-
-          <div style="font-weight:800;margin:8px 0 8px">🏪 Boutiques</div>
-          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">
-            <div class="field" style="margin:0"><label>1 jour</label><input type="number" id="cashPlan_boutique_day" min="1" step="100" placeholder="—"></div>
-            <div class="field" style="margin:0"><label>7 jours</label><input type="number" id="cashPlan_boutique_week" min="1" step="100" placeholder="—"></div>
-            <div class="field" style="margin:0"><label>1 mois</label><input type="number" id="cashPlan_boutique_month" min="1" step="100" placeholder="—"></div>
-            <div class="field" style="margin:0"><label>1 an</label><input type="number" id="cashPlan_boutique_year" min="1" step="100" placeholder="—"></div>
-          </div>
-
-          <div style="font-weight:800;margin:16px 0 8px;opacity:.5;text-decoration:line-through">🏢 Entreprises (désactivé)</div>
-          <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Boutiques et entreprises utilisent des formules d’activation (quota de commandes). Le Super Admin définit les formules ; chaque vendeur choisit la sienne.</p>
-          <!-- champs conservés cachés pour compatibilité -->
-          <div style="display:none">
-            <input type="number" id="cashPlan_entreprise_day" value="0">
-            <input type="number" id="cashPlan_entreprise_week" value="0">
-            <input type="number" id="cashPlan_entreprise_month" value="0">
-            <input type="number" id="cashPlan_entreprise_year" value="0">
-          </div>
-
-          <button class="btn btn-cyan btn-block" style="margin-top:14px" onclick="saveCashOfferPlans()">💾 Enregistrer les tarifs</button>
-          <p id="cashOfferPlanAdminHint" style="font-size:11px;color:var(--text-muted);margin-top:7px"></p>
-        </div>
       </div>
 
-      
 
       <!-- TOP-UP REQUESTS (user) -->
       <div class="view" id="view-topups">
@@ -4465,7 +4407,6 @@ nav.bottom,
   </section>
 </div>
 
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 function requestAuthorLabel(item) {
@@ -4476,7 +4417,6 @@ function requestAuthorLabel(item) {
   }
   return item?.user_name || item?.identifier || item?.user_id || 'Compte inconnu';
 }
-
 
 /* ===== Allo Toast — remplace alert() navigateur ===== */
 (function () {
@@ -4525,7 +4465,6 @@ function requestAuthorLabel(item) {
 })();
 
 
-
 // ============================================================
 // ALLO × SUPABASE — config + couche données / images / auth
 // Remplace alloEphemeralStorage + IndexedDB quand configuré
@@ -4553,7 +4492,6 @@ const alloEphemeralStorage = {
   } catch(e){}
   try { if(window.indexedDB && indexedDB.deleteDatabase) indexedDB.deleteDatabase('allo_media_v1'); } catch(e){}
 })();
-
 
 let sb = null;
 // Supabase est la source de vérité unique pour les données métier.
@@ -4653,10 +4591,9 @@ function mapProfileToUser(p) {
     phone: p.phone,
     balance: Number(p.balance || 0),
     wallet: Number(p.wallet || 0),
-    shopId: p.shop_id || null,
-    companyId: p.company_id || null,
-    job: p.job || null,
-    features: p.features || {},
+    // Le Super Admin n'a ni boutique ni entreprise.
+    shopId: p.role === 'admin' ? null : (p.shop_id || null),
+    companyId: p.role === 'admin' ? null : (p.company_id || null),
     avatar_url: p.avatar_url || null,
     country: p.country || '',
     city: p.city || '',
@@ -4779,7 +4716,6 @@ function mapOrderRow(r, items) {
     })), { total: Number(r.total || 0) })
   };
 }
-
 
 /** Fusionne les lignes d'articles en double et corrige prix/qté à 0 (affichage facture propre). */
 function normalizeOrderItems(items, orderHint) {
@@ -5053,7 +4989,7 @@ function resolveOrderSellerCompanyId(order) {
 function getSellerCompanyIdForCurrentUser() {
   if (!currentUser) return '';
   if (currentUser.companyId) return String(currentUser.companyId);
-  if (currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+  if (currentUser.role === 'entreprise') {
     const owned = (data.companies || []).find(c =>
       String(c.ownerId || '') === String(currentUser.id || '')
     );
@@ -5120,7 +5056,7 @@ function orderBuyerIsMe(o) {
   if (o.buyerRefId) return String(o.buyerRefId) === uid;
   const stored = String(o.userId || o.user_id || o.buyerId || '');
   if (!stored || stored !== uid) return false;
-  const sellerRole = currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe';
+  const sellerRole = currentUser.role === 'boutique' || currentUser.role === 'entreprise';
   if (sellerRole && orderItemsAreOurs(o)) {
     const digits = function(v) { return String(v || '').replace(/\D/g, ''); };
     const norm = function(v) { return String(v || '').trim().toLowerCase(); };
@@ -5159,8 +5095,8 @@ function orderBelongsToSeller(o, sellerShopIds) {
     });
   }
 
-  // —— Entreprise / employé ——
-  if (currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+  // —— Entreprise ——
+  if (currentUser.role === 'entreprise') {
     if (!cid) return false;
 
     // Preuve solide : les produits appartiennent à notre catalogue
@@ -5204,7 +5140,7 @@ async function refreshOrdersFromSupabase() {
   if (!alloIsSupabaseMode()) return false;
   try {
     // S'assurer que l'entreprise courante a son company_id depuis Supabase
-    if (currentUser && (currentUser.role === 'entreprise' || currentUser.role === 'employe') && !currentUser.companyId) {
+    if (currentUser && (currentUser.role === 'entreprise') && !currentUser.companyId) {
       try {
         const cr = await sb.from('companies').select('id,owner_id').eq('owner_id', currentUser.id).maybeSingle();
         if (!cr.error && cr.data && cr.data.id) currentUser.companyId = cr.data.id;
@@ -5630,7 +5566,7 @@ async function sbLoadAllIntoData() {
   if (!USE_SUPABASE || !sb) return false;
   try {
     const [
-      companies, shops, products, clients, invitations, clientPrices, employeeMemberships, orders, messages,
+      companies, shops, products, clients, invitations, clientPrices, orders, messages,
       feedback, notifications, reviews, userNotifs, wishlist,
       promoCodes, returns, walletTx, walletAccounts, topUps, withdraws, payMethods,
       categories, zones, settings, variants, pimgs, appRecords, hashtags, productHashtags
@@ -5641,7 +5577,6 @@ async function sbLoadAllIntoData() {
       sb.from('company_clients').select('*'),
       sb.from('company_client_requests').select('*'),
       sb.from('company_client_product_prices').select('*'),
-      sb.from('company_employees').select('*'),
       sb.from('orders').select('*'),
       sb.from('messages').select('*'),
       sb.from('feedback').select('*'),
@@ -5670,6 +5605,12 @@ async function sbLoadAllIntoData() {
       id: c.id, name: c.name, ownerId: c.owner_id, description: c.description
     }));
     data.shops = (shops.data || []).map(mapShopRow);
+    // Le Super Admin ne possède ni entreprise ni boutique.
+    if (currentUser && currentUser.role === 'admin') {
+      const aid = String(currentUser.id);
+      data.companies = data.companies.filter(c => String(c.ownerId) !== aid);
+      data.shops = data.shops.filter(sh => String(sh.ownerId) !== aid);
+    }
     const prods = (products.data || []).map(mapProductRow);
     const varsByP = {};
     (variants.data || []).forEach(v => {
@@ -5731,17 +5672,6 @@ async function sbLoadAllIntoData() {
       id: r.id, companyId: r.company_id, clientId: r.client_id,
       productId: r.product_id, price: Number(r.price || 0),
       createdAt: r.created_at, updatedAt: r.updated_at
-    }));
-    // Les employés sont des adhésions entreprise, jamais un changement de rôle du compte principal.
-    data.employeeMemberships = (employeeMemberships.data || []).map(e => ({
-      id: e.id,
-      userId: e.user_id,
-      companyId: e.company_id,
-      job: e.job || 'autre',
-      features: e.features || {},
-      isActive: e.is_active !== false,
-      createdAt: e.created_at,
-      updatedAt: e.updated_at
     }));
     const orderItems = await sb.from('order_items').select('*');
     const itemsByO = {};
@@ -5914,9 +5844,8 @@ async function sbLoadAllIntoData() {
 
     // Données métier sans table dédiée : conservées côté serveur dans app_records.
     try {
-      data.subscriptions = (appRecords.data || []).filter(r => r.collection === 'subscriptions').map(r => {
-        const v = r.value || {}; return Object.assign({id:r.record_key, userId:r.user_id}, v);
-      });
+      // Les abonnements viennent maintenant de la table shop_subscriptions (loadShopSubscriptions).
+      data.subscriptions = Array.isArray(window._alloSubs) ? window._alloSubs.slice() : [];
       const ixr=(appRecords.data||[]).find(r=>r.collection==='interactions'&&String(r.user_id)===String(currentUser&&currentUser.id)&&r.record_key==='main');
       if(ixr && currentUser){ window._alloRemoteInteractions=ixr.value||{}; }
       // Quota activation entreprise (indépendant du statut livré)
@@ -6014,6 +5943,8 @@ async function sbLoadAllIntoData() {
       console.log('[Allo] catalogue Supabase chargé:', data.shops.length, 'catalogues/boutiques,', data.products.length, 'produits');
     } catch (e) { console.warn(e); }
 
+    // Vues, likes, abonnements : compteurs globaux + temps réel (aussi après une connexion).
+    try { if (typeof loadSocialStats === 'function') loadSocialStats(); } catch (e) { console.warn('[Allo] social stats', e); }
     return true;
   } catch (e) {
     console.error('sbLoadAllIntoData', e);
@@ -6125,6 +6056,7 @@ async function sbUpsertProduct(p) {
 
 async function sbSaveShop(s) {
   if (!USE_SUPABASE || !sb || !s) return null;
+  if (currentUser && currentUser.role === 'admin') return null; // le Super Admin n'a pas de boutique
   const uid = currentUser && currentUser.id;
   let cover = s.coverImage;
   if (cover && String(cover).startsWith('data:')) {
@@ -6158,7 +6090,6 @@ async function sbSaveShop(s) {
   return res.data || null;
 }
 
-
 // ============================================================
 //  ALLO v1 — Plateforme multi-comptes
 // ============================================================
@@ -6167,14 +6098,12 @@ const ROLE_LABELS = {
   boutique: 'BOUTIQUE',
   entreprise: 'ENTREPRISE',
   client: 'CLIENT ENTREPRISE',
-  employe: 'EMPLOYÉ',
   admin: 'SUPER ADMIN'
 };
 const ROLE_LABELS_EN = {
   boutique: 'SHOP',
   entreprise: 'COMPANY',
   client: 'COMPANY CLIENT',
-  employe: 'EMPLOYEE',
   admin: 'SUPER ADMIN'
 };
 
@@ -6182,109 +6111,8 @@ const ROLE_CLASSES = {
   boutique: 'boutique',
   entreprise: 'entreprise',
   client: 'client',
-  employe: 'client',
   admin: 'admin'
 };
-
-/** Postes employés entreprise */
-const STAFF_JOBS = {
-  magasinier: { fr: 'Magasinier', en: 'Warehouse', ico: '📦' },
-  secretaire: { fr: 'Secrétaire', en: 'Secretary', ico: '📋' },
-  comptable: { fr: 'Comptable', en: 'Accountant', ico: '🧮' },
-  livreur: { fr: 'Livreur', en: 'Delivery', ico: '🛵' },
-  commercial: { fr: 'Commercial', en: 'Sales', ico: '🤝' },
-  manager: { fr: 'Manager', en: 'Manager', ico: '👔' },
-  autre: { fr: 'Autre', en: 'Other', ico: '👤' }
-};
-function staffJobLabel(job) {
-  const j = STAFF_JOBS[job] || STAFF_JOBS.autre;
-  return lang === 'en' ? j.en : j.fr;
-}
-
-/** Fonctionnalités attribuables aux employés par l'entreprise */
-const STAFF_FEATURES = {
-  products:   { fr: 'Produits / Stock', en: 'Products / Stock', ico: '📦' },
-  clients:    { fr: 'Clients', en: 'Clients', ico: '👥' },
-  orders:     { fr: 'Commandes', en: 'Orders', ico: '📋' },
-  messages:   { fr: 'Messages', en: 'Messages', ico: '💬' },
-  wallet:     { fr: 'Portefeuille', en: 'Wallet', ico: '💰' },
-  transactions: { fr: 'Transactions', en: 'Transactions', ico: '📜' },
-  analytics:  { fr: 'Statistiques', en: 'Analytics', ico: '📊' },
-  notifs:     { fr: 'Notifications', en: 'Notifications', ico: '🔔' }
-};
-
-/** Permissions par défaut selon le poste */
-function defaultStaffFeatures(job) {
-  const base = { products: false, clients: false, orders: true, messages: true, wallet: false, transactions: false, analytics: false, notifs: true };
-  // Entreprise: pas de portefeuille (ni pour le propriétaire ni pour les employés)
-  const j = job || 'autre';
-  if (j === 'magasinier') {
-    return Object.assign({}, base, { products: true, orders: true });
-  }
-  if (j === 'secretaire') {
-    return Object.assign({}, base, { clients: true, messages: true });
-  }
-  if (j === 'comptable') {
-    // Pas de portefeuille côté entreprise
-    return Object.assign({}, base, { wallet: false, transactions: false, analytics: true });
-  }
-  if (j === 'livreur') {
-    return Object.assign({}, base, { orders: true });
-  }
-  if (j === 'commercial') {
-    return Object.assign({}, base, { clients: true, messages: true, orders: true });
-  }
-  if (j === 'manager') {
-    return Object.assign({}, base, {
-      products: true, clients: true, orders: true, messages: true,
-      wallet: false, transactions: false, analytics: true, notifs: true
-    });
-  }
-  return base;
-}
-
-function getStaffFeatures(user) {
-  if (!user) return defaultStaffFeatures('autre');
-  if (user.features && typeof user.features === 'object') {
-    return Object.assign({}, defaultStaffFeatures(user.job), user.features);
-  }
-  return defaultStaffFeatures(user.job);
-}
-
-function staffHasFeature(feature, user) {
-  const u = user || currentUser;
-  if (!u) return false;
-  if (u.role === 'entreprise') return true;
-  if (u.role !== 'employe') return false;
-  const f = getStaffFeatures(u);
-  return !!f[feature];
-}
-
-function staffFeaturesCheckboxesHTML(selected) {
-  const sel = selected || {};
-  return Object.keys(STAFF_FEATURES).map(k => {
-    const info = STAFF_FEATURES[k];
-    const label = lang === 'en' ? info.en : info.fr;
-    const checked = sel[k] ? 'checked' : '';
-    return `<label class="zone-check ${sel[k] ? 'on' : ''}" style="margin:0">
-      <input type="checkbox" name="staffFeat" value="${k}" ${checked} onchange="this.parentElement.classList.toggle('on', this.checked)">
-      <span>${info.ico} ${label}</span>
-    </label>`;
-  }).join('');
-}
-
-function readStaffFeaturesFromForm() {
-  const boxes = document.querySelectorAll('input[name="staffFeat"]');
-  const out = {};
-  Object.keys(STAFF_FEATURES).forEach(k => { out[k] = false; });
-  boxes.forEach(b => { if (b.checked) out[b.value] = true; });
-  if (!Object.values(out).some(Boolean)) {
-    out.orders = true;
-    out.messages = true;
-    out.notifs = true;
-  }
-  return out;
-}
 
 // ===== I18N =====
 let lang = (function(){
@@ -6311,24 +6139,20 @@ const I18N = {
     all: 'Tous', products_f: 'Produits', shops_f: 'Boutiques',
     noProduct: 'Aucun produit disponible', noMessage: 'Aucun message', noOrder: 'Aucune commande',
     noClient: 'Aucun client', noShop: 'Aucune boutique', noShopLinked: 'Aucune boutique rattachée',
-    noEmployee: 'Aucun employé', noProductAdd: 'Aucun produit. Ajoutez-en un !', noShopYet: 'Aucune boutique pour le moment',
+noProductAdd: 'Aucun produit. Ajoutez-en un !', noShopYet: 'Aucune boutique pour le moment',
     noCart: 'Votre panier est vide', noRevenue: 'Aucun revenu pour le moment. Les ventes apparaissent ici une fois la commande marquée « livré ».',
     newMsg: '+ Nouveau', reply: 'Répondre', send: 'Envoyer', save: 'Enregistrer',
-    addProduct: '+ Produit', addClient: '+ Client', addEmployee: '+ Employé', edit: 'Modifier', add: 'Ajouter',
-    employees: 'Employés', sectionEmployees: 'Mes employés', createEmployee: 'Créer un employé',
-    employeeJob: 'Poste', employeeCreated: 'Employé créé !', deleteEmployeeConfirm: 'Supprimer cet employé ?',
-    employeesHint: 'Créez des comptes pour vos employés (magasinier, secrétaire, comptable, livreur…). Ils se connectent avec leur identifiant.',
-    staffFeatures: 'Fonctionnalités',
-    staffFeaturesHint: 'Cochez les modules auxquels cet employé aura accès.',
-    editEmployee: 'Modifier l\'employé',
-    employeeUpdated: 'Employé mis à jour !',
-    allEmployees: 'Tous les employés',
-    sendToStaffOrClient: 'Envoyer à un client, un employé ou à tous',
-    writeToCompany: 'Écrire à l\'entreprise',
-    toAllStaff: 'Tous les employés',
-    msgToStaff: 'Message aux employés',
+    addProduct: '+ Produit', addClient: '+ Client',edit: 'Modifier', add: 'Ajouter',
 
-    staffSpace: 'Espace employé',
+
+
+
+
+
+    writeToCompany: 'Écrire à l\'entreprise',
+
+
+
     subscribed: 'Abonné', subscribe: "S'abonner", mySubscriptions: 'Mes abonnements',
     subscribers: 'abonnés', subscriber: 'abonné', subscribersCount: 'Abonnés',
     otherShops: 'Autres boutiques', allShops: 'Toutes les boutiques', backShops: '← Boutiques',
@@ -6482,24 +6306,20 @@ you: 'Vous', product: 'Produit', shopOnAllora: 'Boutique sur Allo',
     all: 'All', products_f: 'Products', shops_f: 'Shops',
     noProduct: 'No products available', noMessage: 'No messages', noOrder: 'No orders',
     noClient: 'No clients', noShop: 'No shops', noShopLinked: 'No linked shops',
-    noEmployee: 'No employees', noProductAdd: 'No products. Add one!', noShopYet: 'No shops yet',
+noProductAdd: 'No products. Add one!', noShopYet: 'No shops yet',
     noCart: 'Your cart is empty', noRevenue: 'No revenue yet. Sales appear here once an order is marked “delivered”.',
     newMsg: '+ New', reply: 'Reply', send: 'Send', save: 'Save',
-    addProduct: '+ Product', addClient: '+ Client', addEmployee: '+ Employee', edit: 'Edit', add: 'Add',
-    employees: 'Employees', sectionEmployees: 'My employees', createEmployee: 'Create employee',
-    employeeJob: 'Job title', employeeCreated: 'Employee created!', deleteEmployeeConfirm: 'Delete this employee?',
-    employeesHint: 'Create accounts for your staff (warehouse, secretary, accountant, delivery…). They sign in with their identifier.',
-    staffFeatures: 'Features',
-    staffFeaturesHint: 'Select the modules this employee can access.',
-    editEmployee: 'Edit employee',
-    employeeUpdated: 'Employee updated!',
-    allEmployees: 'All staff',
-    sendToStaffOrClient: 'Send to a client, an employee, or everyone',
-    writeToCompany: 'Message the company',
-    toAllStaff: 'All staff',
-    msgToStaff: 'Message to staff',
+    addProduct: '+ Product', addClient: '+ Client',edit: 'Edit', add: 'Add',
 
-    staffSpace: 'Employee space',
+
+
+
+
+
+    writeToCompany: 'Message the company',
+
+
+
     subscribed: 'Subscribed', subscribe: 'Subscribe', mySubscriptions: 'My subscriptions',
     subscribers: 'subscribers', subscriber: 'subscriber', subscribersCount: 'Subscribers',
     otherShops: 'Other shops', allShops: 'All shops', backShops: '← Shops',
@@ -6726,8 +6546,6 @@ const EXTRA_I18N_PAIRS = {
   'Entreprise': 'Company',
   'Utilisateur': 'User',
   'Boutique': 'Shop',
-  'Employé': 'Employee',
-  'Mes employés': 'My employees',
   'Mes produits': 'My products',
   'Paramètres admin': 'Admin settings',
   'Boutiques certifiées': 'Certified shops',
@@ -6748,7 +6566,6 @@ const EXTRA_I18N_PAIRS = {
   'Aucun message': 'No message',
   'Aucune commande': 'No order',
   'Aucun client': 'No client',
-  'Aucun employé': 'No employee',
   'Aucun résultat': 'No results',
   'Erreur': 'Error',
   'Impossible': 'Unable',
@@ -6796,7 +6613,6 @@ const EXTRA_I18N_PAIRS = {
   'Utilisateur — Acheter sur Allo': 'User — Shop on Allo',
   'Client': 'Client',
   'CLIENT ENTREPRISE': 'COMPANY CLIENT',
-  'EMPLOYÉ': 'EMPLOYEE',
   'Zones': 'Zones',
   'Catégorie': 'Category',
   'Commission': 'Commission',
@@ -6981,7 +6797,6 @@ function applyUiLanguage() {
         boutique: t('manageShop'),
         entreprise: t('companyDash'),
         client: t('privateClient'),
-        employe: t('staffSpace'),
         admin: t('adminHome')
       };
       const ws = document.getElementById('welcomeSub');
@@ -7102,7 +6917,6 @@ async function translateText(text, targetLang) {
   }
 }
 
-
 // No demo accounts — users register via Supabase (admin = profiles.role)
 const DEMO_ACCOUNTS = {};
 
@@ -7131,7 +6945,6 @@ let data = {
   products: [],
   clients: [],
   companyClientRequests: [],
-  employeeMemberships: [],
   orders: [],
   messages: [],
   subscriptions: [],
@@ -7157,12 +6970,10 @@ let data = {
   depositInfo: { number: '653199986', name: 'Junior Yemeli Tchoffo' }
 };
 
-
 let selectedBoutiqueId = null;
 let selectedShopBrowseId = null;
 let searchFilter = 'all';
 let replyToMsgId = null;
-
 
 
 let currentUser = null;
@@ -7291,7 +7102,7 @@ function init() {
         if (sess && sess.user) {
           const pr = await sb.from('profiles').select('*').eq('id', sess.user.id).maybeSingle();
           if (pr && pr.data) {
-            const allowedRoles = ['boutique','entreprise','employe','admin'];
+            const allowedRoles = ['boutique','entreprise','admin'];
             if (!allowedRoles.includes(String(pr.data.role || ''))) {
               // Réparer un ancien rôle grâce au type réellement choisi dans Auth.
               const metaRole = String(sess.user?.user_metadata?.role || '').toLowerCase().trim();
@@ -7350,6 +7161,7 @@ function init() {
           try { startReviewsRealtime(); } catch (e) { console.warn('[Allo] reviews realtime init', e); }
           try { startViewsRealtime(); } catch (e) { console.warn('[Allo] views realtime init', e); }
           try { loadProductViewCounts(); } catch (e) { console.warn('[Allo] load views', e); }
+          try { loadSocialStats(); } catch (e) { console.warn('[Allo] social stats', e); }
         }
       }).catch(function(e){
         console.warn('[Allo] session', e);
@@ -7417,7 +7229,6 @@ function init() {
   }, 4200);
 }
 
-
 // ===== AUTH UI =====
 function showRegister() {
   document.getElementById('loginFormCard').classList.add('hidden');
@@ -7452,7 +7263,6 @@ function showLogin() {
   document.getElementById('tabRegister').classList.remove('active');
   document.getElementById('tabLogin').classList.add('active');
 }
-
 
 function markRegistrationFieldTouched(el) {
   if (el) el.dataset.userTouched = '1';
@@ -7634,7 +7444,6 @@ function setAuthLoading(which, loading) {
   }
 }
 
-
 /** Disable modal primary action while async work runs (anti double-click). */
 let _modalActionBusy = false;
 function setModalActionBusy(busy, loadingLabel) {
@@ -7730,7 +7539,7 @@ async function doLogin() {
         await sb.auth.signOut();
         return;
       }
-      const allowedRoles = ['boutique','entreprise','employe','admin'];
+      const allowedRoles = ['boutique','entreprise','admin'];
       if (!allowedRoles.includes(String(profile.role || ''))) {
         // Le rôle choisi à l'inscription est aussi conservé dans Supabase Auth.
         // Si le profil a gardé un ancien rôle, on le répare automatiquement.
@@ -8118,7 +7927,7 @@ async function refreshProfilesFromSupabase() {
 /**
  * Tags multi-espaces d'un compte pour le classement admin.
  * Un même utilisateur peut apparaître dans plusieurs filtres :
- * utilisateur + boutique, utilisateur + entreprise, client, employé, etc.
+ * utilisateur + boutique, utilisateur + entreprise, client, etc.
  */
 function getAccountTags(u) {
   const tags = new Set();
@@ -8126,12 +7935,11 @@ function getAccountTags(u) {
   const uid = String(u.id || '');
   const raw = String(u.role || '');
 
-  if (['boutique','entreprise','employe','admin'].includes(raw)) tags.add(raw);
+  if (['boutique','entreprise','admin'].includes(raw)) tags.add(raw);
 
   if (raw === 'boutique') tags.add('boutique');
   if (raw === 'entreprise') tags.add('entreprise');
   if (raw === 'client') tags.add('client');
-  if (raw === 'employe') tags.add('employe');
 
   const shopId = u.shopId || u.shop_id || null;
   // companyId sur le profil peut etre un simple lien client (espace temporaire).
@@ -8159,10 +7967,6 @@ function getAccountTags(u) {
     if ((data.clients || []).some(c => String(c.id) === uid || String(c.clientId || '') === uid)) {
       tags.add('client');
     }
-    // Espace employe
-    if ((data.employeeMemberships || []).some(m => m.isActive !== false && String(m.userId || '') === uid)) {
-      tags.add('employe');
-    }
   }
 
   return Array.from(tags);
@@ -8170,7 +7974,7 @@ function getAccountTags(u) {
 
 /** Rôle principal affiché (priorité métier, tags restent pour les filtres). */
 function getPrimaryAccountRole(tags) {
-  const order = ['entreprise', 'boutique', 'employe', 'client', 'admin'];
+  const order = ['entreprise', 'boutique', 'client', 'admin'];
   for (const t of order) if (tags && tags.indexOf(t) !== -1) return t;
   return 'invalide';
 }
@@ -8281,7 +8085,6 @@ async function renderAdminHome() {
       </div>`;
   }
 }
-
 
 // ============================================================
 // ALLO — ÉCRITURES ADMIN CENTRALES
@@ -8584,10 +8387,10 @@ async function renderAdminAccounts() {
   const roleFilterEl = document.getElementById('adminAccountsRoleFilter');
   const activeRole = window._adminAccountsRole || 'all';
   if (roleFilterEl) {
-    const roles = ['all', 'boutique', 'entreprise', 'client', 'employe'];
+    const roles = ['all', 'boutique', 'entreprise', 'client'];
     const labels = lang === 'en'
-      ? { all: 'All', boutique: 'Shops', entreprise: 'Companies', client: 'Clients', employe: 'Staff' }
-      : { all: 'Tous', boutique: 'Boutiques', entreprise: 'Entreprises', client: 'Clients', employe: 'Employés' };
+      ? { all: 'All', boutique: 'Shops', entreprise: 'Companies', client: 'Clients' }
+      : { all: 'Tous', boutique: 'Boutiques', entreprise: 'Entreprises', client: 'Clients' };
     roleFilterEl.innerHTML = roles.map(r => {
       // Multi-appartenance : un compte boutique compte aussi dans Utilisateurs, etc.
       const n = r === 'all' ? accounts.length : accounts.filter(a => accountHasTag(a, r)).length;
@@ -8619,7 +8422,6 @@ async function renderAdminAccounts() {
   const countBoutique = allAcc.filter(a => accountHasTag(a, 'boutique')).length;
   const countEntreprise = allAcc.filter(a => accountHasTag(a, 'entreprise')).length;
   const countClient = allAcc.filter(a => accountHasTag(a, 'client')).length;
-  const countEmploye = allAcc.filter(a => accountHasTag(a, 'employe')).length;
   const totalOrders = (data.orders || []).length;
   const totalBal = allAcc.reduce((s, a) => s + Number(a.wallet || a.balance || 0), 0);
 
@@ -8673,7 +8475,6 @@ async function renderAdminAccounts() {
       <span>${lang==='en'?'Shops':'Boutiques'} ${countBoutique}</span>
       <span>${lang==='en'?'Companies':'Entreprises'} ${countEntreprise}</span>
       ${countClient ? `<span>${lang==='en'?'Clients':'Clients'} ${countClient}</span>` : ''}
-      ${countEmploye ? `<span>${lang==='en'?'Staff':'Employés'} ${countEmploye}</span>` : ''}
     </div>`;
 
   el.innerHTML = `
@@ -8770,7 +8571,6 @@ async function adminDeleteAccount(type, id) {
     alert(t('adminDeleted')); await renderAdminAccounts(); try{renderAdminHome();}catch(e){} try{renderAll();}catch(e){}
     return;
   }
-
 
   // Récupérer infos avant suppression
   const reg = (registeredUsers || []).find(u => String(u.id) === sid);
@@ -9538,7 +9338,6 @@ function getSuggestionAuthor(f) {
   return null;
 }
 
-
 async function refreshAdminFeedbackFromSupabase() {
   if (!USE_SUPABASE || !sb || !currentUser || currentUser.role !== 'admin') return false;
   try {
@@ -9719,7 +9518,6 @@ async function creditAdminCommission(amount, orderId) {
   return true;
 }
 
-
 async function doLogout() {
   try { if (typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb) { sb.auth.signOut(); } } catch (e) {}
   try { stopOrderRealtime(); } catch (e) {}
@@ -9801,7 +9599,6 @@ function enterApp() {
   }
   applyStaticI18n();
 
-
   // Top header actions per role
   const wChip = document.getElementById('walletChip');
   const msgBtn = document.getElementById('msgHeaderBtn');
@@ -9832,14 +9629,14 @@ function enterApp() {
   }
   // Les deux accès publics restent TOUJOURS visibles une fois connecté,
   // quel que soit le type de compte (boutique, entreprise, client,
-  // employé ou admin). Ils ne doivent pas disparaître après l'ouverture du compte.
+  // ou admin). Ils ne doivent pas disparaître après l'ouverture du compte.
   if (isLoggedIn()) {
     if (shopsBtn) { shopsBtn.classList.add('show'); shopsBtn.style.display = 'inline-flex'; }
     if (companiesBtn) { companiesBtn.classList.add('show'); companiesBtn.style.display = 'inline-flex'; }
   }
 
   // Actions spécifiques au rôle, sans toucher aux deux boutons publics.
-  if (currentUser.role === 'entreprise') {
+  if (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'admin') {
     if (msgBtn) msgBtn.classList.add('show');
   }
   if (currentUser.role === 'client') {
@@ -9859,7 +9656,6 @@ function enterApp() {
     }
   }
   updateNotifBadge();
-
 
 
   // Profile
@@ -9899,12 +9695,10 @@ function enterApp() {
     boutique: t('manageShop'),
     entreprise: t('companyDash'),
     client: t('privateClient'),
-    employe: t('staffSpace') + (currentUser.job ? ' · ' + staffJobLabel(currentUser.job) : ''),
     admin: t('adminHome')
   };
   document.getElementById('welcomeSub').textContent = subs[currentUser.role] || '';
   document.getElementById('welcomeText').textContent = t('welcome');
-
 
   buildNav();
   renderAll();
@@ -9924,7 +9718,6 @@ function updateWalletChip() {
   currentUser.wallet = w;
   el.textContent = w >= 1000 ? (Math.round(w/1000) + 'k') : String(w);
 }
-
 
 // ===== NAVIGATION =====
 function openSidebar() {
@@ -9948,7 +9741,6 @@ function buildSidebarNav() {
   document.getElementById('sidebarRole').textContent = roleLabels[currentUser.role] || currentUser.role;
   const lo = document.getElementById('sidebarLogoutLabel');
   if (lo) lo.textContent = t('logout');
-
 
   const role = currentUser.role;
   let items = [];
@@ -9988,7 +9780,6 @@ function buildSidebarNav() {
     items = [
       { view: 'home', label: 'Tableau de bord', ico: '🏠' },
       { view: 'clients', label: t('clients'), ico: '👥' },
-      { view: 'employees', label: t('employees'), ico: '🧑‍💼' },
       { view: 'orders', label: 'Mes commandes', ico: '📋' },
       { view: 'promos', label: 'Faire une promo', ico: '🏷' },
       { view: 'promos', label: 'Mes promotions', ico: '🔥' },
@@ -10003,17 +9794,6 @@ function buildSidebarNav() {
       { view: 'account', label: 'Profil', ico: '👤' },
       { view: 'settings', label: 'Paramètres', ico: '⚙️' }
     ];
-  } else if (role === 'employe') {
-    const feat = getStaffFeatures(currentUser);
-    items = [ { view: 'home', label: 'Tableau de bord', ico: '🏠' } ];
-    if (feat.clients) items.push({ view: 'clients', label: t('clients'), ico: '👥' });
-    if (feat.orders) items.push({ view: 'orders', label: t('orders'), ico: '📋' });
-    if (feat.messages) items.push({ view: 'messages', label: t('messages'), ico: '💬' });
-    if (feat.wallet) items.push({ view: 'wallet', label: t('wallet'), ico: '💰' });
-    if (feat.transactions) items.push({ view: 'transactions', label: 'Transactions', ico: '📜' });
-    if (feat.analytics) items.push({ view: 'analytics', label: t('analytics'), ico: '📊' });
-    if (feat.notifs) items.push({ view: 'notifs', label: t('notifs'), ico: '🔔' });
-    items.push({ view: 'account', label: t('myAccount'), ico: '👤' });
   } else if (role === 'client') {
     items = [
       { view: 'home', label: t('catalog'), ico: '🏠' },
@@ -10045,7 +9825,6 @@ function buildSidebarNav() {
       { view: 'account', label: t('myAccount'), ico: '👤' }
     ];
   }
-
 
   // Suggestions / export restent dans le menu ☰, pas dans la page Compte.
   if (role !== 'admin') {
@@ -10186,18 +9965,7 @@ function switchView(view) {
           currentUser.companyId = null;
         }
       } catch (e) {}
-      // Si on est temporairement en mode employé d'une entreprise, revenir au rôle réel.
-      if (currentUser.role === 'employe' || window._alloActiveEmployeeMembershipId) {
-        const base = window._alloBaseRole || 'client';
-        currentUser.role = base;
-        window._alloActiveEmployeeMembershipId = null;
-        currentUser.employeeMembershipId = null;
-        currentUser.employeeCompanyId = null;
-        currentUser.job = null;
-        currentUser.features = {};
-        window._alloBaseRole = null;
-        try { buildSidebarNav(); buildNav(); } catch (e) {}
-      } else if (window._alloBaseRole && String(window._alloBaseRole) !== String(currentUser.role || '')) {
+      if (window._alloBaseRole && String(window._alloBaseRole) !== String(currentUser.role || '')) {
         // Compte boutique/entreprise entré en client d'une autre entreprise : restaurer le vrai rôle.
         currentUser.role = window._alloBaseRole;
         window._alloBaseRole = null;
@@ -10299,7 +10067,6 @@ function switchView(view) {
     }
   }
 }
-
 
 // ===== HELPERS =====
 function formatMoney(n) {
@@ -10445,7 +10212,7 @@ function isCompanyPrivateProduct(p) {
   const owner = (registeredUsers || []).find(u =>
     String(u.id) === String(p.ownerId || '')
   );
-  if (owner && (owner.role === 'entreprise' || owner.role === 'employe')) return true;
+  if (owner && (owner.role === 'entreprise')) return true;
 
   return false;
 }
@@ -10482,7 +10249,7 @@ function getVisibleProducts() {
     } else {
       list = (data.products || []).filter(p => !isCompanyPrivateProduct(p));
     }
-  } else if (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+  } else if (currentUser.role === 'boutique' || currentUser.role === 'entreprise') {
     // ACCUEIL = catalogue public global d'Allo.
     // Ne jamais limiter l'Accueil aux produits du compte connecté.
     // Les produits d'entreprise/catalogues privés restent exclus du marché public.
@@ -10499,7 +10266,6 @@ function getVisibleProducts() {
   return list.filter(baseFilter);
 }
 
-
 // ===== RENDER =====
 function renderAll() {
   renderHome();
@@ -10507,7 +10273,6 @@ function renderAll() {
   renderCart();
   renderStock();
   renderClients();
-  renderEmployees();
   renderBoutiques();
   renderShopsBrowser();
   renderClientSpace();
@@ -10553,7 +10318,6 @@ function renderAll() {
 
 
 
-
 function renderHome() {
   const role = currentUser.role;
   if (role === 'admin') {
@@ -10569,7 +10333,6 @@ function renderHome() {
   // après avoir appuyé sur « Entrer pour faire les achats ».
   banner.classList.add('hidden');
   catalogTitle.textContent = t('catalog');
-
 
   // Stats
   if (role === 'client') {
@@ -10602,12 +10365,10 @@ function renderHome() {
     const shops = data.shops.filter(s => s.companyId === currentUser.companyId && s.isCompanyCatalog === true);
     const sellerShopIds = getSellerShopIds();
     const orders = data.orders.filter(o => orderBelongsToSeller(o, sellerShopIds));
-    const staff = getCompanyEmployees();
     const remaining = typeof getCompanyOrdersRemaining === 'function' ? getCompanyOrdersRemaining(currentUser.companyId) : '—';
     const locked = typeof isCompanyAccountActive === 'function' && !isCompanyAccountActive(currentUser.companyId);
     stats.innerHTML = `
       <div class="hero-stat"><b>${clients.length}</b><span>${t('clientsCount')}</span></div>
-      <div class="hero-stat"><b>${staff.length}</b><span>${t('employees')}</span></div>
       <div class="hero-stat"><b>${orders.length}</b><span>${t('ordersCount')}</span></div>
       <div class="hero-stat"><b style="color:${locked?'var(--red)':'var(--green)'}">${remaining}</b><span>Quota restant</span></div>`;
     if (locked) {
@@ -10616,14 +10377,6 @@ function renderHome() {
         <div><b>Compte entreprise verrouillé</b><br>
         Votre quota de commandes est épuisé. <a href="#" onclick="switchView('company-activation');return false;" style="color:var(--accent-bright);font-weight:700">Réactiver le compte →</a></div>`;
     }
-  } else if (role === 'employe') {
-    const sellerShopIds = getSellerShopIds();
-    const orders = data.orders.filter(o => orderBelongsToSeller(o, sellerShopIds));
-    const products = getVisibleProducts();
-    stats.innerHTML = `
-      <div class="hero-stat"><b>${staffJobLabel(currentUser.job || 'autre')}</b><span>${t('employeeJob')}</span></div>
-      <div class="hero-stat"><b>${products.length}</b><span>${t('productsCount')}</span></div>
-      <div class="hero-stat"><b>${orders.length}</b><span>${t('ordersCount')}</span></div>`;
   } else if (role === 'client') {
     const myOrders = data.orders.filter(o => o.userId === currentUser.id);
     const products = getVisibleProducts();
@@ -10670,7 +10423,7 @@ function renderCatalogToolbar(role) {
   const toolbar = document.getElementById('catalogToolbar');
   if (!toolbar) return;
   // Ne JAMAIS réinitialiser _catalogCat ici — conserve le filtre catégorie choisi
-  const needSearch = (role === 'client' || role === 'boutique' || role === 'entreprise' || role === 'employe');
+  const needSearch = (role === 'client' || role === 'boutique' || role === 'entreprise');
   const existing = document.getElementById('catalogSearchInput');
   if (existing && document.activeElement === existing) return;
   let html = '';
@@ -10710,7 +10463,6 @@ function onCatalogSearchInput(el) {
     renderHomeProductsOnly();
   }, 200);
 }
-
 
 window._catalogCat = window._catalogCat || 'all';
 if (typeof adminConfig !== 'undefined' && adminConfig && !adminConfig.categoryImages) adminConfig.categoryImages = {};
@@ -10909,7 +10661,7 @@ function renderHomeProductsOnly() {
   const el = document.getElementById('homeProducts');
   if (!el || !currentUser) return;
   const role = currentUser.role;
-  const canAdd = (role === 'client' || role === 'entreprise' || role === 'employe' || role === 'boutique');
+  const canAdd = (role === 'client' || role === 'entreprise' || role === 'boutique');
   const activeCat = window._catalogCat || 'all';
   const catalogQ = (window._catalogQ || '').toLowerCase().trim();
 
@@ -10986,7 +10738,6 @@ function updateSectionHeads() {
     'view-cart': t('myCart'),
     'view-stock': t('sectionStock'),
     'view-clients': t('sectionClients'),
-    'view-employees': t('sectionEmployees'),
     'view-boutiques': t('sectionCompany'),
     'view-shops': t('sectionShops'),
     'view-search': t('sectionSearch'),
@@ -11006,8 +10757,6 @@ function updateSectionHeads() {
   if (ap) ap.textContent = t('addProduct');
   const ac = document.querySelector('#view-clients .link');
   if (ac) ac.textContent = t('addClient');
-  const ae = document.querySelector('#view-employees .link');
-  if (ae) ae.textContent = t('addEmployee');
   const si = document.getElementById('searchInput');
   if (si) si.placeholder = t('searchPlaceholder');
   const fa = document.getElementById('filterAll');
@@ -11026,7 +10775,6 @@ function updateSectionHeads() {
   const cs = document.getElementById('catalogSearchInput');
   if (cs) cs.placeholder = t('searchCatalog');
 }
-
 
 
 
@@ -11128,7 +10876,6 @@ function collectAllProductCats(products) {
   });
   return [...set];
 }
-
 
 function getProductCodFieldHTML(product) {
   const shopIds = (typeof getSellerShopIds === 'function') ? getSellerShopIds() : [];
@@ -11288,7 +11035,7 @@ function openShopPage(shopId) {
       alert(lang==='en' ? 'This shop is not in your company catalog' : 'Cette boutique n\'est pas dans votre catalogue entreprise');
     }
   } else {
-    // Boutique / entreprise / employé / admin : aperçu de la boutique.
+    // Boutique / entreprise / admin : aperçu de la boutique.
     openModal('shopPreview', shopId);
   }
   try { renderShopsBrowser(); } catch(e) {}
@@ -11418,7 +11165,6 @@ function openSellerProfile(productId) {
   openSellerProfilePage(String(ownerId));
 }
 
-
 function getSellerPublicProducts(ownerId) {
   const uid = String(ownerId || '');
   if (!uid) return [];
@@ -11445,7 +11191,7 @@ function productCardHTML(p, showAdd, manage) {
   const valScore = revs.length ? Math.min(100, Math.round(avgStars * 20)) : 0;
   const stockReal = getProductAvailableStock(p);
   const stockDisplay = stockReal > 999 ? '999+' : String(stockReal);
-  const favCount = (data.wishlist || []).filter(w => String(w.productId) === String(p.id)).length;
+  const favCount = getProductLikeCount(p.id);
   const isFav = currentUser && typeof isInWishlist === 'function' && isInWishlist(p.id);
   const deliveredCount = (data.orders || []).filter(o => {
     const st = String(o.status || '').toLowerCase();
@@ -11547,7 +11293,7 @@ function productCardHTML(p, showAdd, manage) {
         <div class="yc-stat ${stockClass}"><span class="val">${stockDisplay}</span><span class="lbl">📦STK</span></div>
         <div class="yc-stat ${noteClass}"><span class="val">${noteDisplay}</span><span class="lbl">⭐NOTE</span></div>
         <div class="yc-stat ${livClass}"><span class="val">${livDisplay}</span><span class="lbl">🚚LIV</span></div>
-        <div class="yc-stat mid"><span class="val">${viewsCount > 99 ? 99 : viewsCount}</span><span class="lbl">👁️VUE</span></div>
+        <div class="yc-stat mid"><span class="val">${viewsCount > 99 ? '99+' : viewsCount}</span><span class="lbl">👁️VUE</span></div>
         <div class="yc-stat ${promoClass}"><span class="val">${promoDisplay}</span><span class="lbl">🏷️PRM</span></div>
         <div class="yc-stat ${popClass}"><span class="val">${popScore}</span><span class="lbl">🔥POP</span></div>
         <div class="yc-stat"><span class="val">${garantDisplay}</span><span class="lbl">🛡️GAR</span></div>
@@ -11624,7 +11370,7 @@ function buildProductDetailModalHTML(productId) {
   const valScore = revs.length ? Math.min(100, Math.round(avgStars * 20)) : 0;
   const stockReal = getProductAvailableStock(p);
   const stockDisplay = stockReal > 999 ? '999+' : String(stockReal);
-  const favCount = (data.wishlist || []).filter(w => String(w.productId) === String(p.id)).length;
+  const favCount = getProductLikeCount(p.id);
   const isFav = currentUser && typeof isInWishlist === 'function' && isInWishlist(p.id);
   const deliveredCount = (data.orders || []).filter(o => {
     const st = String(o.status || '').toLowerCase();
@@ -11693,7 +11439,6 @@ function buildProductDetailModalHTML(productId) {
       ${currentUser && (currentUser.role==='client') ? `<button type="button" class="btn btn-ghost btn-block" style="margin-top:8px" onclick="event.stopPropagation();toggleWishlist('${p.id}');openProductDetail('${p.id}')">${isFav ? '❤️ '+t('removeWishlist') : '🤍 '+t('addWishlist')}</button>` : ''}
     </div>`;
 }
-
 
 
 
@@ -11778,7 +11523,7 @@ function openProductReviews(productId) {
     .slice().sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
   const avg = revs.length ? (revs.reduce((s,r) => s + (Number(r.stars)||0), 0) / revs.length) : 0;
   const canComment = canMarketplaceInteract(currentUser);
-  const isSeller = currentUser && (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe');
+  const isSeller = currentUser && (currentUser.role === 'boutique' || currentUser.role === 'entreprise');
   const name = displayProductName(p.name);
   const fr = lang !== 'en';
   const listHtml = revs.length ? revs.map(r => {
@@ -11919,7 +11664,6 @@ function startReviewsRealtime() {
 }
 
 function openProductDescription(productId) { openProductReviews(productId); }
-
 
 function getCategoryOptionSchema(cat) {
   const c = String(cat || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -12319,7 +12063,6 @@ function removeShopFromCart(shopId) {
   renderHome();
 }
 
-
 function changeCartQty(productId, delta, variantId) {
   const p = (data.products || []).find(x => String(x.id) === String(productId));
   if (!p) return;
@@ -12417,7 +12160,6 @@ function renderCart() {
   el.innerHTML = html;
 }
 
-
 async function validateCart() {
   if (_modalActionBusy) return;
   if (!isLoggedIn()) {
@@ -12431,8 +12173,8 @@ async function validateCart() {
   try {
 
   if (!cart.length) return;
-  // Boutique, entreprise et employé peuvent acheter auprès d'un autre vendeur.
-  const buyerRoles = ['entreprise','employe','boutique'];
+  // Boutique et entreprise peuvent acheter auprès d'un autre vendeur.
+  const buyerRoles = ['entreprise','boutique'];
   if (buyerRoles.indexOf(currentUser.role) === -1) return;
   let total = 0;
   for (const item of cart) {
@@ -12443,7 +12185,7 @@ async function validateCart() {
     }
     total += (typeof getEffectivePriceForBuyer==='function'?getEffectivePriceForBuyer(p,(item.variantId&&p.variants)?p.variants.find(v=>v.id===item.variantId):null):p.price) * item.qty;
   }
-  // Un vendeur (boutique/entreprise/employé) utilise le même checkout pour acheter auprès d'un autre vendeur.
+  // Un vendeur (boutique/entreprise) utilise le même checkout pour acheter auprès d'un autre vendeur.
   // Il peut payer avec son solde Allo ou en espèces lorsque le vendeur l'autorise.
   window._checkoutTotal = total;
   window._payMethod = 'balance';
@@ -12729,7 +12471,6 @@ function applyShopCodFlagsFromCashOffers() {
 }
 
 
-
 function renderCashOfferCard() {
   const ctx = getCashOfferContext();
   if (!ctx) return '';
@@ -12861,48 +12602,6 @@ async function activateCashOnDelivery() {
   }
 }
 
-async function saveCashOfferPlanPrice(entityType, durationKey, silent=false) {
-  if (!currentUser || currentUser.role !== 'admin') throw new Error('Accès Super Admin requis');
-  const input = document.getElementById('cashPlan_' + entityType + '_' + durationKey);
-  const amount = Math.max(0, Math.round(Number(input?.value || 0)));
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Le prix de ' + entityType + ' / ' + formatCashDuration(durationKey) + ' doit être supérieur à 0.');
-  const { data: saved, error } = await sb.rpc('set_cash_on_delivery_offer_plan_price', { p_entity_type:entityType, p_duration_key:durationKey, p_amount:amount });
-  if (error) throw error;
-  const plan = getCashPlan(entityType, durationKey);
-  if (plan) plan.price = Number(saved || amount);
-  if (!silent) {
-    const hint = document.getElementById('cashOfferPlanAdminHint');
-    if (hint) hint.textContent = 'Prix enregistré.';
-  }
-  return Number(saved || amount);
-}
-
-async function saveCashOfferPlans() {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  const keys = ['boutique','entreprise'].flatMap(t => ['day','week','month','year'].map(d => [t,d]));
-  try {
-    for (const [entityType,durationKey] of keys) await saveCashOfferPlanPrice(entityType,durationKey,true);
-    await refreshCashPaymentOffers();
-    syncCashAdminPlanInputs();
-    const hint = document.getElementById('cashOfferPlanAdminHint');
-    if (hint) hint.textContent = 'Les 8 tarifs sont enregistrés.';
-    alert('Tarifs des offres enregistrés.');
-  } catch (e) {
-    const hint = document.getElementById('cashOfferPlanAdminHint');
-    if (hint) hint.textContent = 'Échec : ' + (e.message || e);
-    alert('Enregistrement interrompu : ' + (e.message || e));
-  }
-}
-
-function syncCashAdminPlanInputs() {
-  const keys = ['boutique','entreprise'].flatMap(t => ['day','week','month','year'].map(d => [t,d]));
-  keys.forEach(([entityType,durationKey]) => {
-    const input = document.getElementById('cashPlan_' + entityType + '_' + durationKey);
-    const plan = getCashPlan(entityType,durationKey);
-    if (input && plan) input.value = Number(plan.price || 0);
-  });
-}
-
 async function confirmCheckout() {
   if (_modalActionBusy) return;
   if (!setModalActionBusy(true, actionBusyLabel('pay'))) return;
@@ -12929,7 +12628,7 @@ async function confirmCheckout() {
   // RÈGLE ABSOLUE : un vendeur ne peut jamais acheter chez lui-même.
   // Le contrôle est fait AVANT tout débit de solde et AVANT la création des commandes.
   // Boutique : même shop / même propriétaire.
-  // Entreprise / employé : même companyId.
+  // Entreprise : même companyId.
   const buyerId = String(currentUser?.id || '');
   const buyerCompanyId = String(currentUser?.companyId || '');
   const buyerShopIds = new Set((typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String));
@@ -12942,8 +12641,8 @@ async function confirmCheckout() {
       return buyerShopIds.has(String(g.shopId)) || String(shop.ownerId || '') === buyerId;
     }
 
-    // Une entreprise et ses employés ne peuvent pas acheter auprès de leur propre entreprise.
-    if (currentUser?.role === 'entreprise' || currentUser?.role === 'employe') {
+    // Une entreprise ne peut pas acheter auprès de sa propre entreprise.
+    if (currentUser?.role === 'entreprise') {
       const sellerCompanyId = String(
         g.companyId ||
         shop.companyId ||
@@ -13222,7 +12921,6 @@ async function confirmCheckout() {
 
 
 
-
 function orderTimelineHasDelivered(o) {
   const tl = (o && Array.isArray(o.timeline)) ? o.timeline : [];
   return tl.some(t => t && (t.status === 'livré' || t.status === 'delivered' || t.status === 'livre'));
@@ -13250,7 +12948,7 @@ function getSellerSeenAt(o) {
 function markOrdersSeenBySeller(opts) {
   opts = opts || {};
   if (!currentUser) return;
-  if (currentUser.role !== 'entreprise' && currentUser.role !== 'employe') return;
+  if (currentUser.role !== 'entreprise') return;
   const sellerShopIds = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String);
   if (!sellerShopIds.length) return;
   const toSync = [];
@@ -13298,11 +12996,10 @@ function softUpdateCompanyOrderSeenPills() {
   });
 }
 
-
 /** Entreprise : marquer une commande comme livrée UNE seule fois (pas de double livraison). */
 async function markCompanyOrderDelivered(orderId) {
   if (!currentUser) return;
-  if (currentUser.role !== 'entreprise' && currentUser.role !== 'employe') return;
+  if (currentUser.role !== 'entreprise') return;
   const o = (data.orders || []).find(x => String(x.id) === String(orderId));
   if (!o) return;
   const isCompany = !!(o.companyId || o.payment === 'company_free');
@@ -13433,7 +13130,6 @@ async function markCompanyOrderDelivered(orderId) {
   }
 }
 
-
 /** Boutique : marquage livré en un clic pour commandes en espèces (pas de suivi ni de code). */
 function isCodPayment(o) {
   if (!o) return false;
@@ -13482,7 +13178,7 @@ async function persistOrderDelivered(o, nextShopStatus, nextTimeline, now) {
 
 async function markCodOrderDelivered(orderId) {
   if (!currentUser) return;
-  if (currentUser.role !== 'boutique' && currentUser.role !== 'entreprise' && currentUser.role !== 'employe') return;
+  if (currentUser.role !== 'boutique' && currentUser.role !== 'entreprise') return;
   const o = (data.orders || []).find(x => String(x.id) === String(orderId));
   if (!o) return;
   if (!isCodPayment(o)) return;
@@ -13788,11 +13484,11 @@ async function advanceOrderStatus(orderId) {
     const o = (data.orders || []).find(x => String(x.id) === String(orderId));
     if (!o) return;
     const role = currentUser && currentUser.role;
-    if (role !== 'boutique' && role !== 'entreprise' && role !== 'employe') return;
+    if (role !== 'boutique' && role !== 'entreprise') return;
     if (normalizeOrderStatus(o.status) === 'annulé' || normalizeOrderStatus(o.status) === 'livré') return;
     if (!o.shopStatus || typeof o.shopStatus !== 'object') o.shopStatus = {};
     // Si déjà en livraison côté entreprise, le prochain clic marque livré
-    if ((role === 'entreprise' || role === 'employe' || o.companyId) &&
+    if ((role === 'entreprise' || o.companyId) &&
         (normalizeOrderStatus(o.status) === 'livraison' ||
          Object.values(o.shopStatus || {}).some(st => normalizeOrderStatus(st) === 'livraison'))) {
       window._forceCompanyDelivered = true;
@@ -13828,7 +13524,7 @@ async function advanceOrderStatus(orderId) {
 
     // COD : livraison directe sans code. Solde Allo : même flux que la boutique,
     // avec code saisi par l'acheteur pour libérer le paiement.
-    const isCompanySeller = currentUser.role === 'entreprise' || currentUser.role === 'employe' || !!o.companyId;
+    const isCompanySeller = currentUser.role === 'entreprise' || !!o.companyId;
     const isCodOrder = (typeof isCodPayment === 'function') ? isCodPayment(o) : (o.payment === 'cod');
     if (!isCodOrder && relevantShopIds.some(sid => normalizeOrderStatus(o.shopStatus[sid]) === 'livraison') && !o.deliveryCode) {
       o.deliveryCode = generateDeliveryCode();
@@ -14002,7 +13698,7 @@ function getSellerShopIds() {
     ).map(sh => String(sh.id));
   }
 
-  if (currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+  if (currentUser.role === 'entreprise') {
     if (!cid) return [];
     return (data.shops || []).filter(sh =>
       String(sh.companyId || '') === cid ||
@@ -14035,7 +13731,6 @@ function orderItemsForSeller(o) {
     return false;
   });
 }
-
 
 function copyDeliveryCode(orderId, code) {
   const value = String(code || '').trim();
@@ -14078,7 +13773,7 @@ function setOrdersMode(mode) {
 }
 
 function updateOrdersModeUI() {
-  const isSeller = currentUser && (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe');
+  const isSeller = currentUser && (currentUser.role === 'boutique' || currentUser.role === 'entreprise');
   const deliveryBtn = document.querySelector('.orders-mode-tab[data-orders-mode="delivery"]');
   if (deliveryBtn) deliveryBtn.disabled = !isSeller;
   const labels = document.querySelectorAll('[data-orders-label]');
@@ -14094,7 +13789,7 @@ function renderOrders() {
   // Pour un vendeur, une commande reçue doit ouvrir dans "Commandes à livrer".
   // On ne force ce mode que lorsqu'aucun choix explicite n'a encore été fait.
   if (!window._ordersMode) {
-    const isSeller = currentUser && (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe');
+    const isSeller = currentUser && (currentUser.role === 'boutique' || currentUser.role === 'entreprise');
     if (isSeller) {
       try {
         const ids = getSellerShopIds();
@@ -14148,7 +13843,7 @@ function _paintOrdersList() {
     }
   } else {
     const uid = String(currentUser.id || '');
-    const isSellerRole = currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe';
+    const isSellerRole = currentUser.role === 'boutique' || currentUser.role === 'entreprise';
 
     // Commandes achetées = commandes dont le compte connecté est l'acheteur.
     const purchasedOrders = (data.orders || []).filter(function(o) {
@@ -14181,7 +13876,7 @@ function _paintOrdersList() {
   el.innerHTML = orders.map(o => {
     // À LIVRER = catalogue vendeur ; ACHETÉE = compte connecté comme acheteur.
     // Une commande achetée ne doit jamais être affichée comme commande à livrer pour le même compte.
-    const isSellerRole = currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe';
+    const isSellerRole = currentUser.role === 'boutique' || currentUser.role === 'entreprise';
     const iAmBuyer = orderBuyerIsMe(o);
     const belongsToMyCatalog = isSellerRole && orderBelongsToSeller(o, sellerShopIds);
     // L'onglet actif détermine le rôle visuel de la commande. On conserve néanmoins
@@ -14236,7 +13931,7 @@ function _paintOrdersList() {
     }).join('');
     const isCompanyOrderEarly = !!(o.companyId || o.payment === 'company_free');
     const isCompanyOrder = !!(o.companyId || o.payment === 'company_free');
-    const isEnterpriseSpace = currentUser.role === 'entreprise' || currentUser.role === 'employe';
+    const isEnterpriseSpace = currentUser.role === 'entreprise';
     // Espace entreprise : pas de progression de statut (juste voir la commande)
     let nxtSeller = isEnterpriseSpace && isCompanyOrder ? null : nextSellerStatus(displayStatus);
     if (!nxtSeller && isCompanyOrderEarly && displayStatus === 'livraison' && isEnterpriseSpace && !isCompanyOrder) {
@@ -14768,7 +14463,6 @@ function withdrawFunds() {
   openModal('requestWithdraw');
 }
 
-
 function renderStock() {
   if (currentUser.role !== 'boutique') return;
   try { resolveUserShopLinks(); } catch (e) {}
@@ -14794,9 +14488,8 @@ function renderStock() {
   el.innerHTML = html;
 }
 
-
 function renderClients() {
-  if (!currentUser || (currentUser.role !== 'entreprise' && currentUser.role !== 'employe')) return;
+  if (!currentUser || (currentUser.role !== 'entreprise')) return;
   const el = document.getElementById('clientsList');
   if (!el) return;
   const clients = data.clients.filter(c => c.companyId === currentUser.companyId);
@@ -14832,167 +14525,8 @@ async function deleteClient(id) {
   const client=data.clients.find(c=>c.id===id); data.clients=data.clients.filter(c=>c.id!==id); registeredUsers=registeredUsers.filter(u=>!(u.role==='client'&&(u.id===id||u.email===client?.identifiant))); saveAppData(); saveRegisteredUsers(); renderClients();
 }
 
-function getCompanyEmployees() {
-  if (!currentUser || !currentUser.companyId) return [];
-  const profiles = new Map((registeredUsers || []).map(u => [String(u.id), u]));
-  return (data.employeeMemberships || [])
-    .filter(m => m.isActive !== false && String(m.companyId) === String(currentUser.companyId))
-    .map(m => Object.assign({}, profiles.get(String(m.userId)) || {}, {
-      id: m.userId, role: 'employe', companyId: m.companyId,
-      job: m.job || 'autre', features: m.features || {}, membershipId: m.id
-    }))
-    .filter(e => e.id);
-}
-
-function getEmployeeMembershipsForCurrentUser() {
-  if (!currentUser || !currentUser.id) return [];
-  const profile = (registeredUsers || []).find(u => String(u.id) === String(currentUser.id)) || currentUser;
-  return (data.employeeMemberships || [])
-    .filter(m => m.isActive !== false && String(m.userId) === String(currentUser.id))
-    .map(m => {
-      const company = (data.companies || []).find(c => String(c.id) === String(m.companyId));
-      return Object.assign({}, profile, {
-        role: 'employe', membershipId: m.id, companyId: m.companyId,
-        companyName: company?.name || (lang === 'en' ? 'Company' : 'Entreprise'),
-        job: m.job || 'autre', features: m.features || {}
-      });
-    });
-}
-
-function renderEmployees() {
-  if (!currentUser || currentUser.role !== 'entreprise') return;
-  const el = document.getElementById('employeesList');
-  const title = document.getElementById('employeesTitle');
-  const hint = document.getElementById('employeesHint');
-  if (title) title.textContent = t('sectionEmployees');
-  if (hint) hint.textContent = t('employeesHint');
-  if (!el) return;
-  const list = getCompanyEmployees();
-  if (!list.length) {
-    el.innerHTML = `<div class="empty">${t('noEmployee')}</div>`;
-    return;
-  }
-  el.innerHTML = list.map(e => {
-    const job = e.job || 'autre';
-    const jobInfo = STAFF_JOBS[job] || STAFF_JOBS.autre;
-    const feat = getStaffFeatures(e);
-    const featLabels = Object.keys(STAFF_FEATURES).filter(k => feat[k]).map(k => {
-      const info = STAFF_FEATURES[k];
-      return (lang === 'en' ? info.en : info.fr);
-    });
-    const featLine = featLabels.length
-      ? featLabels.slice(0, 4).join(', ') + (featLabels.length > 4 ? '…' : '')
-      : (lang === 'en' ? 'No features' : 'Aucune fonctionnalité');
-    return `
-    <div class="list-row" style="flex-wrap:wrap">
-      <div class="avatar">${(e.name || '?').charAt(0)}</div>
-      <div class="c-info">
-        <div class="c-name">${e.name || ''}</div>
-        <div class="c-sub">${e.identifier || e.email || ''} · ${jobInfo.ico} ${staffJobLabel(job)}</div>
-        <div class="c-sub" style="margin-top:3px;color:var(--accent-bright);font-size:10.5px">${featLine}</div>
-      </div>
-      <div class="c-action" style="flex-wrap:wrap;gap:5px">
-        <button class="btn btn-sm btn-ghost" onclick="openModal('editEmployee','${e.id}')" title="${t('editEmployee')}">✎</button>
-        <button class="btn btn-sm btn-cyan" onclick="openModal('newMessage','${e.id}')" title="Message">💬</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${e.id}')" title="Supprimer">✕</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function addEmployee() {
-  if (_modalActionBusy) return;
-  if (!setModalActionBusy(true, actionBusyLabel('create'))) return;
-  try {
-
-  if (!currentUser || currentUser.role !== 'entreprise') return;
-  const rawId = document.getElementById('mEmpId')?.value || '';
-  const ident = (typeof normalizeIdentifier === 'function') ? normalizeIdentifier(rawId) : String(rawId).trim().toLowerCase().replace(/\s+/g,'');
-  const pass = document.getElementById('mEmpPass')?.value || '';
-  const job = document.getElementById('mEmpJob')?.value || 'autre';
-  if (!ident || !pass) { alert(lang==='en' ? 'Enter the existing employee account ID and password.' : 'Entrez l’identifiant et le mot de passe du compte de la personne.'); return; }
-  if (typeof isValidIdentifier === 'function' && !isValidIdentifier(ident)) { alert(lang==='en'?'Invalid identifier.':'Identifiant invalide.'); return; }
-  if (pass.length < 6) { alert(lang==='en'?'Password must contain at least 6 characters.':'Le mot de passe doit contenir au moins 6 caractères.'); return; }
-  let features = defaultStaffFeatures(job);
-  if (document.querySelectorAll('input[name="staffFeat"]').length > 0) features = readStaffFeaturesFromForm();
-  if (!(USE_SUPABASE && sb)) { alert(lang==='en' ? 'Internet connection required.' : 'Une connexion Internet est nécessaire.'); return; }
-  try {
-    const {data:res,error} = await sb.functions.invoke('manage-company-user-v2', {body:{action:'link_existing',role:'employe',company_id:currentUser.companyId,identifier:ident,password:pass,job,features}});
-    if (error || !res || !res.ok) throw new Error((res&&res.error)||(error&&error.message)||'Rattachement de l’employé impossible');
-    await sbLoadAllIntoData(); closeModal(); renderEmployees();
-    alert(lang==='en' ? 'Existing account linked as employee.' : 'Le compte existant a été rattaché comme employé.');
-  } catch(e) {
-    console.error('[Allo] link employee',e);
-    alert((lang==='en'?'Employee link failed: ':'Impossible de rattacher l’employé : ')+(e.message||e));
-  }
-
-  } finally {
-    setModalActionBusy(false);
-  }
-}
-async function deleteEmployee(id) {
-  if (!currentUser || currentUser.role !== 'entreprise') return;
-  if (!confirm(t('deleteEmployeeConfirm'))) return;
-  if (USE_SUPABASE && sb) {
-    try {
-      const {data:res,error}=await sb.functions.invoke('manage-company-user-v2',{body:{action:'delete',company_id:currentUser.companyId,user_id:id}});
-      if(error||!res||!res.ok) throw new Error((res&&res.error)||(error&&error.message)||'Suppression impossible');
-      await sbLoadAllIntoData(); renderEmployees(); alert(lang==='en'?'Employee disabled.':'Employé désactivé.'); return;
-    } catch(e){console.error('[Allo] delete employee',e);alert((lang==='en'?'Deletion failed: ':'Suppression impossible : ')+(e.message||e));return;}
-  }
-  registeredUsers=(registeredUsers||[]).filter(u=>!(u.role==='employe'&&String(u.id)===String(id)&&String(u.companyId)===String(currentUser.companyId))); saveRegisteredUsers(); renderEmployees();
-}
-
-async function saveEmployee(id) {
-  if (_modalActionBusy) return;
-  if (!setModalActionBusy(true, actionBusyLabel('save'))) return;
-  try {
-
-  if (!currentUser || currentUser.role !== 'entreprise') return;
-  const emp = getCompanyEmployees().find(u => String(u.id) === String(id));
-  if (!emp) { alert(lang === 'en' ? 'Employee not found' : 'Employé introuvable'); return; }
-  const name = (document.getElementById('mEmpName')?.value || '').trim();
-  const job = document.getElementById('mEmpJob')?.value || emp.job || 'autre';
-  const pass = document.getElementById('mEmpPass')?.value || '';
-  if (!name) { alert(t('fillFields')); return; }
-  if (pass && pass.length < 6) {
-    alert(lang === 'en' ? 'Password must contain at least 6 characters.' : 'Le mot de passe doit contenir au moins 6 caractères.');
-    return;
-  }
-  const features = readStaffFeaturesFromForm();
-  if (USE_SUPABASE && sb) {
-    try {
-      const {data:res,error}=await sb.functions.invoke('manage-company-user-v2',{
-        body:{action:'update_employee',company_id:currentUser.companyId,user_id:id,name,job,features,password:pass||null}
-      });
-      if(error||!res||!res.ok) throw new Error((res&&res.error)||(error&&error.message)||'Modification impossible');
-      await sbLoadAllIntoData(); closeModal(); renderEmployees();
-      alert(t('employeeUpdated'));
-      return;
-    } catch(e) {
-      console.error('[Allo] update employee',e);
-      alert((lang==='en'?'Update failed: ':'Modification impossible : ')+(e.message||e));
-      return;
-    }
-  }
-
-  } finally {
-    setModalActionBusy(false);
-  }
-}
-
-function onEmpJobChangeDefaults() {
-  const job = document.getElementById('mEmpJob')?.value || 'autre';
-  const defaults = defaultStaffFeatures(job);
-  document.querySelectorAll('input[name="staffFeat"]').forEach(b => {
-    b.checked = !!defaults[b.value];
-    if (b.parentElement) b.parentElement.classList.toggle('on', b.checked);
-  });
-}
-
-
 function renderBoutiques() {
-  if (!currentUser || (currentUser.role !== 'entreprise' && currentUser.role !== 'employe')) return;
+  if (!currentUser || (currentUser.role !== 'entreprise')) return;
   const listEl = document.getElementById('boutiquesList');
   const prodsEl = document.getElementById('boutiqueProducts');
   if (!listEl) return;
@@ -15033,14 +14567,12 @@ function renderBoutiques() {
   listEl.innerHTML = html;
 }
 
-
 function renderMessages() {
   const el = document.getElementById('messagesList');
   const btnNew = document.getElementById('btnNewMsg');
   if (!el) return;
 
-  if (currentUser.role === 'entreprise' || currentUser.role === 'client' ||
-      (currentUser.role === 'employe' && staffHasFeature('messages'))) {
+  if (currentUser.role === 'entreprise' || currentUser.role === 'client') {
     if (btnNew) {
       btnNew.style.display = '';
       btnNew.textContent = t('newMsg');
@@ -15061,10 +14593,8 @@ function renderMessages() {
   function msgCard(m, isReply) {
     const isMe = m.from === currentUser.id || m.from === currentUser.email ||
                  (currentUser.role === 'entreprise' && (m.from === currentUser.id || m.from === 'e1'));
-    const isBroadcast = m.to === 'all' || m.to === 'all_staff' || m.to === 'staff';
-    const broadcastLabel = (m.to === 'all_staff' || m.to === 'staff')
-      ? (lang === 'en' ? 'All staff' : 'Tous les employés')
-      : t('toAll');
+    const isBroadcast = m.to === 'all';
+    const broadcastLabel = t('toAll');
     const replyRef = m.replyTo ? (data.messages || []).find(x => x.id === m.replyTo) : null;
     const locale = lang === 'en' ? 'en-US' : 'fr-FR';
     const youLabel = lang === 'en' ? 'You' : 'Vous';
@@ -15110,7 +14640,6 @@ function renderMessages() {
   });
 }
 
-
 function getVisibleMessages() {
   if (!currentUser) return [];
   const uid = String(currentUser.id || '');
@@ -15120,7 +14649,7 @@ function getVisibleMessages() {
 
   if (currentUser.role === 'entreprise') {
     // Messages de l'entreprise : broadcasts de cette entreprise + conversations
-    // directes entre le propriétaire et ses clients/employés. Ne jamais prendre
+    // directes entre le propriétaire et ses clients. Ne jamais prendre
     // les messages d'une boutique ou d'une autre entreprise.
     return (data.messages || []).filter(m => {
       const mcid = m.companyId ? String(m.companyId) : '';
@@ -15129,21 +14658,9 @@ function getVisibleMessages() {
       if (!mcid && companyOwnerId && (from === companyOwnerId || to === companyOwnerId)) {
         const other = from === companyOwnerId ? to : from;
         const isClient = (data.clients || []).some(c => String(c.id) === other && String(c.companyId || '') === cid);
-        const isEmployee = (typeof getCompanyEmployees === 'function') && (getCompanyEmployees() || []).some(e => String(e.id) === other);
-        return isClient || isEmployee || from === uid || to === uid;
+        return isClient || from === uid || to === uid;
       }
       return from === uid || to === uid;
-    });
-  }
-  if (currentUser.role === 'employe') {
-    return (data.messages || []).filter(m => {
-      const mcid = m.companyId ? String(m.companyId) : '';
-      if (mcid && mcid !== cid) return false;
-      if (mcid === cid) {
-        if (m.to === 'all_staff' || m.to === 'staff') return true;
-        return String(m.from || '') === uid || String(m.to || '') === uid;
-      }
-      return String(m.from || '') === uid || String(m.to || '') === uid;
     });
   }
   if (currentUser.role === 'client') {
@@ -15152,7 +14669,6 @@ function getVisibleMessages() {
       if (mcid && mcid !== cid) return false;
       if (mcid === cid) {
         if (m.to === 'all') return true;
-        if (m.to === 'all_staff' || m.to === 'staff') return false;
         return String(m.from || '') === uid || String(m.to || '') === uid;
       }
       // Anciennes conversations directes sans company_id : uniquement avec
@@ -15173,6 +14689,8 @@ function openReply(msgId) {
 
 function countShopSubscribers(shopId) {
   if (!shopId) return 0;
+  const g = (window._subCounts || {})[String(shopId)];
+  if (g != null) return Number(g) || 0;
   return (data.subscriptions || []).filter(s => String(s.shopId) === String(shopId)).length;
 }
 
@@ -15185,7 +14703,8 @@ function formatSubscribersLabel(n) {
 }
 
 function renderShopsBrowser() {
-  if (currentUser.role !== 'client') return;
+  // Tous les comptes connectés (client, boutique, entreprise) peuvent parcourir les boutiques et y acheter.
+  if (!currentUser || currentUser.role === 'admin') return;
   const browser = document.getElementById('shopsBrowser');
   const detail = document.getElementById('shopDetail');
   if (!browser) return;
@@ -15206,6 +14725,7 @@ function renderShopsBrowser() {
     let html = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px">
         <button class="btn btn-sm btn-ghost" onclick="selectedShopBrowseId=null;renderShopsBrowser()">← Boutiques</button>
+        <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();chatWithOwner('${shop.ownerId||''}')">💬 Message</button>
         <button class="btn btn-sm ${isSub ? 'btn-danger' : 'btn-accent'}" onclick="event.stopPropagation();toggleSubscribe('${shop.id}')">
           ${isSub ? '✓ '+t('subscribed') : '+ '+t('subscribe')}
         </button>
@@ -15278,6 +14798,7 @@ function renderShopsBrowser() {
       <div class="${coverClass}" style="${coverStyle}">
         ${s.coverImage ? '' : '<span class="shop-cover-fallback">🏪</span>'}
         <div class="shop-badge">${isSub ? '<span class="status-pill status-ok">'+t('subscribed')+'</span>' : ''}</div>
+        ${s.ownerId && String(s.ownerId)!==String(currentUser.id) ? `<button class="btn btn-sm btn-accent" style="position:absolute;right:8px;bottom:8px" onclick="event.stopPropagation();chatWithOwner('${s.ownerId}')">💬</button>` : ''}
       </div>
       <div class="shop-card-body">
         <h3>${s.name}${(typeof isShopCertified==='function'&&isShopCertified(s))?' '+certBadgeHTML():''}</h3>
@@ -15313,25 +14834,55 @@ function renderShopsBrowser() {
   browser.innerHTML = html;
 }
 
-
 async function toggleSubscribe(shopId) {
   if (!currentUser) return;
-  if (!data.subscriptions) data.subscriptions=[];
-  const idx=data.subscriptions.findIndex(x=>String(x.userId)===String(currentUser.id)&&String(x.shopId)===String(shopId));
-  if (USE_SUPABASE&&sb&&alloUuid(currentUser.id)&&alloUuid(shopId)) {
-    try {
-      if(idx>=0){
-        await sb.from('app_records').delete().eq('user_id',currentUser.id).eq('collection','subscriptions').eq('record_key',String(shopId));
-        data.subscriptions.splice(idx,1);
-      } else {
-        await sb.from('app_records').upsert({user_id:currentUser.id,collection:'subscriptions',record_key:String(shopId),value:{shopId:shopId},updated_at:new Date().toISOString()},{onConflict:'user_id,collection,record_key'});
-        data.subscriptions.push({userId:currentUser.id,shopId,date:new Date().toISOString()});
-      }
-      renderShopsBrowser(); return;
-    } catch(e){console.error('[Allo] subscription sync',e);}
+  if (!data.subscriptions) data.subscriptions = [];
+  const uid = String(currentUser.id);
+  const sid = String(shopId);
+  const shop = (data.shops || []).find(x => String(x.id) === sid);
+  if (shop && String(shop.ownerId || '') === uid) {
+    alert(lang === 'en' ? 'You cannot subscribe to your own shop.' : 'Vous ne pouvez pas vous abonner à votre propre boutique.');
+    return;
   }
-  if(idx>=0) data.subscriptions.splice(idx,1); else data.subscriptions.push({userId:currentUser.id,shopId,date:new Date().toISOString()});
-  saveAppData(); renderShopsBrowser();
+  const idx = data.subscriptions.findIndex(x => String(x.userId) === uid && String(x.shopId) === sid);
+  const wasSub = idx >= 0;
+  const online = !!(USE_SUPABASE && sb && alloUuid(currentUser.id) && alloUuid(shopId));
+  if (!window._subCounts) window._subCounts = {};
+  const base = (window._subCounts[sid] != null) ? Number(window._subCounts[sid]) || 0
+    : (data.subscriptions || []).filter(x => String(x.shopId) === sid).length;
+
+  // Mise à jour immédiate de l'écran
+  if (wasSub) { data.subscriptions.splice(idx, 1); window._subCounts[sid] = Math.max(0, base - 1); }
+  else { data.subscriptions.push({ userId: currentUser.id, shopId, date: new Date().toISOString() }); window._subCounts[sid] = base + 1; }
+  window._alloSubs = data.subscriptions.filter(x => String(x.userId) === uid);
+  try { renderShopsBrowser(); } catch (e) {}
+
+  if (!online) { try { saveAppData(); } catch (e) {} return; }
+
+  try {
+    const res = wasSub
+      ? await sb.from('shop_subscriptions').delete().eq('user_id', currentUser.id).eq('shop_id', shopId)
+      : await sb.from('shop_subscriptions').insert({ user_id: currentUser.id, shop_id: shopId });
+    if (res.error) {
+      const msg = String(res.error.code || '') + ' ' + String(res.error.message || '');
+      if (!wasSub && /23505|duplicate|unique/i.test(msg)) {
+        // Déjà abonné en base : on resynchronise simplement les compteurs.
+        try { await loadShopSubscriptions(); } catch (e) {}
+        try { renderShopsBrowser(); } catch (e) {}
+        return;
+      }
+      throw res.error;
+    }
+  } catch (e) {
+    console.error('[Allo] subscription sync', e);
+    // Échec réel : on annule l'affichage pour ne jamais montrer un abonnement non enregistré.
+    const k = data.subscriptions.findIndex(x => String(x.userId) === uid && String(x.shopId) === sid);
+    if (wasSub) { if (k < 0) data.subscriptions.push({ userId: currentUser.id, shopId, date: new Date().toISOString() }); window._subCounts[sid] = base; }
+    else { if (k >= 0) data.subscriptions.splice(k, 1); window._subCounts[sid] = base; }
+    window._alloSubs = data.subscriptions.filter(x => String(x.userId) === uid);
+    try { renderShopsBrowser(); } catch (e2) {}
+    alert(lang === 'en' ? 'Subscription could not be saved. Check your connection.' : 'L’abonnement n’a pas pu être enregistré. Vérifiez votre connexion.');
+  }
 }
 
 // ===== SEARCH =====
@@ -15461,7 +15012,6 @@ function setCatalogResultsPage(p) {
   window._catalogPage = p;
   renderHomeProductsOnly();
 }
-
 
 function setSearchFilter(f) {
   searchFilter = f;
@@ -15643,14 +15193,7 @@ function leaveAccountSpace() {
   if (currentUser.role === 'boutique' || currentUser.role === 'entreprise') return;
   const base = window._alloBaseRole || 'client';
   currentUser.role = base;
-  if (window._alloActiveEmployeeMembershipId) {
-    window._alloActiveEmployeeMembershipId = null;
-    currentUser.employeeMembershipId = null;
-    currentUser.employeeCompanyId = null;
-    currentUser.job = null;
-    currentUser.features = {};
-  }
-  // En quittant un espace client/employe, ne pas laisser companyId d'une entreprise
+  // En quittant un espace client, ne pas laisser companyId d'une entreprise
   // dont on n'est pas proprietaire (sinon Mon entreprise apparait a tort).
   try {
     const uidLeave = String(currentUser.id || '');
@@ -15664,46 +15207,6 @@ function leaveAccountSpace() {
   buildSidebarNav(); buildNav();
   switchView('account');
   renderAccount();
-}
-
-async function openEmployeeSpace(membershipId) {
-  if (!currentUser || !membershipId) return;
-  const membership = (data.employeeMemberships || []).find(m =>
-    String(m.id) === String(membershipId) &&
-    m.isActive !== false &&
-    String(m.userId) === String(currentUser.id)
-  );
-  if (!membership) {
-    alert(lang === 'en' ? 'Employee membership not found.' : 'Rattachement employé introuvable.');
-    return;
-  }
-  const company = (data.companies || []).find(c => String(c.id) === String(membership.companyId));
-  if (!company) {
-    alert(lang === 'en' ? 'Company not found.' : 'Entreprise introuvable.');
-    return;
-  }
-  window._alloBaseRole = currentUser.role || 'client';
-  window._alloActiveEmployeeMembershipId = membership.id;
-  currentUser.employeeMembershipId = membership.id;
-  currentUser.role = 'employe';
-  currentUser.employeeCompanyId = membership.companyId;
-  currentUser.companyId = membership.companyId;
-  currentUser.job = membership.job || 'autre';
-  currentUser.features = membership.features || {};
-  buildSidebarNav(); buildNav(); switchView('home'); renderAll();
-}
-
-function renderEmployeeCompanyChooser() {
-  const memberships = getEmployeeMembershipsForCurrentUser();
-  return memberships.map(m => `
-    <button class="client-company-card" type="button" onclick="openEmployeeSpace('${String(m.membershipId).replace(/'/g, "\'")}');closeModal()">
-      <div class="ccc-ico">🧑‍💼</div>
-      <div class="ccc-info">
-        <div class="ccc-name">${String(m.companyName || '').replace(/</g,'&lt;')}</div>
-        <div class="ccc-sub">${staffJobLabel(m.job)} · ${lang === 'en' ? 'Open employee space' : 'Ouvrir l’espace employé'}</div>
-      </div>
-      <div class="ccc-arrow">›</div>
-    </button>`).join('') || `<div class="empty">${lang === 'en' ? 'No employee space.' : 'Aucun espace employé.'}</div>`;
 }
 
 function getCompaniesForCurrentClient() {
@@ -15785,7 +15288,7 @@ function renderClientSpace() {
     .map(r => String(r.companyId)));
   // Tout compte connecté peut demander à devenir client d'une entreprise.
   // Le propriétaire de l'entreprise ne peut évidemment pas demander à sa propre entreprise.
-  const canRequest = ['user','client','boutique','entreprise','employe'].includes(String(currentUser.role || ''));
+  const canRequest = ['user','client','boutique','entreprise'].includes(String(currentUser.role || ''));
 
   directory.innerHTML = `
     <div class="card" style="margin-bottom:12px">
@@ -15809,7 +15312,7 @@ function renderClientSpace() {
         <div style="flex:1;min-width:180px">
           <div style="font-weight:800">${escapeCompanyText(c.name || (lang==='en'?'Company':'Entreprise'))}</div>
           <div class="ccc-sub">${mine ? (lang==='en'?'You are already a client':'Vous êtes déjà client') : pending ? (lang==='en'?'Your request is waiting for the company':'Votre demande attend la réponse de l’entreprise') : (lang==='en'?'Company on Allo':'Entreprise sur Allo')}</div>
-        </div>${action}
+        </div>${(!mine && !owner) ? `<button class="btn btn-sm btn-ghost" onclick="openCompanyPreview('${cid}')">👁️ ${lang==='en'?'View products':'Voir les produits'}</button>` : ''}${!owner ? `<button class="btn btn-sm btn-ghost" onclick="chatWithOwner('${c.ownerId||''}')">💬</button>` : ''}${action}
       </div>`;
     }).join('') : `<div class="empty">${lang==='en'?'No company is available yet.':'Aucune entreprise disponible pour le moment.'}</div>`}
   `;
@@ -15841,7 +15344,7 @@ function renderClientSpace() {
 }
 
 async function requestToJoinCompany(companyId) {
-  if (_modalActionBusy || !currentUser || !['user','client','boutique','entreprise','employe'].includes(String(currentUser.role || ''))) return;
+  if (_modalActionBusy || !currentUser || !['user','client','boutique','entreprise'].includes(String(currentUser.role || ''))) return;
   const company=getCompanyById(companyId);
   if (!company || String(company.ownerId) === String(currentUser.id)) return;
   if (!setModalActionBusy(true, actionBusyLabel('save'))) return;
@@ -15874,7 +15377,7 @@ async function respondCompanyClientRequest(requestId,decision) {
 }
 
 async function cancelCompanyClientRequest(requestId) {
-  if(!currentUser||!['user','client','boutique','entreprise','employe'].includes(String(currentUser.role || '')))return;
+  if(!currentUser||!['user','client','boutique','entreprise'].includes(String(currentUser.role || '')))return;
   try{ const res=await sb.from('company_client_requests').update({status:'cancelled'}).eq('id',requestId).eq('requester_id',currentUser.id).eq('status','pending').select('*').single(); if(res.error||!res.data)throw(res.error||new Error('Demande introuvable')); await sbLoadAllIntoData(); renderClientSpace(); }catch(e){alert((lang==='en'?'Cancellation failed: ':'Impossible d’annuler : ')+(e.message||e));}
 }
 
@@ -16111,9 +15614,6 @@ function renderSettings() {
 
 function renderAccount() {
   const balCard = document.getElementById('balanceCard');
-  if (currentUser && currentUser.role === 'admin') {
-    syncCashAdminPlanInputs();
-  }
   // Super Admin / Entreprise: pas de portefeuille ni recharges personnelles côté entreprise
   try {
     const fin = document.getElementById('accountFinanceActions');
@@ -16139,7 +15639,7 @@ function renderAccount() {
   const balEl = document.getElementById('accountBalance');
   const hint = document.getElementById('balanceHint');
   const extra = document.getElementById('accountExtra');
-  // Les anciens blocs « Ma boutique / Mon espace client / Mes espaces employés »
+  // Les anciens blocs « Ma boutique / Mon espace client »
   // ne sont plus affichés dans Profil. La gestion des produits est affichée
   // directement dans accountExtra pour les comptes vendeur.
 
@@ -16152,7 +15652,6 @@ function renderAccount() {
   } else {
     balCard.style.display = 'none';
   }
-
 
   // Extra info
   const sellerProductsHTML = renderAccountSellerProducts();
@@ -16541,7 +16040,6 @@ function openModal(type, extra) {
     }
   }
 
-
   if (type === 'addProduct' && (currentUser.role === 'boutique' || currentUser.role === 'entreprise')) {
     let shopId = '';
     if (currentUser.role === 'boutique') {
@@ -16625,65 +16123,6 @@ function openModal(type, extra) {
 
 
 
-  if (type === 'addEmployee' && currentUser.role === 'entreprise') {
-    const jobOpts = Object.keys(STAFF_JOBS).map(k => {
-      const j = STAFF_JOBS[k];
-      return `<option value="${k}">${j.ico} ${lang === 'en' ? j.en : j.fr}</option>`;
-    }).join('');
-    const defaultFeat = defaultStaffFeatures('magasinier');
-    html = `<button class="modal-close" onclick="closeModal()">×</button>
-      <h3>${t('createEmployee')}</h3>
-      <p class="sub">${lang === 'en' ? 'The employee must already have an Allo account. Enter their credentials to verify and attach that account to your company.' : 'L’employé doit déjà avoir un compte Allo. Entrez ses identifiants pour vérifier et rattacher ce compte à votre entreprise.'}</p>
-      <div class="field"><label>${t('identifier') || 'Identifiant Allo'}</label>
-        <input id="mEmpId" type="text" placeholder="Ex: jean_dupont" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
-      <div class="field"><label>${lang === 'en' ? 'Account password' : 'Mot de passe du compte'}</label>
-        <input id="mEmpPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
-      <div class="field"><label>${t('employeeJob')}</label>
-        <select id="mEmpJob" onchange="onEmpJobChangeDefaults()">${jobOpts}</select>
-      </div>
-      <div class="field">
-        <label>${t('staffFeatures')}</label>
-        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${t('staffFeaturesHint')}</p>
-        <div class="zone-check-grid" id="mEmpFeatures">${staffFeaturesCheckboxesHTML(defaultFeat)}</div>
-      </div>
-      <button class="btn btn-accent btn-block" onclick="addEmployee()">${t('createEmployee')}</button>`;
-  }
-
-  if (type === 'employeeCompanies') {
-    html = `<button class="modal-close" onclick="closeModal()">×</button>
-      <h3>${lang === 'en' ? 'Choose an employee space' : 'Choisir un espace employé'}</h3>
-      <p class="sub">${lang === 'en' ? 'Your Allo account can work for several companies. Choose the company you want to enter.' : 'Votre compte Allo peut travailler pour plusieurs entreprises. Choisissez l’entreprise dont vous voulez ouvrir l’espace.'}</p>
-      ${renderEmployeeCompanyChooser()}`;
-  }
-
-  if (type === 'editEmployee' && currentUser.role === 'entreprise') {
-    const emp = getCompanyEmployees().find(u => String(u.id) === String(extra));
-    if (!emp) { alert(lang === 'en' ? 'Employee not found' : 'Employé introuvable'); return; }
-    const jobOpts = Object.keys(STAFF_JOBS).map(k => {
-      const j = STAFF_JOBS[k];
-      const sel = (emp.job || 'autre') === k ? 'selected' : '';
-      return `<option value="${k}" ${sel}>${j.ico} ${lang === 'en' ? j.en : j.fr}</option>`;
-    }).join('');
-    const feat = getStaffFeatures(emp);
-    html = `<button class="modal-close" onclick="closeModal()">×</button>
-      <h3>${t('editEmployee')}</h3>
-      <p class="sub">${emp.identifier || emp.email || ''}</p>
-      <div class="field"><label>${t('fullName') || 'Nom complet'}</label>
-        <input id="mEmpName" type="text" value="${(emp.name || '').replace(/"/g, '&quot;')}"></div>
-      <div class="field"><label>${t('password') || 'Mot de passe'} <span style="font-weight:400;text-transform:none;letter-spacing:0">(laisser vide = inchangé)</span></label>
-        <input id="mEmpPass" type="password" placeholder="••••••••"></div>
-      <div class="field"><label>${t('employeeJob')}</label>
-        <select id="mEmpJob" onchange="onEmpJobChangeDefaults()">${jobOpts}</select>
-      </div>
-      <div class="field">
-        <label>${t('staffFeatures')}</label>
-        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${t('staffFeaturesHint')}</p>
-        <div class="zone-check-grid" id="mEmpFeatures">${staffFeaturesCheckboxesHTML(feat)}</div>
-      </div>
-      <button class="btn btn-accent btn-block" onclick="saveEmployee('${emp.id}')">${t('save') || 'Enregistrer'}</button>`;
-  }
-
-
   if (type === 'clientPrices' && currentUser && currentUser.role === 'entreprise') {
     const client = (data.clients || []).find(c => String(c.id) === String(extra) && String(c.companyId) === String(currentUser.companyId));
     if (!client) { alert(lang === 'en' ? 'Client not found.' : 'Client introuvable.'); return; }
@@ -16735,30 +16174,15 @@ function openModal(type, extra) {
   }
 
   if (type === 'newMessage') {
-    // Direct message to a specific employee id passed as extra
-    if (extra && currentUser.role === 'entreprise') {
-      const emp = (registeredUsers || []).find(u => String(u.id) === String(extra));
-      const empName = emp ? emp.name : extra;
-      html = `<button class="modal-close" onclick="closeModal()">×</button>
-        <h3>${t('newMessage')}</h3>
-        <p class="sub">${lang === 'en' ? 'To' : 'À'} : ${empName}</p>
-        <div class="field"><label>${t('message')}</label>
-          <textarea id="mText" rows="4" placeholder="${t('writeYourMessage')}"></textarea>
-        </div>
-        <button class="btn btn-accent btn-block" onclick="sendMessage('${extra}')">Envoyer</button>`;
-    } else if (currentUser.role === 'entreprise') {
+    if (currentUser.role === 'entreprise') {
       const clients = (data.clients || []).filter(c => c.companyId === currentUser.companyId);
-      const staff = (typeof getCompanyEmployees === 'function') ? getCompanyEmployees() : [];
       const clientOpts = clients.map(c => `<option value="${c.id}">👤 ${c.name} (${c.identifiant || c.phone || ''})</option>`).join('');
-      const staffOpts = staff.map(e => `<option value="${e.id}">🧑‍💼 ${e.name} · ${staffJobLabel(e.job)}</option>`).join('');
       html = `<button class="modal-close" onclick="closeModal()">×</button>
         <h3>${t('newMessage')}</h3>
-        <p class="sub">${t('sendToStaffOrClient')}</p>
+        <p class="sub">${t('sendToClient') || (lang === 'en' ? 'Send to a client or everyone' : 'Envoyer à un client ou à tous')}</p>
         <div class="field"><label>${t('recipient')}</label>
           <select id="mTo">
-            <option value="all_staff">${t('allEmployees')}</option>
             <option value="all">${t('allClients')}</option>
-            ${staffOpts ? `<optgroup label="${lang === 'en' ? 'Employees' : 'Employés'}">${staffOpts}</optgroup>` : ''}
             ${clientOpts ? `<optgroup label="${lang === 'en' ? 'Clients' : 'Clients'}">${clientOpts}</optgroup>` : ''}
           </select>
         </div>
@@ -16766,15 +16190,6 @@ function openModal(type, extra) {
           <textarea id="mText" rows="4" placeholder="${t('writeYourMessage')}"></textarea>
         </div>
         <button class="btn btn-accent btn-block" onclick="sendMessage()">Envoyer</button>`;
-    } else if (currentUser.role === 'employe') {
-      const company = data.companies.find(c => c.id === currentUser.companyId);
-      html = `<button class="modal-close" onclick="closeModal()">×</button>
-        <h3>${t('writeToCompany')}</h3>
-        <p class="sub">${company ? company.name : (lang === 'en' ? 'Company' : 'Entreprise')}</p>
-        <div class="field"><label>${t('message')}</label>
-          <textarea id="mText" rows="4" placeholder="${t('writeYourMessage')}"></textarea>
-        </div>
-        <button class="btn btn-accent btn-block" onclick="sendMessage('company')">Envoyer</button>`;
     } else if (currentUser.role === 'client') {
       const company = data.companies.find(c => c.id === currentUser.companyId);
       html = `<button class="modal-close" onclick="closeModal()">×</button>
@@ -16786,7 +16201,6 @@ function openModal(type, extra) {
         <button class="btn btn-accent btn-block" onclick="sendMessage('company')">Envoyer</button>`;
     }
   }
-
 
   if (type === 'addHashtag') {
     html = `<button class="modal-close" onclick="closeModal()">×</button>
@@ -16935,7 +16349,6 @@ function openModal(type, extra) {
       <button class="btn btn-accent btn-block" onclick="sendSuggestionToAdmin()">${t('send')}</button>`;
   }
 
-  
   if (type === 'topUp') {
     window._walletPayMethod = 'wave';
     html = `<button class="modal-close" onclick="closeModal()">×</button>
@@ -17090,7 +16503,6 @@ function openModal(type, extra) {
       <button class="btn btn-accent btn-block" onclick="submitKyc()">${t('kycSubmit')}</button>`;
   }
 
-  
   if (type === 'sellerProfile') {
     const ownerId = String(extra || '');
     let owner = (registeredUsers || []).find(u => String(u.id) === ownerId);
@@ -17203,7 +16615,6 @@ function openModal(type, extra) {
       </div>
       <button class="btn btn-accent btn-block" onclick="sendReply()">${t('sendReply')}</button>`;
   }
-
 
   // --- v4 modals ---
   if (type === 'requestTopUp') {
@@ -17341,7 +16752,6 @@ function openModal(type, extra) {
     if (ta) ta.focus();
   }, 80);
 }
-
 
 function profileNeedsCompletion(u) {
   // Plus de questionnaire forcé après inscription.
@@ -17928,7 +17338,6 @@ function initProductImagesAfterModal() {
   try { renderProductFormImages(); } catch (e) {}
 }
 
-
 async function previewShopCover(input) {
   const file = input && input.files && input.files[0];
   if (!file) return;
@@ -18022,7 +17431,7 @@ async function saveShopProfile() {
 function ensureBoutiqueShop() {
   if (!currentUser) return null;
   // Les entreprises utilisent ensureCompanyCatalogForCurrentUser(), pas cette voie boutique.
-  if (currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+  if (currentUser.role === 'entreprise') {
     return null;
   }
   try { resolveUserShopLinks(); } catch (e) {}
@@ -18398,7 +17807,7 @@ function sendMessage(toId) {
   // Le nom de l'entreprise ne remplace pas le nom de l'utilisateur expéditeur.
   fromName = currentUser.name || currentUser.identifier || fromId;
 
-  if (to === 'company' && (currentUser.role === 'client' || currentUser.role === 'employe')) {
+  if (to === 'company' && (currentUser.role === 'client')) {
     const company = data.companies.find(c => c.id === currentUser.companyId);
     to = company ? company.ownerId : 'e1';
   }
@@ -18420,11 +17829,7 @@ function sendMessage(toId) {
 
   // Notifications destinataires
   try {
-    if (to === 'all_staff' || to === 'staff') {
-      (typeof getCompanyEmployees === 'function' ? getCompanyEmployees() : []).forEach(e => {
-        pushUserNotif(e.id, lang === 'en' ? 'Message from company' : 'Message de l\'entreprise', text.slice(0, 80));
-      });
-    } else if (to === 'all') {
+    if (to === 'all') {
       (data.clients || []).filter(c => c.companyId === currentUser.companyId).forEach(c => {
         pushUserNotif(c.id, lang === 'en' ? 'Message from company' : 'Message de l\'entreprise', text.slice(0, 80));
       });
@@ -18437,7 +17842,7 @@ function sendMessage(toId) {
   closeModal();
   replyToMsgId = null;
   switchView('messages');
-  alert((to === 'all' || to === 'all_staff' || to === 'staff') ? t('msgSentAll') : t('msgSent'));
+  alert((to === 'all') ? t('msgSentAll') : t('msgSent'));
 }
 
 function sendReply() {
@@ -18451,8 +17856,8 @@ function sendReply() {
   if (to === currentUser.id || to === currentUser.email) {
     to = original.to === 'all' ? 'company' : original.to;
   }
-  if (to === 'company' || to === 'all_staff' || to === 'staff' ||
-      ((currentUser.role === 'client' || currentUser.role === 'employe') && !to)) {
+  if (to === 'company' ||
+      ((currentUser.role === 'client') && !to)) {
     const company = data.companies.find(c => c.id === currentUser.companyId);
     to = company ? company.ownerId : 'e1';
   }
@@ -18727,8 +18132,9 @@ async function sbSyncRuntimeState() {
       const patch = {
         name: u.name || null, identifier: u.identifier || null, email: u.email || null,
         phone: u.phone || null, balance: Number(u.balance || 0), wallet: Number(u.wallet || 0),
-        shop_id: alloUuid(u.shopId) ? u.shopId : null, company_id: alloUuid(u.companyId) ? u.companyId : null,
-        job: u.job || null, features: u.features || {}, avatar_url: u.avatarUrl || u.avatar_url || null,
+        shop_id: (u.role !== 'admin' && alloUuid(u.shopId)) ? u.shopId : null,
+        company_id: (u.role !== 'admin' && alloUuid(u.companyId)) ? u.companyId : null,
+        avatar_url: u.avatarUrl || u.avatar_url || null,
         is_active: u.is_active !== false, deleted_at: u.deleted_at || null, updated_at: new Date().toISOString()
       };
       await sb.from('profiles').update(patch).eq('id', u.id);
@@ -18774,7 +18180,8 @@ async function sbSyncRuntimeState() {
     // utilisent target + company_id. Les deux doivent être persistés.
     for (const m of (data.messages || [])) {
       if (!m || !alloUuid(m.from)) continue;
-      const isBroadcast = m.to === 'all' || m.to === 'all_staff' || m.to === 'staff';
+      const isBroadcast = m.to === 'all';
+      if (!isBroadcast) continue; // les messages directs sont gérés par la messagerie temps réel (évite d'écraser read_at)
       if (!isBroadcast && !alloUuid(m.to)) continue;
       if (!admin && !isBroadcast && String(m.from)!==String(uid) && String(m.to)!==String(uid)) continue;
       if (!admin && isBroadcast && String(m.companyId || currentUser.companyId || '') !== String(currentUser.companyId || '')) continue;
@@ -19704,7 +19111,7 @@ function renderVariantsPage() {
   if (!variants.length) {
     el.innerHTML = '<div class="empty">Aucun modèle</div>'; return;
   }
-  const canAdd = currentUser && (currentUser.role === 'client' || currentUser.role === 'entreprise' || currentUser.role === 'employe' || currentUser.role === 'boutique');
+  const canAdd = currentUser && (currentUser.role === 'client' || currentUser.role === 'entreprise' || currentUser.role === 'boutique');
   el.innerHTML = variants.map(v => {
     const promoOn = isVariantPromoActive(v);
     const eff = getEffectivePrice(p, v);
@@ -19807,7 +19214,6 @@ function deleteProductVariant(productId, variantId) {
     openModal('manageVariants', productId);
   }
 }
-
 
 
 // ===== ACTIVATION & FORMULES (boutiques + entreprises) =====
@@ -20669,9 +20075,7 @@ function renderAdminCompanyActivations() {
   } catch (e) {}
 }
 
-
 init();
-
 
 // ===== BADGES & ORDER NOTIFICATIONS =====
 function countUndeliveredOrders() {
@@ -20693,13 +20097,13 @@ function countUndeliveredOrders() {
       });
       return String(o.userId || '') === String(currentUser.id || '') && (!cid || belongsToCompany) && norm !== 'livré';
     }
-    if (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+    if (currentUser.role === 'boutique' || currentUser.role === 'entreprise') {
       const shopIds = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String);
       const items = orderItemsForSeller(o);
       if (!items.length) return false;
       // Espace entreprise : badge seulement si non vue ET non livrée.
       const isCompany = !!(o.companyId || o.payment === 'company_free');
-      if ((currentUser.role === 'entreprise' || currentUser.role === 'employe') && isCompany) {
+      if ((currentUser.role === 'entreprise') && isCompany) {
         if (norm === 'livré' || norm === 'annulé') return false;
         return !orderHasSellerSeen(o);
       }
@@ -20817,7 +20221,6 @@ function notifySellersOfOrder(order) {
 }
 
 
-
 // ===== FEATURES v3: wishlist, promo, reorder, returns, invoice, export, reco, stock alerts =====
 window._appliedPromo = null;
 
@@ -20829,7 +20232,7 @@ function isInWishlist(productId) {
 function updateWishlistCardUI(productId) {
   if (!productId) return;
   const isFav = currentUser && isInWishlist(productId);
-  const favCount = (data.wishlist || []).filter(w => String(w.productId) === String(productId)).length;
+  const favCount = getProductLikeCount(productId);
   const key = String(productId);
   const safe = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   document.querySelectorAll('.product-card[data-product-id="' + safe + '"]').forEach(card => {
@@ -20848,7 +20251,7 @@ function updateWishlistCardUI(productId) {
         const t = (lbl.textContent || '').toUpperCase();
         if (t.indexOf('FAV') === -1) return;
         const val = stat.querySelector('.val');
-        if (val) val.textContent = String(favCount > 99 ? 99 : favCount);
+        if (val) val.textContent = (favCount > 99 ? '99+' : String(favCount));
         if (isFav) stat.classList.add('high');
         else stat.classList.remove('high');
       }
@@ -20878,26 +20281,58 @@ function toggleWishlist(productId) {
   if (!currentUser) return;
   try { ensureProductView(productId); } catch (_) {}
   if (!data.wishlist) data.wishlist = [];
-  const i = data.wishlist.findIndex(w => w.userId === currentUser.id && w.productId === productId);
-  if (i >= 0) data.wishlist.splice(i, 1);
-  else {
+  if (!window._likeCounts) window._likeCounts = {};
+  const key = String(productId);
+  const uid = String(currentUser.id);
+  const i = data.wishlist.findIndex(w => String(w.userId) === uid && String(w.productId) === key);
+  const wasFav = i >= 0;
+  const baseCount = getProductLikeCount(productId);
+  const online = !!(typeof alloIsSupabaseMode === 'function' && alloIsSupabaseMode() && alloUuid(currentUser.id) && alloUuid(productId));
+
+  if (wasFav) {
+    data.wishlist.splice(i, 1);
+    window._likeCounts[key] = Math.max(0, baseCount - 1);
+  } else {
     data.wishlist.push({ userId: currentUser.id, productId, date: new Date().toISOString() });
+    window._likeCounts[key] = baseCount + 1;
     try {
-      const p = (data.products || []).find(x => String(x.id) === String(productId));
+      const p = (data.products || []).find(x => String(x.id) === key);
       const cats = p && (typeof getProductCats === 'function') ? getProductCats(p) : (p && p.cat ? [p.cat] : []);
       if (typeof trackInteraction === 'function') trackInteraction('wishlist', { productId, shopId: p && p.shopId, cat: cats[0] });
     } catch (e) {}
   }
-  try { saveAppData(); } catch (e) {}
   // Mise à jour locale stable — pas de re-render de la grille catalogue
   try { updateWishlistCardUI(productId); } catch (e) {}
-  // Wishlist page : seulement si on y est
   const wishView = document.getElementById('view-wishlist');
   if (wishView && wishView.classList.contains('active') && typeof renderWishlist === 'function') {
     try { renderWishlist(); } catch (e) {}
   }
-  // Recherche active : mise à jour visuelle locale uniquement (pas doSearch qui reconstruit tout)
-  // Les cartes de la vue search ont aussi data-product-id, donc updateWishlistCardUI suffit.
+
+  if (!online) { try { saveAppData(); } catch (e) {} return; }
+
+  // Écriture DIRECTE et immédiate en base (avant : seulement via la synchro globale, jamais supprimée)
+  (async function () {
+    try {
+      const res = wasFav
+        ? await sb.from('wishlist').delete().eq('user_id', currentUser.id).eq('product_id', productId)
+        : await sb.from('wishlist').insert({ user_id: currentUser.id, product_id: productId });
+      if (res.error) {
+        const msg = String(res.error.code || '') + ' ' + String(res.error.message || '');
+        if (!wasFav && /23505|duplicate|unique/i.test(msg)) { try { await loadProductLikeCounts(); } catch (e) {} try { updateWishlistCardUI(productId); } catch (e) {} return; }
+        throw res.error;
+      }
+    } catch (e) {
+      console.error('[Allo] wishlist sync', e);
+      // Échec réel : on annule pour ne pas afficher un like qui disparaîtra au rechargement.
+      const k = data.wishlist.findIndex(w => String(w.userId) === uid && String(w.productId) === key);
+      if (wasFav) { if (k < 0) data.wishlist.push({ userId: currentUser.id, productId, date: new Date().toISOString() }); }
+      else if (k >= 0) data.wishlist.splice(k, 1);
+      window._likeCounts[key] = baseCount;
+      try { updateWishlistCardUI(productId); } catch (e2) {}
+      try { if (wishView && wishView.classList.contains('active')) renderWishlist(); } catch (e2) {}
+      alert(lang === 'en' ? 'Favorite could not be saved. Check your connection.' : 'Le favori n’a pas pu être enregistré. Vérifiez votre connexion.');
+    }
+  })();
 }
 function renderWishlist() {
   const el = document.getElementById('wishlistContent');
@@ -20986,7 +20421,7 @@ function renderReturns() {
   let list = data.returns || [];
   if (currentUser.role === 'client') {
     list = list.filter(r => r.userId === currentUser.id);
-  } else if (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+  } else if (currentUser.role === 'boutique' || currentUser.role === 'entreprise') {
     const shopIds = getSellerShopIds();
     list = list.filter(r => {
       const o = data.orders.find(x => x.id === r.orderId);
@@ -21063,6 +20498,476 @@ const INTERACT_KEY = 'allora_interactions';
 const RECENT_PURCHASE_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_INTERACT_EVENTS = 400;
 
+// ===== MESSAGERIE STYLE WHATSAPP (conversations privées, ✓ envoyé / ✓✓ reçu / ✓✓ bleu vu, temps réel, vocaux, blocage) =====
+const CH = { msgs: [], peers: {}, blocks: new Set(), open: null, chan: null, loaded: false, rec: null, uid: null, shell: null };
+(function(){ const st = document.createElement('style'); st.textContent =
+'.ch-row{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border,#2a2a35);cursor:pointer}'+
+'.ch-av{width:42px;height:42px;border-radius:50%;background:var(--surface-2,#222);display:flex;align-items:center;justify-content:center;font-weight:800;flex:none;overflow:hidden}'+
+'.ch-av img{width:100%;height:100%;object-fit:cover}.ch-mid{flex:1;min-width:0}.ch-nm{font-weight:700;font-size:14px}'+
+'.ch-last{font-size:12.5px;color:var(--text-muted,#999);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+'.ch-unread{background:#25d366;color:#000;border-radius:999px;font-size:11px;font-weight:800;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;padding:0 6px}'+
+'.ch-pane{position:fixed;left:0;right:0;z-index:2000;display:flex;flex-direction:column;padding:0 12px;box-sizing:border-box;background:var(--bg,#0f0f14);overflow:hidden;touch-action:manipulation}.ch-head{flex:none;display:flex;align-items:center;gap:10px;padding:6px 0 10px;border-bottom:1px solid var(--border,#2a2a35)}'+
+'.ch-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 2px;display:flex;flex-direction:column;gap:4px}'+
+'.ch-b{max-width:80%;padding:7px 10px 4px;border-radius:12px;font-size:14px;line-height:1.35;word-wrap:break-word;white-space:pre-wrap}'+
+'.ch-me{align-self:flex-end;background:#005c4b;color:#fff;border-bottom-right-radius:3px}.ch-ot{align-self:flex-start;background:var(--surface-2,#2b2b36);border-bottom-left-radius:3px}'+
+'.ch-meta{font-size:10px;opacity:.7;text-align:right;margin-top:2px}.ch-tk.seen{color:#53bdeb;opacity:1}'+
+'.ch-in{display:flex;flex:none;gap:8px;align-items:flex-end;padding:8px 0 6px;background:var(--bg,#0f0f14);position:relative;z-index:5;flex-shrink:0;width:100%;box-sizing:border-box}.ch-in textarea{flex:1;resize:none;max-height:120px;min-height:42px;border-radius:21px;padding:10px 14px;font-size:16px;line-height:1.35;overflow-y:auto;box-sizing:border-box;-webkit-user-select:text;user-select:text}'+
+'.ch-btn{width:42px;height:42px;border-radius:50%;border:0;background:#25d366;color:#000;font-size:18px;flex:none}.ch-b audio{max-width:220px;height:36px}'; document.head.appendChild(st); })();
+
+function chEsc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function chOn(){ return !!(typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb && currentUser && alloUuid(currentUser.id)); }
+function chName(id){ const p = CH.peers[String(id)]; return (p && p.name) || (lang === 'en' ? 'User' : 'Utilisateur'); }
+function chTime(d){ try { return new Date(d).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); } catch(e){ return ''; } }
+function chAvatar(id){ const p = CH.peers[String(id)] || {}; return `<div class="ch-av">${p.avatar_url ? `<img src="${chEsc(p.avatar_url)}" alt="">` : chEsc((chName(id)[0] || '?').toUpperCase())}</div>`; }
+function chUnread(){ const me = String(currentUser && currentUser.id || ''); return CH.msgs.filter(m => String(m.receiver_id) === me && !m.read_at && !CH.blocks.has(String(m.sender_id))).length; }
+
+async function chFetchPeers(ids){
+  const need = [...new Set(ids.map(String))].filter(i => i && !CH.peers[i]);
+  if (!need.length) return;
+  const r = await sb.rpc('chat_profiles', { ids: need });
+  if (!r.error) (r.data || []).forEach(p => { CH.peers[String(p.id)] = p; });
+}
+
+async function chLoad(){
+  if (!chOn()) return;
+  const me = String(currentUser.id);
+  if (CH.uid !== me) { CH.msgs = []; CH.peers = {}; CH.blocks = new Set(); CH.open = null; CH.uid = me; chStartRealtime(); }
+  const [m, b] = await Promise.all([
+    sb.from('messages').select('*').is('target', null).not('receiver_id', 'is', null)
+      .or('sender_id.eq.' + me + ',receiver_id.eq.' + me).order('created_at', { ascending: true }).limit(2000),
+    sb.from('user_blocks').select('blocked_id').eq('blocker_id', me)
+  ]);
+  if (m.error) { console.warn('[Allo] chat load', m.error); return; }
+  CH.msgs = m.data || [];
+  CH.blocks = new Set((b.data || []).map(x => String(x.blocked_id)));
+  await chFetchPeers(CH.msgs.map(x => String(x.sender_id) === me ? x.receiver_id : x.sender_id));
+  CH.loaded = true;
+  // Tout ce qui m'est arrivé est maintenant « reçu »
+  const now = new Date().toISOString();
+  if (CH.msgs.some(x => String(x.receiver_id) === me && !x.delivered_at)) {
+    sb.from('messages').update({ delivered_at: now }).eq('receiver_id', me).is('delivered_at', null).then(function(){});
+    CH.msgs.forEach(x => { if (String(x.receiver_id) === me && !x.delivered_at) x.delivered_at = now; });
+  }
+  try { updateAllBadges(); } catch(e) {}
+}
+
+function chStartRealtime(){
+  try { if (CH.chan) sb.removeChannel(CH.chan); } catch(e) {}
+  const me = String(currentUser.id);
+  const h = payload => { try { chApply(payload.new); } catch(e) { console.warn(e); } };
+  CH.chan = sb.channel('allo-chat-' + me + '-' + Date.now())
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me }, h)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + me }, h)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me }, h)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: 'sender_id=eq.' + me }, h)
+    .subscribe();
+}
+
+async function chApply(row){
+  if (!row || row.target || !row.receiver_id || !currentUser) return;
+  const me = String(currentUser.id), incoming = String(row.receiver_id) === me;
+  const peer = String(incoming ? row.sender_id : row.receiver_id);
+  if (!CH.peers[peer]) await chFetchPeers([peer]);
+  const i = CH.msgs.findIndex(x => String(x.id) === String(row.id) || (x._tmp && x._tmp === row.id));
+  if (i >= 0) CH.msgs[i] = Object.assign({}, CH.msgs[i], row, { _tmp: null }); else CH.msgs.push(row);
+  const cur = CH.msgs.find(x => String(x.id) === String(row.id));
+  if (incoming && cur && !cur.delivered_at) { cur.delivered_at = new Date().toISOString(); sb.from('messages').update({ delivered_at: cur.delivered_at }).eq('id', cur.id).then(function(){}); }
+  const viewing = CH.open === peer && document.getElementById('view-messages') && document.getElementById('view-messages').classList.contains('active');
+  if (incoming && viewing && cur && !cur.read_at) chMarkRead(peer);
+  if (document.getElementById('view-messages') && document.getElementById('view-messages').classList.contains('active')) { CH.open ? chPane(true) : chList(); }
+  try { updateAllBadges(); } catch(e) {}
+}
+
+function chMarkRead(peer){
+  const me = String(currentUser.id), now = new Date().toISOString();
+  const mine = CH.msgs.filter(x => String(x.sender_id) === String(peer) && String(x.receiver_id) === me && !x.read_at);
+  if (!mine.length) return;
+  mine.forEach(x => { x.read_at = now; x.delivered_at = x.delivered_at || now; });
+  sb.from('messages').update({ read_at: now, delivered_at: now }).eq('receiver_id', me).eq('sender_id', peer).is('read_at', null).then(function(){});
+  try { updateAllBadges(); } catch(e) {}
+}
+
+function chConvos(){
+  const me = String(currentUser.id), map = {};
+  CH.msgs.forEach(m => { const p = String(m.sender_id) === me ? String(m.receiver_id) : String(m.sender_id); (map[p] = map[p] || []).push(m); });
+  return Object.keys(map).map(p => ({ peer: p, last: map[p][map[p].length - 1], unread: map[p].filter(m => String(m.receiver_id) === me && !m.read_at).length }))
+    .sort((a, b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+}
+
+function chList(){
+  const el = document.getElementById('messagesList'); if (!el) return;
+  CH.open = null; chOverlayRemove();
+  const me = String(currentUser.id), fr = lang !== 'en';
+  const rows = chConvos().map(c => {
+    const l = c.last, mine = String(l.sender_id) === me;
+    const txt = l.kind === 'audio' ? '🎤 ' + (fr ? 'Message vocal' : 'Voice message') : l.body;
+    return `<div class="ch-row" onclick="chOpen('${c.peer}')">${chAvatar(c.peer)}<div class="ch-mid"><div class="ch-nm">${chEsc(chName(c.peer))}${CH.blocks.has(c.peer) ? ' 🚫' : ''}</div><div class="ch-last">${mine ? '<span class="ch-tk' + (l.read_at ? ' seen' : '') + '">' + (l.delivered_at || l.read_at ? '✓✓' : '✓') + '</span> ' : ''}${chEsc(txt)}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--text-muted)">${chTime(l.created_at)}</div>${c.unread ? '<div class="ch-unread">' + c.unread + '</div>' : ''}</div></div>`;
+  }).join('');
+  el.innerHTML = `<input id="chSearch" placeholder="${fr ? 'Rechercher une personne, boutique ou entreprise…' : 'Search a person, shop or company…'}" oninput="chSearch(this.value)" style="width:100%;margin-bottom:8px"><div id="chResults"></div>` +
+    (rows || `<div class="empty">${fr ? 'Aucune discussion. Recherchez quelqu’un pour commencer.' : 'No chats yet. Search someone to start.'}</div>`);
+}
+
+let _chSearchT = null;
+function chSearch(q){
+  clearTimeout(_chSearchT);
+  _chSearchT = setTimeout(async () => {
+    const box = document.getElementById('chResults'); if (!box) return;
+    if (String(q).trim().length < 2) { box.innerHTML = ''; return; }
+    const r = await sb.rpc('chat_search', { q });
+    if (r.error) { box.innerHTML = ''; return; }
+    (r.data || []).forEach(p => { CH.peers[String(p.id)] = p; });
+    box.innerHTML = (r.data || []).map(p => `<div class="ch-row" onclick="chOpen('${p.id}')">${chAvatar(p.id)}<div class="ch-mid"><div class="ch-nm">${chEsc(p.name)}</div><div class="ch-last">${chEsc(p.role)}</div></div></div>`).join('') || '<div class="empty">—</div>';
+  }, 250);
+}
+
+async function chOpen(peer){
+  if (!chOn()) return;
+  peer = String(peer);
+  if (peer === String(currentUser.id)) return;
+  if (!CH.loaded) await chLoad();
+  await chFetchPeers([peer]);
+  CH.open = peer;
+  chMarkRead(peer);
+  chPane(false);
+}
+
+function chTicks(m){
+  if (m._failed) return '⚠️'; if (m._tmp) return '🕒';
+  return `<span class="ch-tk ${m.read_at ? 'seen' : ''}">${m.read_at || m.delivered_at ? '✓✓' : '✓'}</span>`;
+}
+
+function chPane(keep){
+  const el = document.getElementById('messagesList'); if (!el || !CH.open) return;
+  const me = String(currentUser.id), peer = CH.open, fr = lang !== 'en', blocked = CH.blocks.has(peer);
+  const old = document.getElementById('chScroll'), draft = (document.getElementById('chText') || {}).value || '';
+  const sameShell = keep && old && CH.shell === peer + '|' + blocked;
+  const msgs = CH.msgs.filter(m => (String(m.sender_id) === me && String(m.receiver_id) === peer) || (String(m.sender_id) === peer && String(m.receiver_id) === me));
+  const bubbles = msgs.map(m => {
+    const mine = String(m.sender_id) === me;
+    const body = m.kind === 'audio' && m.audio_url ? `<audio controls preload="none" src="${chEsc(m.audio_url)}"></audio>` : chEsc(m.body);
+    return `<div class="ch-b ${mine ? 'ch-me' : 'ch-ot'}">${body}<div class="ch-meta">${chTime(m.created_at)} ${mine ? chTicks(m) : ''}</div></div>`;
+  }).join('');
+  if (sameShell) {
+    const atBottom = old.scrollHeight - old.scrollTop - old.clientHeight < 80;
+    old.innerHTML = bubbles;
+    if (atBottom) old.scrollTop = old.scrollHeight;
+    return;
+  }
+  chOverlayRemove(); CH.shell = peer + '|' + blocked; el.innerHTML = '';
+  const _tmp = document.createElement('div');
+  _tmp.innerHTML = `<div class="ch-pane"><div class="ch-head"><button class="btn btn-sm btn-ghost" onclick="chBack()">←</button>${chAvatar(peer)}<div class="ch-nm" style="flex:1">${chEsc(chName(peer))}</div><button class="btn btn-sm btn-ghost" onclick="chToggleBlock('${peer}')">${blocked ? (fr ? 'Débloquer' : 'Unblock') : (fr ? '🚫 Bloquer' : '🚫 Block')}</button></div>
+    <div class="ch-scroll" id="chScroll">${bubbles || ''}</div>
+    ${blocked ? `<div class="empty" style="padding:12px">${fr ? 'Contact bloqué. Débloquez-le pour lui écrire.' : 'Contact blocked. Unblock to message.'}</div>` :
+    `<div class="ch-in"><textarea id="chText" rows="1" placeholder="${fr ? 'Votre message' : 'Message'}" oninput="chGrow(this)" onfocus="chKb(true)" onblur="chKb(false)" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!chTouch()){event.preventDefault();chSend();}">${chEsc(draft)}</textarea><button class="ch-btn" id="chMic" onclick="chVoice()">🎤</button><button class="ch-btn" onclick="chSend()">➤</button></div>`}</div>`;
+  document.body.appendChild(_tmp.firstElementChild);
+  try { chGrow(document.getElementById('chText')); chFit(); } catch(e) {}
+  const sc = document.getElementById('chScroll');
+  if (sc) sc.scrollTop = (keep && old && old.scrollHeight - old.scrollTop - old.clientHeight > 80) ? old.scrollTop : sc.scrollHeight;
+}
+function chTouch(){ try { return window.matchMedia('(pointer:coarse)').matches; } catch(e) { return false; } }
+function chGrow(t){ if (!t) return; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px'; }
+CH.kb = false;
+function chKb(on){
+  CH.kb = !!on;
+  // Plusieurs passes : le clavier mobile s'anime (Android/iOS)
+  [0, 50, 120, 280, 450].forEach(function(ms){
+    setTimeout(function(){ try { chFit(); } catch(e) {} }, ms);
+  });
+  if (on) {
+    setTimeout(function(){
+      try {
+        var ta = document.getElementById('chText');
+        if (ta) ta.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+      } catch(e) {}
+    }, 100);
+  }
+}
+/** Ajuste la hauteur de la discussion à l'écran réel : la zone de saisie reste visible juste au-dessus du clavier. */
+function chFit(){
+  const pane = document.querySelector('.ch-pane'); if (!pane) return;
+  const vv = window.visualViewport;
+  const ta = document.getElementById('chText');
+  const typing = CH.kb || (ta && document.activeElement === ta);
+  let top, height;
+  if (vv) {
+    // Toujours s'ancrer sur le visualViewport : quand le clavier s'ouvre, vv.height diminue
+    // et la zone de saisie (en bas du flex) reste juste au-dessus du clavier.
+    if (typing) {
+      top = Math.round(vv.offsetTop);
+      height = Math.max(180, Math.round(vv.height));
+      pane.style.left = Math.round(vv.offsetLeft) + 'px';
+      pane.style.width = Math.round(vv.width) + 'px';
+      pane.style.right = 'auto';
+    } else {
+      const hb = document.getElementById('msgHeaderBtn');
+      const hr = hb ? hb.getBoundingClientRect() : null, hdrEl = hb && hb.closest('header');
+      const hbot = (hr && hr.height > 0) ? hr.bottom + 8 : (hdrEl && hdrEl.getBoundingClientRect().height < 160 ? hdrEl.getBoundingClientRect().bottom : 56);
+      top = Math.max(0, Math.min(Math.round(hbot), 140));
+      const nav = document.getElementById('bottomNav');
+      const bottom = (nav && getComputedStyle(nav).display !== 'none') ? Math.round(nav.getBoundingClientRect().top) : Math.round(vv.height + vv.offsetTop);
+      height = Math.max(200, bottom - top);
+      pane.style.left = '0';
+      pane.style.right = '0';
+      pane.style.width = '';
+    }
+  } else {
+    const vh = window.innerHeight;
+    if (typing) {
+      top = 0; height = vh;
+    } else {
+      const hb = document.getElementById('msgHeaderBtn');
+      const hr = hb ? hb.getBoundingClientRect() : null, hdrEl = hb && hb.closest('header');
+      const hbot = (hr && hr.height > 0) ? hr.bottom + 8 : (hdrEl && hdrEl.getBoundingClientRect().height < 160 ? hdrEl.getBoundingClientRect().bottom : 56);
+      top = Math.max(0, Math.min(Math.round(hbot), 140));
+      const nav = document.getElementById('bottomNav');
+      const bottom = (nav && getComputedStyle(nav).display !== 'none') ? Math.round(nav.getBoundingClientRect().top) : vh;
+      height = Math.max(200, bottom - top);
+    }
+    pane.style.left = '0';
+    pane.style.right = '0';
+    pane.style.width = '';
+  }
+  pane.style.top = top + 'px';
+  pane.style.height = height + 'px';
+  pane.style.bottom = 'auto';
+  // Padding bas : safe-area uniquement clavier fermé
+  const cin = pane.querySelector('.ch-in');
+  if (cin) {
+    cin.style.paddingBottom = typing ? '6px' : 'calc(6px + env(safe-area-inset-bottom, 0px))';
+  }
+  const sc = document.getElementById('chScroll');
+  if (sc) sc.scrollTop = sc.scrollHeight;
+}
+if (window.visualViewport) { window.visualViewport.addEventListener('resize', function(){ try { chFit(); } catch(e) {} }); window.visualViewport.addEventListener('scroll', function(){ try { chFit(); } catch(e) {} }); }
+window.addEventListener('resize', function(){ try { chFit(); } catch(e) {} });
+function chOverlayRemove(){ document.querySelectorAll('.ch-pane').forEach(n => n.remove()); CH.shell = null; CH.kb = false; }
+function chBack(){ CH.open = null; chOverlayRemove(); chList(); }
+
+async function chInsert(peer, fields){
+  const me = String(currentUser.id), tmp = (crypto.randomUUID ? crypto.randomUUID() : 'tmp' + Date.now());
+  const local = Object.assign({ id: tmp, _tmp: tmp, sender_id: me, receiver_id: peer, kind: 'text', created_at: new Date().toISOString() }, fields);
+  CH.msgs.push(local); chPane(true);
+  const r = await sb.from('messages').insert(Object.assign({ sender_id: me, receiver_id: peer }, fields)).select().single();
+  if (r.error) { local._failed = true; local._tmp = null; console.warn('[Allo] chat send', r.error); }
+  else { const i = CH.msgs.indexOf(local); const dup = CH.msgs.findIndex(x => String(x.id) === String(r.data.id) && x !== local); if (dup >= 0) CH.msgs.splice(i, 1); else CH.msgs[i] = r.data; }
+  if (CH.open === peer) chPane(true);
+}
+function chSend(){
+  const ta = document.getElementById('chText'); if (!ta || !CH.open) return;
+  const text = ta.value.trim(); if (!text) return;
+  ta.value = ''; chGrow(ta); chInsert(CH.open, { body: text, kind: 'text' }); ta.focus();
+}
+
+async function chVoice(){
+  const btn = document.getElementById('chMic'); if (!btn || !CH.open) return;
+  if (CH.rec) { CH.rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { alert(lang === 'en' ? 'Voice recording is not supported here.' : 'Enregistrement vocal non supporté ici.'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined), chunks = [], t0 = Date.now(), peer = CH.open;
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop()); CH.rec = null; clearInterval(CH.recT);
+      const ms = Date.now() - t0; if (ms < 800 || !chunks.length) { if (CH.open) chPane(true); return; }
+      const type = rec.mimeType || 'audio/webm', ext = /mp4/.test(type) ? 'm4a' : 'webm';
+      const path = String(currentUser.id) + '/' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()) + '.' + ext;
+      const up = await sb.storage.from('voice-messages').upload(path, new Blob(chunks, { type }), { contentType: type });
+      if (up.error) { alert(lang === 'en' ? 'Voice upload failed.' : 'Échec de l’envoi du vocal.'); if (CH.open) chPane(true); return; }
+      const url = sb.storage.from('voice-messages').getPublicUrl(path).data.publicUrl;
+      chInsert(peer, { body: '🎤 Message vocal', kind: 'audio', audio_url: url, audio_ms: ms });
+    };
+    CH.rec = rec; rec.start(); btn.textContent = '⏹'; btn.style.background = '#e53935';
+    CH.recT = setInterval(() => { const b = document.getElementById('chMic'); if (b) b.textContent = '⏹ ' + Math.round((Date.now() - t0) / 1000) + 's'; }, 500);
+  } catch (e) { alert(lang === 'en' ? 'Microphone access denied.' : 'Accès au micro refusé.'); }
+}
+
+async function chToggleBlock(peer){
+  const me = String(currentUser.id), was = CH.blocks.has(String(peer));
+  const r = was ? await sb.from('user_blocks').delete().eq('blocker_id', me).eq('blocked_id', peer)
+                : await sb.from('user_blocks').insert({ blocker_id: me, blocked_id: peer });
+  if (r.error) { alert(r.error.message); return; }
+  if (was) CH.blocks.delete(String(peer)); else CH.blocks.add(String(peer));
+  chPane(true); try { updateAllBadges(); } catch(e) {}
+}
+
+/** Bouton « Message » des cartes boutique / entreprise : ouvre (ou crée) la discussion avec le propriétaire. */
+function chatWithOwner(ownerId){
+  if (!isLoggedIn()) { requireAuth(lang === 'en' ? 'Sign in to send a message.' : 'Connectez-vous pour envoyer un message.'); return; }
+  if (!ownerId) return;
+  switchView('messages');
+  setTimeout(() => chOpen(ownerId), 50);
+}
+
+// Branchement sur l'existant
+const _chOrigRender = renderMessages;
+renderMessages = function(){
+  if (!chOn()) return _chOrigRender();
+  const btn = document.getElementById('btnNewMsg'); if (btn) btn.style.display = 'none';
+  const el = document.getElementById('messagesList');
+  if (CH.loaded) { CH.open ? chPane(true) : chList(); return; }
+  if (el) el.innerHTML = '<div class="empty">…</div>';
+  chLoad().then(() => { CH.open ? chPane(true) : chList(); });
+};
+const _chOrigSwitchView = switchView;
+switchView = function(v){ if (v !== 'messages') { chOverlayRemove(); CH.open = null; } return _chOrigSwitchView.apply(this, arguments); };
+const _chOrigCount = countUnreadMessages;
+countUnreadMessages = function(){ return CH.loaded ? chUnread() : _chOrigCount(); };
+
+// ===== APERÇU PUBLIC D'UNE ENTREPRISE (produits visibles, prix masqués jusqu'à acceptation de la demande) =====
+window._previewCompanyId = null; window._companyPreview = window._companyPreview || {};
+async function openCompanyPreview(companyId){
+  if (!isLoggedIn()) { requireAuth(lang==='en'?'Sign in to browse companies.':'Connectez-vous pour parcourir les entreprises.'); return; }
+  window._previewCompanyId = String(companyId);
+  if (!window._companyPreview[companyId]) {
+    const r = await sb.rpc('company_catalog_preview', { p_company_id: companyId });
+    window._companyPreview[companyId] = r.error ? [] : (r.data || []);
+    if (r.error) console.warn('[Allo] company preview', r.error);
+  }
+  renderClientSpace();
+}
+function closeCompanyPreview(){ window._previewCompanyId = null; renderClientSpace(); }
+const _origRenderClientSpace = renderClientSpace;
+renderClientSpace = function(){
+  const cid = window._previewCompanyId;
+  const dir = document.getElementById('companyDirectory');
+  if (!cid || !dir || !currentUser) return _origRenderClientSpace();
+  const c = getCompanyById(cid), fr = lang !== 'en';
+  const isMine = (typeof getCompaniesForCurrentClient === 'function') && getCompaniesForCurrentClient().some(x => String(x.id) === String(cid));
+  if (isMine) { window._previewCompanyId = null; return _origRenderClientSpace(); }
+  const pending = (data.companyClientRequests || []).some(r => String(r.requesterId) === String(currentUser.id) && String(r.companyId) === String(cid) && r.status === 'pending');
+  const prods = window._companyPreview[cid] || [];
+  const card = p => `<div class="card" style="padding:10px"><div style="aspect-ratio:1/1;background:var(--surface-2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:34px;overflow:hidden">${p.image_url ? `<img src="${escapeCompanyText(p.image_url)}" style="width:100%;height:100%;object-fit:cover" alt="">` : escapeCompanyText(p.icon || '📦')}</div><div style="font-weight:800;font-size:13px;margin-top:6px">${escapeCompanyText(p.name)}</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">🔒 ${fr ? 'Prix visible après acceptation' : 'Price visible once accepted'}</div></div>`;
+  dir.innerHTML = `<div class="card" style="margin-bottom:12px"><button class="btn btn-sm btn-ghost" onclick="closeCompanyPreview()">← ${fr ? 'Entreprises' : 'Companies'}</button>
+    <div style="margin-top:12px;font-size:20px;font-weight:900">🏢 ${escapeCompanyText(c ? c.name : 'Entreprise')}</div>
+    <div style="margin-top:4px;color:var(--text-muted);font-size:12px">${fr ? 'Pour voir les prix et acheter, faites une demande. Une fois acceptée, l’accès est définitif.' : 'To see prices and buy, send a request. Once accepted, access is permanent.'}</div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${pending ? `<span class="badge">${fr ? 'Demande en attente' : 'Request pending'}</span>` : `<button class="btn btn-sm btn-accent" onclick="requestToJoinCompany('${cid}')">${fr ? 'Demander l’accès' : 'Request access'}</button>`}<button class="btn btn-sm btn-ghost" onclick="chatWithOwner('${c ? c.ownerId : ''}')">💬 Message</button></div></div>
+    <div style="font-size:12px;color:var(--text-muted);margin:4px 0 10px">${prods.length} ${fr ? 'produit(s)' : 'product(s)'}</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">${prods.length ? prods.map(card).join('') : `<div class="empty">${fr ? 'Aucun produit pour le moment.' : 'No products yet.'}</div>`}</div>`;
+  const panel = document.getElementById('companyInvitationsPanel'); if (panel) panel.innerHTML = '';
+};
+
+// ===== STATS SOCIALES : likes, abonnements, vues (chargement + temps réel) =====
+window._likeCounts = window._likeCounts || {};   // productId -> nombre de likes (global)
+window._subCounts = window._subCounts || {};     // shopId -> nombre d'abonnés (global)
+window._alloSubs = window._alloSubs || [];       // mes abonnements
+let _socialUserId = null;
+let _socialLoading = false;
+let _socialChannel = null;
+
+function getProductLikeCount(productId) {
+  const k = String(productId);
+  const g = (window._likeCounts || {})[k];
+  if (g != null) return Number(g) || 0;
+  return (data.wishlist || []).filter(w => String(w.productId) === k).length;
+}
+
+/** Le vendeur ne compte pas comme « vue » sur son propre produit. */
+function isOwnProductForViews(productId) {
+  try {
+    if (!currentUser) return false;
+    const uid = String(currentUser.id || '');
+    const p = (data.products || []).find(x => String(x.id) === String(productId));
+    if (!p) return false;
+    if (p.ownerId && String(p.ownerId) === uid) return true;
+    const sh = (data.shops || []).find(x => String(x.id) === String(p.shopId));
+    if (sh && String(sh.ownerId || '') === uid) return true;
+    const cid = (typeof getSellerCompanyIdForCurrentUser === 'function') ? getSellerCompanyIdForCurrentUser() : '';
+    if (cid && p.companyId && String(p.companyId) === String(cid)) return true;
+  } catch (e) {}
+  return false;
+}
+
+async function loadProductLikeCounts() {
+  if (!(typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb)) return;
+  try {
+    const res = await sb.from('product_like_counts').select('product_id, like_count');
+    if (res.error) { console.warn('[Allo] like counts', res.error); return; }
+    const map = {};
+    (res.data || []).forEach(r => { map[String(r.product_id)] = Number(r.like_count) || 0; });
+    window._likeCounts = map;
+  } catch (e) { console.warn('[Allo] loadProductLikeCounts', e); }
+}
+
+async function loadShopSubscriptions() {
+  if (!(typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb) || !currentUser || !currentUser.id) return;
+  try {
+    const [mine, counts] = await Promise.all([
+      sb.from('shop_subscriptions').select('shop_id, created_at').eq('user_id', currentUser.id),
+      sb.from('shop_subscriber_counts').select('shop_id, subscriber_count')
+    ]);
+    if (!mine.error) {
+      window._alloSubs = (mine.data || []).map(r => ({ userId: currentUser.id, shopId: r.shop_id, date: r.created_at }));
+      data.subscriptions = window._alloSubs.slice();
+    } else console.warn('[Allo] my subscriptions', mine.error);
+    if (!counts.error) {
+      const map = {};
+      (counts.data || []).forEach(r => { map[String(r.shop_id)] = Number(r.subscriber_count) || 0; });
+      window._subCounts = map;
+    } else console.warn('[Allo] subscriber counts', counts.error);
+  } catch (e) { console.warn('[Allo] loadShopSubscriptions', e); }
+}
+
+function refreshAllLikeCountsUI() {
+  try {
+    document.querySelectorAll('.product-card[data-product-id]').forEach(card => {
+      const pid = card.getAttribute('data-product-id');
+      if (pid && typeof updateWishlistCardUI === 'function') updateWishlistCardUI(pid);
+    });
+  } catch (e) {}
+}
+
+function startSocialRealtime() {
+  if (!(typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb)) return;
+  try { if (_socialChannel) sb.removeChannel(_socialChannel); } catch (e) {}
+  _socialChannel = sb.channel('allo-social-' + Date.now())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'product_like_counts' }, function (payload) {
+      try {
+        const row = payload.new && payload.new.product_id ? payload.new : null;
+        if (!row) return;
+        window._likeCounts[String(row.product_id)] = Number(row.like_count) || 0;
+        if (typeof updateWishlistCardUI === 'function') updateWishlistCardUI(row.product_id);
+      } catch (e) {}
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_subscriber_counts' }, function (payload) {
+      try {
+        const row = payload.new && payload.new.shop_id ? payload.new : null;
+        if (!row) return;
+        window._subCounts[String(row.shop_id)] = Number(row.subscriber_count) || 0;
+        const v = document.querySelector('.view.active');
+        if (v && /boutique|shop/i.test(v.id) && typeof renderShopsBrowser === 'function' && currentUser && currentUser.role !== 'admin') renderShopsBrowser();
+      } catch (e) {}
+    })
+    .subscribe();
+}
+
+/** Charge tous les compteurs (vues, likes, abonnés) et démarre le temps réel. Appelée après chaque chargement Supabase, y compris juste après une connexion. */
+async function loadSocialStats() {
+  if (!(typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb) || !currentUser || !currentUser.id) return;
+  if (_socialLoading) return;
+  _socialLoading = true;
+  try {
+    const uid = String(currentUser.id);
+    if (_socialUserId !== uid) {
+      // Changement de compte dans la même session : on repart d'un état propre
+      // (sinon les produits « déjà vus » de l'ancien compte bloquent les vues du nouveau).
+      window._myViewedProducts = new Set();
+      window._viewInflight = {};
+      window._likeCounts = {};
+      window._subCounts = {};
+      window._alloSubs = [];
+      _socialUserId = uid;
+      try { startViewsRealtime(); } catch (e) {}
+      try { startSocialRealtime(); } catch (e) {}
+    }
+    await Promise.all([loadProductViewCounts(), loadProductLikeCounts(), loadShopSubscriptions()]);
+    try { refreshAllProductViewCountsUI(); } catch (e) {}
+    try { refreshAllLikeCountsUI(); } catch (e) {}
+    try { if (typeof chLoad === 'function') chLoad(); } catch (e) {}
+  } finally {
+    _socialLoading = false;
+  }
+}
 
 // ===== VUES PRODUIT (Supabase + fallback local) =====
 // Compteur global = utilisateurs uniques ayant vu le produit (1 vue / user / produit)
@@ -21104,7 +21009,7 @@ function updateProductViewCountUI(productId) {
   if (productId == null || productId === '') return;
   const key = String(productId);
   const n = Number((window._productViewCounts || {})[key]) || 0;
-  const display = n > 99 ? '99' : String(n);
+  const display = n > 99 ? '99+' : String(n);
   document.querySelectorAll('.product-card[data-product-id]').forEach(card => {
     if (String(card.getAttribute('data-product-id') || '') !== key) return;
     card.querySelectorAll('.yc-stat').forEach(stat => {
@@ -21208,8 +21113,10 @@ function getProductViewCount(productId) {
 async function recordProductView(productId, shopId) {
   if (!productId) return;
   if (!currentUser || !currentUser.id) return;
-  // Seuls les clients comptent comme acheteurs pour les vues
-  if (currentUser.role !== 'client') return;
+  // Tous les comptes acheteurs comptent (client, boutique, entreprise), sauf l'admin.
+  if (currentUser.role === 'admin') return;
+  // Un vendeur qui regarde son propre produit ne gonfle pas le compteur.
+  if (typeof isOwnProductForViews === 'function' && isOwnProductForViews(productId)) return;
 
   const key = String(productId);
   if (!window._myViewedProducts) window._myViewedProducts = new Set();
@@ -21293,7 +21200,8 @@ async function recordProductView(productId, shopId) {
 /** Point d'entrée unique : tout contact avec la carte produit (clic, option, panier, etc.) */
 function ensureProductView(productId) {
   if (!productId || !currentUser) return;
-  if (currentUser.role !== 'client') return;
+  if (currentUser.role === 'admin') return;
+  if (typeof isOwnProductForViews === 'function' && isOwnProductForViews(productId)) return;
   try {
     const p = (data.products || []).find(x => String(x.id) === String(productId));
     const shopId = p && p.shopId ? p.shopId : null;
@@ -21863,7 +21771,6 @@ function renderRecommendationSectionsHTML(canAdd) {
   return html;
 }
 
-
 function stockAlertsHTML() {
   if (!currentUser || (currentUser.role !== 'boutique' && currentUser.role !== 'entreprise')) return '';
   const shopIds = getSellerShopIds();
@@ -21883,7 +21790,6 @@ function loadWishlistFromStorage() {
   if (alloIsSupabaseMode()) return;
   try { const raw = alloEphemeralStorage.getItem('allora_wishlist'); if (raw) data.wishlist = JSON.parse(raw); } catch(e) {}
 }
-
 
 // ===== FEATURES v2: notifs, reviews, analytics, KYC, 2FA, PWA =====
 function pushUserNotif(userId, title, body) {
@@ -22062,7 +21968,7 @@ function renderAnalytics() {
   if (!el || !currentUser) return;
   let orders = [];
   let products = [];
-  if (currentUser.role === 'boutique' || currentUser.role === 'entreprise' || currentUser.role === 'employe') {
+  if (currentUser.role === 'boutique' || currentUser.role === 'entreprise') {
     const sellerShopIds = getSellerShopIds();
     products = data.products.filter(p => sellerShopIds.includes(String(p.shopId)));
     orders = data.orders.filter(o => orderBelongsToSeller(o, sellerShopIds));
@@ -22137,7 +22043,6 @@ function is2FAEnabled() { return false; }
 function toggle2FA() { /* 2FA removed */ }
 window._pending2FAUser = null;
 function complete2FALogin() { /* 2FA removed */ }
-
 
 // PWA install + offline — site web ET application installable
 let deferredInstallPrompt = null;
@@ -22281,6 +22186,52 @@ function enhanceProductCardRatings() {
   // ratings shown via productRatingHTML when building cards - patch productCardHTML usage optional
 }
 
+
+/* ===== Anti double-clic global =====
+   Enveloppe les actions asynchrones qui n'avaient pas de garde interne.
+   Tant qu'un appel (même fonction + mêmes arguments) est en cours, les clics suivants sont ignorés. */
+(function installOnceGuards() {
+  const names = [
+    // Admin : argent / validations
+    'adminValidateTopUp','adminRefuseTopUp','adminValidateWithdraw','adminRefuseWithdraw',
+    'adminValidateCompanyActivation','adminRefuseCompanyActivation','adminCreditAccount','adminDeleteAccount',
+    'adminCertifyShop','adminRevokeCert','adminAddCategory','adminAddHashtag','adminAddZone',
+    'adminRemoveCategory','adminRemoveHashtag','adminRemoveZone','adminSetCategoryRate',
+    // Commandes / livraison / paiement cash / activation
+    'advanceOrderStatus','confirmDeliveryByBuyer','activateCashOnDelivery','toggleShopCod',
+    'requestSellerActivation','saveShopDeliveryHours',
+    // Suppressions / enregistrements
+    'deleteClient','deletePayMethod','togglePayMethod','deleteProduct',
+    'saveAccountCompany','saveAdminCredentials','saveCategoryImage','removeCategoryImage',
+    'saveClientBalance','saveClientPrices','sendSuggestionToAdmin','submitProductReview',
+    'toggleSubscribe','markAllNotifsRead','cancelCompanyClientRequest',
+    // Entreprises : entrer / aperçu
+    'openClientCompanySpace','openCompanyPreview'
+  ];
+  const inflight = new Set();
+  names.forEach(function (name) {
+    const orig = window[name];
+    if (typeof orig !== 'function' || orig.__onceGuarded) return;
+    const wrapped = function () {
+      let key;
+      try { key = name + '|' + JSON.stringify(Array.prototype.slice.call(arguments)); } catch (e) { key = name; }
+      if (inflight.has(key)) return;
+      inflight.add(key);
+      let res;
+      try { res = orig.apply(this, arguments); }
+      catch (err) { inflight.delete(key); throw err; }
+      if (res && typeof res.then === 'function') {
+        const release = function () { inflight.delete(key); };
+        res.then(release, release);
+      } else {
+        inflight.delete(key);
+      }
+      return res;
+    };
+    wrapped.__onceGuarded = true;
+    window[name] = wrapped;
+  });
+})();
 
 </script>
 
