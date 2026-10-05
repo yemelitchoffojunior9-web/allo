@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#8B5CF6">
+<meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -218,7 +219,8 @@ body {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 14px;
   padding: 13px 18px; border-radius: 12px; border: none; cursor: pointer;
-  transition: transform .12s, filter .12s;
+  transition: transform .12s, filter .12s, opacity .15s;
+  position: relative;
 }
 .btn:active { transform: scale(.97); }
 .btn-accent {
@@ -230,6 +232,33 @@ body {
 .btn-sm { padding: 8px 14px; font-size: 12px; border-radius: 9px; }
 .btn-danger { background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
 .btn-cyan { background: rgba(34,211,238,.15); color: var(--cyan); border: 1px solid rgba(34,211,238,.3); }
+/* Loading / anti double-clic : spinner + état désactivé */
+.btn.is-loading {
+  opacity: 0.8;
+  pointer-events: none;
+  cursor: wait;
+  transform: none !important;
+}
+.btn.is-loading::before {
+  content: '';
+  width: 14px; height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btnSpin .7s linear infinite;
+  flex-shrink: 0;
+}
+.btn-sm.is-loading::before { width: 12px; height: 12px; }
+button.is-loading:not(.btn), [role="button"].is-loading {
+  opacity: 0.7; pointer-events: none; cursor: wait;
+}
+.btn.is-loading { filter: saturate(.85); }
+@keyframes btnSpin { to { transform: rotate(360deg); } }
+.btn[disabled], .btn[aria-busy="true"] {
+  opacity: 0.8;
+  pointer-events: none;
+  cursor: wait;
+}
 .error-msg { color: var(--red); font-size: 12px; margin-top: 10px; text-align: center; display: none; }
 .error-msg.show { display: block; }
 
@@ -3493,6 +3522,41 @@ input[type="text"], input[type="number"], input[type="password"], input[type="em
 .cat-picker-card .cnt { font-size: 10px; color: rgba(255,255,255,.75); font-family: 'JetBrains Mono', monospace; }
 .cat-picker-card.all-card { background: linear-gradient(160deg, rgba(139,92,246,.45), rgba(34,211,238,.2)); }
 
+
+/* ===== Onglet Formules : une carte séparée par formule ===== */
+.dll-panel.plans-split {
+  background: none; border: none; box-shadow: none; overflow: visible; border-radius: 0;
+}
+.dll-panel.plans-split .dll-head,
+.dll-panel.plans-split .dll-footer {
+  background: linear-gradient(180deg, #3a5a7a 0%, #2a4560 35%, #1e3448 100%);
+  border: 1.5px solid rgba(120,170,220,.4);
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(0,20,50,.45), inset 0 1px 0 rgba(255,255,255,.1);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.dll-panel.plans-split .dll-footer { padding: 10px; margin-top: 4px; }
+.dll-panel.plans-split .dll-body { padding: 0; }
+.dll-panel.plans-split .dll-hint {
+  background: rgba(30,52,72,.7);
+  border: 1px solid rgba(100,150,200,.25);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 0 0 12px;
+}
+.dll-panel.plans-split .dll-row {
+  background: linear-gradient(180deg, #3a5a7a 0%, #2a4560 35%, #1e3448 100%);
+  border: 1.5px solid rgba(120,170,220,.4);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 28px rgba(0,20,50,.45), inset 0 1px 0 rgba(255,255,255,.1);
+}
+.dll-panel.plans-split .dll-row.current {
+  border-color: rgba(52,211,153,.6);
+  box-shadow: 0 10px 28px rgba(0,20,50,.45), 0 0 0 1px rgba(52,211,153,.25), inset 0 0 24px rgba(52,211,153,.08);
+}
 </style>
 
 <style id="allora-nav-fix-v2">
@@ -3841,6 +3905,42 @@ nav.bottom,
 .seller-profile-page .spp-products .product-card.ycard-wrap{width:100%!important;min-width:0!important}
 @media(max-width:360px){.seller-profile-page .spp-products{padding:0 6px}.seller-profile-page .spp-products .products-grid{gap:6px!important}.seller-profile-page .spp-stats{gap:18px}}
 </style>
+
+<style id="allo-input-readability">
+/* Champs lisibles : collage / remplissage auto Android & Chrome */
+:root { color-scheme: dark; }
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active,
+textarea:-webkit-autofill, textarea:-webkit-autofill:hover, textarea:-webkit-autofill:focus,
+select:-webkit-autofill, select:-webkit-autofill:focus,
+input:autofill, input:autofill:focus, textarea:autofill {
+  -webkit-box-shadow: 0 0 0 1000px #0b1220 inset !important;
+  box-shadow: 0 0 0 1000px #0b1220 inset !important;
+  -webkit-text-fill-color: #F7F7FB !important;
+  color: #F7F7FB !important;
+  caret-color: #F7F7FB !important;
+  background-color: #0b1220 !important;
+  background-clip: padding-box !important;
+  transition: background-color 600000s 0s, color 600000s 0s !important;
+}
+input::selection, textarea::selection {
+  background: rgba(139,92,246,.55); color: #fff; -webkit-text-fill-color: #fff;
+}
+/* Exemples (placeholders) : grisés, un champ vide ne doit pas ressembler à un champ rempli */
+html body input::placeholder, html body textarea::placeholder,
+html body input::-webkit-input-placeholder, html body textarea::-webkit-input-placeholder,
+html body .field input::placeholder, html body .field textarea::placeholder,
+html body input[type="text"]::placeholder, html body input[type="password"]::placeholder,
+html body input[type="email"]::placeholder, html body input[type="number"]::placeholder,
+html body input[type="tel"]::placeholder, html body input[type="search"]::placeholder {
+  color: #5A5F78 !important;
+  -webkit-text-fill-color: #5A5F78 !important;
+  opacity: .5 !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+}
+html body input:focus::placeholder, html body textarea:focus::placeholder { opacity: .3 !important; }
+</style>
+
 
 </head>
 <body>
@@ -4801,7 +4901,7 @@ function buildOrderRow(o) {
     ? resolveOrderSellerCompanyId(o)
     : (o && o.companyId);
   if (o) o.companyId = sellerCompanyId || null;
-  return {
+  const row = {
     user_id: o.userId || null,
     shop_id: alloUuid(o.shopId) ? o.shopId : null,
     company_id: alloUuid(sellerCompanyId) ? sellerCompanyId : null,
@@ -4830,6 +4930,11 @@ function buildOrderRow(o) {
     created_at: o.date || new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
+  if (o.payerWalletScope && alloUuid(o.payerWalletEntityId)) {
+    row.payer_wallet_scope = o.payerWalletScope;
+    row.payer_wallet_entity_id = o.payerWalletEntityId;
+  }
+  return row;
 }
 
 /**
@@ -5562,6 +5667,48 @@ async function syncProductStockToSupabase(productOrId) {
   }
 }
 
+/** Formules de quota : table quota_plans (créées/supprimées par le Super Admin, lues par tous). */
+async function sbLoadQuotaPlans() {
+  if (!USE_SUPABASE || !sb) return false;
+  try {
+    const { data: rows, error } = await sb.from('quota_plans').select('*').order('price', { ascending: true });
+    if (error) throw error;
+    adminConfig.activationPlans = (rows || []).map(function (r) {
+      return { id: String(r.id), name: r.name, orderQuota: Number(r.order_quota) || 0, price: Number(r.price) || 0,
+               target: r.target || 'both', description: r.description || '', active: r.active !== false };
+    });
+    adminConfig.activationPlansFromServer = true;
+    return true;
+  } catch (e) { console.warn('[Allo] quota_plans load', e); return false; }
+}
+
+/** Synchronise le quota du vendeur connecté depuis le serveur (consommation + renouvellement auto). */
+async function sbSyncMyQuotaState() {
+  if (!USE_SUPABASE || !sb || !currentUser) return;
+  const targets = [];
+  if (currentUser.role === 'entreprise' && currentUser.companyId) {
+    const c = (data.companies || []).find(x => String(x.id) === String(currentUser.companyId));
+    if (c) targets.push(['entreprise', c]);
+  } else if (currentUser.role === 'boutique') {
+    const ids = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String);
+    (data.shops || []).filter(sh => ids.includes(String(sh.id)) && !sh.companyId).forEach(sh => targets.push(['boutique', sh]));
+  }
+  for (const [type, ent] of targets) {
+    if (!alloUuid(ent.id)) continue;
+    try {
+      const { data: q, error } = await sb.rpc('get_my_quota_state', { p_entity_type: type, p_entity_id: ent.id });
+      if (error || !q) continue;
+      ent.ordersUsed = Number(q.orders_used || 0);
+      ent.orderQuotaTotal = Number(q.total_quota || 0);
+      ent.activationLocked = !!q.quota_exhausted;
+      ent.activationPhase = ent.activationLocked ? 'locked' : (ent.activationPhase === 'locked' ? 'paid' : (ent.activationPhase || 'free'));
+      ent.autoRenew = !!q.auto_renew;
+      ent.autoRenewPlanId = q.auto_renew_plan_id || null;
+      ent.activationInitialized = true;
+    } catch (e) { console.warn('[Allo] quota state sync', e); }
+  }
+}
+
 async function sbLoadAllIntoData() {
   if (!USE_SUPABASE || !sb) return false;
   try {
@@ -5874,6 +6021,9 @@ async function sbLoadAllIntoData() {
         shop.activationInitialized = true;
       });
     } catch(e) {}
+    // Le serveur est la source de vérité du quota (trigger sur chaque commande + renouvellement auto)
+    try { await sbLoadQuotaPlans(); } catch (e) {}
+    try { await sbSyncMyQuotaState(); } catch (e) {}
 
     // admin config depuis tables
     try {
@@ -7444,34 +7594,46 @@ function setAuthLoading(which, loading) {
   }
 }
 
-/** Disable modal primary action while async work runs (anti double-click). */
-let _modalActionBusy = false;
-function setModalActionBusy(busy, loadingLabel) {
-  const btn = document.querySelector('#modalContent button.btn-accent.btn-block, #modalContent .btn-accent.btn-block');
+/** Met un bouton en état chargement (spinner + texte + désactivé). Anti double-clic. */
+function setButtonBusy(btn, busy, loadingLabel) {
+  if (!btn || !btn.classList) return;
   if (busy) {
-    if (_modalActionBusy) return false;
-    _modalActionBusy = true;
-    if (btn) {
-      btn.dataset.prevLabel = btn.textContent;
-      btn.disabled = true;
-      btn.style.opacity = '0.75';
-      btn.style.pointerEvents = 'none';
-      btn.setAttribute('aria-busy', 'true');
-      if (loadingLabel) btn.textContent = loadingLabel;
-    }
-    return true;
-  }
-  _modalActionBusy = false;
-  if (btn) {
+    if (btn.classList.contains('is-loading') || btn.disabled) return;
+    if (!btn.dataset.prevLabel) btn.dataset.prevLabel = (btn.textContent || '').trim();
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.classList.add('is-loading');
+    if (loadingLabel) btn.textContent = loadingLabel;
+  } else {
     btn.disabled = false;
-    btn.style.opacity = '';
-    btn.style.pointerEvents = '';
     btn.removeAttribute('aria-busy');
+    btn.classList.remove('is-loading');
     if (btn.dataset.prevLabel) {
       btn.textContent = btn.dataset.prevLabel;
       delete btn.dataset.prevLabel;
     }
   }
+}
+
+/** Disable modal primary action while async work runs (anti double-click). */
+let _modalActionBusy = false;
+let _modalBusyBtn = null;
+function setModalActionBusy(busy, loadingLabel) {
+  if (busy) {
+    if (_modalActionBusy) return false;
+    _modalActionBusy = true;
+    // On garde une référence directe au bouton : le modal peut être re-rendu pendant
+    // l'opération, et on doit toujours restaurer LE MÊME bouton (sinon il reste bloqué).
+    const cands = Array.from(document.querySelectorAll('#modalContent button.btn-accent.btn-block, button.btn-accent.btn-block[onclick*="validateCart"], button.btn-accent.btn-block[onclick*="confirmCheckout"]'));
+    const btn = cands.find(function(b){ return b.offsetParent !== null; }) || cands[0] || null;
+    _modalBusyBtn = btn || null;
+    if (btn) setButtonBusy(btn, true, loadingLabel);
+    return true;
+  }
+  _modalActionBusy = false;
+  const b = _modalBusyBtn;
+  _modalBusyBtn = null;
+  if (b) setButtonBusy(b, false);
   return true;
 }
 function actionBusyLabel(kind) {
@@ -7479,7 +7641,9 @@ function actionBusyLabel(kind) {
   if (kind === 'create') return en ? 'Creating…' : 'Création…';
   if (kind === 'save') return en ? 'Saving…' : 'Enregistrement…';
   if (kind === 'send') return en ? 'Sending…' : 'Envoi…';
-  if (kind === 'pay') return en ? 'Processing…' : 'Traitement…';
+  if (kind === 'pay') return en ? 'Confirming…' : 'Confirmation…';
+  if (kind === 'enter') return en ? 'Entering…' : 'Entrée…';
+  if (kind === 'load') return en ? 'Loading…' : 'Chargement…';
   return en ? 'Please wait…' : 'Patientez…';
 }
 
@@ -8354,6 +8518,76 @@ function renderAdminCertify() {
   el.innerHTML = html;
 }
 
+/**
+ * Solde réel d'un compte pour le Super Admin.
+ * Source de vérité : public.wallet_accounts (un portefeuille par boutique / entreprise,
+ * rattaché au propriétaire). On garde aussi profiles.wallet / profiles.balance et les
+ * transactions « vendeur » comme filet de sécurité, et on retient la valeur la plus haute
+ * (même logique que l'écran Portefeuille du vendeur).
+ */
+function getAdminAccountBalance(a) {
+  if (!a) return 0;
+  const uid = String(a.id || '');
+  const legacy = Math.max(Number(a.wallet || 0), Number(a.balance || 0));
+  if (!uid) return legacy;
+
+  // Portefeuilles des espaces dont ce compte est propriétaire
+  const myShopIds = new Set((data.shops || [])
+    .filter(sh => String(sh.ownerId || '') === uid).map(sh => String(sh.id)));
+  const myCompanyIds = new Set((data.companies || [])
+    .filter(c => String(c.ownerId || '') === uid).map(c => String(c.id)));
+  let spaces = 0;
+  (data.walletAccounts || []).forEach(w => {
+    if (!w) return;
+    const owned = String(w.ownerUserId || '') === uid
+      || (w.scopeType === 'boutique' && myShopIds.has(String(w.scopeId)))
+      || (w.scopeType === 'entreprise' && myCompanyIds.has(String(w.scopeId)));
+    if (owned) spaces += Number(w.balance || 0);
+  });
+
+  // Net des transactions vendeur (filet si wallet_accounts n'est pas encore à jour)
+  let txNet = 0;
+  (data.walletTx || []).forEach(t => {
+    if (t && String(t.ownerId || '') === uid && typeof isSellerRevenueTx === 'function' && isSellerRevenueTx(t)) {
+      txNet += Number(t.amount || 0);
+    }
+  });
+
+  return Math.max(legacy, spaces, txNet, 0);
+}
+
+/** Relit wallet_accounts (+ transactions) depuis Supabase pour l'écran Classement admin. */
+async function refreshAdminWalletsFromSupabase() {
+  if (!(typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb)) return { ok: true };
+  let ok = true, errMsg = '';
+  try {
+    const wa = await sb.from('wallet_accounts').select('*');
+    if (wa.error) { ok = false; errMsg = wa.error.message || String(wa.error); console.warn('[Allo] admin wallet_accounts', wa.error); }
+    else {
+      data.walletAccounts = (wa.data || []).map(w => ({
+        id: w.id, ownerUserId: w.owner_user_id, scopeType: w.scope_type,
+        scopeId: w.scope_id, balance: Number(w.balance || 0)
+      }));
+    }
+  } catch (e) { ok = false; errMsg = String(e && e.message || e); }
+  try {
+    const wt = await sb.from('wallet_transactions').select('*');
+    if (!wt.error && Array.isArray(wt.data)) {
+      data.walletTx = wt.data.map(t => ({
+        id: t.id, ownerId: t.user_id, walletScope: t.wallet_scope || null,
+        walletEntityId: t.wallet_entity_id || null, amount: Number(t.amount || 0),
+        label: t.description || t.label || t.reference || '', description: t.description || '',
+        reference: t.reference || '', date: t.created_at || t.date
+      }));
+    }
+  } catch (e) {}
+  // S'assurer que boutiques / entreprises sont chargées pour relier propriétaires et portefeuilles
+  try {
+    if (!(data.shops || []).length || !(data.companies || []).length) await sbLoadAllIntoData();
+  } catch (e) {}
+  return { ok, errMsg };
+}
+
 async function renderAdminAccounts() {
   if (!currentUser || currentUser.role !== 'admin') return;
   const el = document.getElementById('adminAccountsList');
@@ -8370,6 +8604,7 @@ async function renderAdminAccounts() {
     }
   }
   window._adminAccountsLoadedOnce = true;
+  const walletRes = await refreshAdminWalletsFromSupabase();
 
   let accounts = listAllManagedAccounts();
   const orderCount = {};
@@ -8379,7 +8614,7 @@ async function renderAdminAccounts() {
     orderCount[uid] = (orderCount[uid] || 0) + 1;
   });
   accounts = accounts.map(a => {
-    const bal = Number(a.wallet || a.balance || 0);
+    const bal = getAdminAccountBalance(a);
     const orders = orderCount[String(a.id)] || 0;
     return Object.assign({}, a, { _orders: orders, _bal: bal, _score: orders * 10000 + Math.min(bal, 999999) });
   }).sort((x, y) => y._score - x._score || String(x.name||'').localeCompare(String(y.name||''), 'fr'));
@@ -8423,7 +8658,7 @@ async function renderAdminAccounts() {
   const countEntreprise = allAcc.filter(a => accountHasTag(a, 'entreprise')).length;
   const countClient = allAcc.filter(a => accountHasTag(a, 'client')).length;
   const totalOrders = (data.orders || []).length;
-  const totalBal = allAcc.reduce((s, a) => s + Number(a.wallet || a.balance || 0), 0);
+  const totalBal = allAcc.reduce((s, a) => s + getAdminAccountBalance(a), 0);
 
   const rows = accounts.map((a, i) => {
     const pos = i + 1;
@@ -8477,7 +8712,13 @@ async function renderAdminAccounts() {
       ${countClient ? `<span>${lang==='en'?'Clients':'Clients'} ${countClient}</span>` : ''}
     </div>`;
 
-  el.innerHTML = `
+  const walletWarn = (walletRes && walletRes.ok === false)
+    ? `<div class="card" style="margin-bottom:10px;font-size:12px;line-height:1.45;color:#FBBF24;border-color:rgba(251,191,36,.4)">⚠️ ${lang==='en'
+        ? 'Supabase refused to read wallet_accounts for this admin, so balances may show 0. Run the SQL policy file (admin_wallet_read.sql).'
+        : 'Supabase refuse la lecture de wallet_accounts pour ce compte admin : les soldes peuvent s’afficher à 0. Exécutez le fichier SQL de politique (admin_wallet_read.sql).'}
+        <div style="opacity:.7;margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:10.5px">${String(walletRes.errMsg||'').replace(/</g,'')}</div></div>`
+    : '';
+  el.innerHTML = walletWarn + `
     <div class="admin-rank-wrap">
       <div class="admin-rank-panel">
         <div class="admin-rank-xp">
@@ -10237,30 +10478,17 @@ function getVisibleProducts() {
     return true;
   };
   let list = [];
-  if (currentUser.role === 'client') {
-    // ACCUEIL = marché public Allo.
-    // Le catalogue privé d'une entreprise n'est visible que lorsqu'un client
-    // est réellement entré dans cette entreprise depuis l'onglet Entreprises.
-    const activeCompanyId = window._activeClientCompanyId ? String(window._activeClientCompanyId) : '';
-    if (activeCompanyId) {
-      list = (data.products || []).filter(p =>
-        !!p.companyId && String(p.companyId) === activeCompanyId
-      );
-    } else {
-      list = (data.products || []).filter(p => !isCompanyPrivateProduct(p));
-    }
-  } else if (currentUser.role === 'boutique' || currentUser.role === 'entreprise') {
-    // ACCUEIL = catalogue public global d'Allo.
-    // Ne jamais limiter l'Accueil aux produits du compte connecté.
-    // Les produits d'entreprise/catalogues privés restent exclus du marché public.
-    list = (data.products || []).filter(p => !isCompanyPrivateProduct(p));
-  } else if (false) {
-    // Branche historique conservée pour compatibilité.
-    list = [];
+  // Catalogue privé d'une entreprise : visible uniquement après entrée dans cet espace
+  // (demande acceptée). Le rôle du compte (boutique/entreprise) ne change PAS.
+  const activeCompanyId = window._activeClientCompanyId ? String(window._activeClientCompanyId) : '';
+  if (activeCompanyId && isAcceptedCompanyMember(activeCompanyId, currentUser.id)) {
+    list = (data.products || []).filter(p =>
+      !!p.companyId && String(p.companyId) === activeCompanyId
+    );
   } else if (currentUser.role === 'admin') {
     list = data.products || [];
   } else {
-    // Utilisateur public : JAMAIS les produits d'entreprise
+    // Marché public Allo — jamais les catalogues privés d'entreprise
     list = (data.products || []).filter(p => !isCompanyPrivateProduct(p));
   }
   return list.filter(baseFilter);
@@ -12160,6 +12388,14 @@ function renderCart() {
   el.innerHTML = html;
 }
 
+function getBuyerPayBalance() {
+  if (currentUser && (currentUser.role === 'boutique' || currentUser.role === 'entreprise')) {
+    const a = findWalletAccount(getActiveWalletContext());
+    return Number(a && a.balance || 0);
+  }
+  return Number(currentUser && currentUser.balance || 0);
+}
+
 async function validateCart() {
   if (_modalActionBusy) return;
   if (!isLoggedIn()) {
@@ -12173,9 +12409,16 @@ async function validateCart() {
   try {
 
   if (!cart.length) return;
-  // Boutique et entreprise peuvent acheter auprès d'un autre vendeur.
-  const buyerRoles = ['entreprise','boutique'];
-  if (buyerRoles.indexOf(currentUser.role) === -1) return;
+  // Boutique et entreprise commandent avec leur vrai rôle (pas de bascule « client »).
+  // Si le panier contient le catalogue d'une entreprise, l'acceptation de la demande
+  // a déjà été vérifiée à l'entrée dans l'espace (openClientCompanySpace).
+  const buyerRoles = ['entreprise', 'boutique'];
+  if (buyerRoles.indexOf(currentUser.role) === -1) {
+    alert(lang === 'en'
+      ? 'Only a shop or company account can place orders.'
+      : 'Seuls un compte boutique ou entreprise peuvent passer des commandes.');
+    return;
+  }
   let total = 0;
   for (const item of cart) {
     const p = data.products.find(x => x.id === item.productId);
@@ -12189,9 +12432,18 @@ async function validateCart() {
   // Il peut payer avec son solde Allo ou en espèces lorsque le vendeur l'autorise.
   window._checkoutTotal = total;
   window._payMethod = 'balance';
-  try { await refreshCashPaymentOffers(); } catch (e) { console.warn('[Allo] cash offer refresh', e); }
+  // Ouvre IMMÉDIATEMENT le choix du paiement avec les données déjà en mémoire.
+  // L'actualisation des offres « paiement à la livraison » se fait en arrière-plan :
+  // un réseau lent ne doit jamais bloquer le bouton.
   window._cashOfferAvailable = cashOfferAvailableForCart(groupCartByShop());
   openModal('checkout');
+  const _wasCod = !!window._cashOfferAvailable;
+  refreshCashPaymentOffers().then(function () {
+    const now = !!cashOfferAvailableForCart(groupCartByShop());
+    const open = document.getElementById('modalOverlay')?.classList.contains('show')
+      && document.querySelector('#modalContent .pay-methods');
+    if (open && now !== _wasCod && (window._payMethod || 'balance') === 'balance' && !_modalActionBusy) openModal('checkout');
+  }).catch(function (e) { console.warn('[Allo] cash offer refresh', e); });
 
   } finally {
     setModalActionBusy(false);
@@ -12281,9 +12533,13 @@ function isCashOnDeliveryEnabledForShop(shop) {
   return true;
 }
 
-async function refreshCashPaymentOffers() {
+async function refreshCashPaymentOffers(force) {
   if (!USE_SUPABASE || !sb) return [];
-  const res = await sb.from('cash_payment_offers').select('*');
+  if (!force && window._cashOffersAt && (Date.now() - window._cashOffersAt) < 30000 && (data.cashPaymentOffers || []).length >= 0 && data.cashOfferPlans) return data.cashPaymentOffers;
+  const [res, plans] = await withTimeout(Promise.all([
+    sb.from('cash_payment_offers').select('*'),
+    sb.rpc('get_cash_on_delivery_offer_plans')
+  ]), 4000, 'cash offers');
   if (res.error) throw res.error;
   data.cashPaymentOffers = (res.data || []).map(o => ({
     id:o.id, entityType:o.entity_type, entityId:o.entity_id, ownerUserId:o.owner_user_id,
@@ -12291,8 +12547,8 @@ async function refreshCashPaymentOffers() {
     updatedAt:o.updated_at, planId:o.plan_id || null, durationKey:o.duration_key || null,
     startsAt:o.starts_at || null, expiresAt:o.expires_at || null
   }));
-  const plans = await sb.rpc('get_cash_on_delivery_offer_plans');
   if (plans.error) throw plans.error;
+  window._cashOffersAt = Date.now();
   data.cashOfferPlans = (plans.data || []).map(p => ({
     id:p.id, entityType:p.entity_type, durationKey:p.duration_key, price:Number(p.price || 0), enabled:p.enabled === true
   }));
@@ -12512,7 +12768,7 @@ async function toggleShopCod() {
       const { data: result, error } = await sb.rpc(rpcName, rpcArgs);
       if (error) throw error;
       if (!result || !result.ok) throw new Error(currentlyActive ? 'Désactivation non confirmée' : 'Activation non confirmée');
-      await refreshCashPaymentOffers();
+      await refreshCashPaymentOffers(true);
       const afterActive = !!findCashOffer('entreprise', ctx.entityId);
       if (afterActive !== !currentlyActive) {
         throw new Error(currentlyActive ? 'Désactivation non confirmée dans Supabase' : 'Activation non confirmée dans Supabase');
@@ -12558,7 +12814,7 @@ async function toggleShopCod() {
 async function openCashOfferModal(durationKey) {
   const ctx = getCashOfferContext();
   if (!ctx) return;
-  try { await refreshCashPaymentOffers(); } catch (e) { console.warn('[Allo] cash plans refresh', e); }
+  try { await refreshCashPaymentOffers(true); } catch (e) { console.warn('[Allo] cash plans refresh', e); }
   const active = findCashOffer(ctx.entityType, ctx.entityId);
   const plans = getCashOfferPlans(ctx.entityType);
   if (active) {
@@ -12586,7 +12842,7 @@ async function activateCashOnDelivery() {
     flags[String(ctx.entityId)] = true;
     try { await persistShopCodFlags(); } catch (_) {}
     await sbLoadAllIntoData();
-    await refreshCashPaymentOffers();
+    await refreshCashPaymentOffers(true);
     // Pour une entreprise, l'état officiel vient de cash_payment_offers(entity_type, entity_id).
     // Ne jamais déduire son état depuis un catalogue/boutique.
     if (ctx.entityType === 'entreprise') {
@@ -12611,7 +12867,7 @@ async function confirmCheckout() {
   let method = window._payMethod || 'balance';
   // Client entreprise : paiement normal (solde Allo ou espèces), comme en boutique.
   if (method === 'cod') {
-    try { await refreshCashPaymentOffers(); } catch (_) {}
+    try { await refreshCashPaymentOffers(true); } catch (_) {}
     if (!cashOfferAvailableForCart(groupCartByShop())) {
       alert(lang === 'en' ? 'Cash on delivery is not available for all shops in this order.' : 'Le paiement à la livraison n’est pas disponible pour toutes les boutiques de cette commande.');
       window._payMethod = 'balance';
@@ -12697,24 +12953,44 @@ async function confirmCheckout() {
   const grandRaw = groups.reduce((s, g) => s + g.subtotal, 0);
   const discount = getPromoDiscount(grandRaw);
   const grand = Math.max(0, grandRaw - discount);
-  // Paiement en espèces : aucun débit Allo. Paiement balance : débit du solde personnel de l'acheteur.
+  // Paiement en espèces : aucun débit Allo.
+  // Paiement balance : un client paie avec son solde personnel ; une boutique / entreprise
+  // paie avec le portefeuille de SON espace (wallet_accounts). Le débit réel est fait
+  // côté serveur à la création de la commande (trigger), jamais côté navigateur.
+  const _isSellerBuyer = currentUser.role === 'boutique' || currentUser.role === 'entreprise';
+  let _payerCtx = null;
   if (method === 'balance') {
-    if ((currentUser.balance || 0) < grand) {
-      alert(t('balanceInsufficient') + '\n' + (lang==='en'?'Top up from Account.':'Rechargez depuis Compte.'));
-      return;
-    }
-    currentUser.balance -= grand;
-    const reg = registeredUsers.find(u => u.id === currentUser.id);
-    if (reg) { reg.balance = currentUser.balance; saveRegisteredUsers(); }
+    if (_isSellerBuyer) {
+      _payerCtx = getActiveWalletContext();
+      if (!_payerCtx) {
+        alert(lang === 'en' ? 'Your wallet is not linked to an active space.' : 'Votre portefeuille n’est pas lié à un espace actif.');
+        return;
+      }
+      let acct = null;
+      try { acct = await withTimeout(ensureWalletAccount(_payerCtx), 6000, 'wallet'); } catch (e) { console.warn('[Allo] wallet read checkout', e); }
+      const availW = Number((acct || findWalletAccount(_payerCtx))?.balance || 0);
+      if (availW < grand) {
+        alert(t('balanceInsufficient') + '\n' + (lang==='en'?'Top up from Account.':'Rechargez depuis Compte.'));
+        return;
+      }
+    } else {
+      if ((currentUser.balance || 0) < grand) {
+        alert(t('balanceInsufficient') + '\n' + (lang==='en'?'Top up from Account.':'Rechargez depuis Compte.'));
+        return;
+      }
+      currentUser.balance -= grand;
+      const reg = registeredUsers.find(u => u.id === currentUser.id);
+      if (reg) { reg.balance = currentUser.balance; saveRegisteredUsers(); }
 
-    // Sync solde profil immédiatement (national)
-    if (alloIsSupabaseMode() && alloUuid(currentUser.id)) {
-      try {
-        await sb.from('profiles').update({
-          balance: Number(currentUser.balance || 0),
-          updated_at: new Date().toISOString()
-        }).eq('id', currentUser.id);
-      } catch (e) { console.warn('[Allo] balance sync checkout', e); }
+      // Sync solde profil immédiatement (national)
+      if (alloIsSupabaseMode() && alloUuid(currentUser.id)) {
+        try {
+          await sb.from('profiles').update({
+            balance: Number(currentUser.balance || 0),
+            updated_at: new Date().toISOString()
+          }).eq('id', currentUser.id);
+        } catch (e) { console.warn('[Allo] balance sync checkout', e); }
+      }
     }
   }
 
@@ -12816,6 +13092,8 @@ async function confirmCheckout() {
       })),
       total: orderTotal,
       promo: window._appliedPromo ? window._appliedPromo.code : null,
+      payerWalletScope: _payerCtx ? _payerCtx.scope : null,
+      payerWalletEntityId: _payerCtx ? _payerCtx.entityId : null,
       escrow: method === 'balance',
       paidHeld: method === 'balance',
       commissionTotal: 0,
@@ -12835,9 +13113,9 @@ async function confirmCheckout() {
       try {
         await sbUpsertOrder(order);
         // Pousser le stock vers Supabase (les autres clients le reçoivent en temps réel)
-        for (const { item, p } of g.items) {
+        await Promise.all(g.items.map(async ({ item, p }) => {
           try { await syncProductStockToSupabase(p); } catch (_) {}
-        }
+        }));
       } catch (e) {
         console.error('[Allo] checkout order sync', e);
         alert((lang === 'en' ? 'Order could not be saved: ' : 'La commande n’a pas pu être enregistrée : ') + (e && e.message ? e.message : e));
@@ -12889,6 +13167,9 @@ async function confirmCheckout() {
     } catch (e) {
       console.warn('[Allo] refresh orders after checkout', e);
     }
+  }
+  if (_payerCtx) {
+    try { await ensureWalletAccount(_payerCtx); updateWalletChip(); renderWallet(); } catch (e) { console.warn('[Allo] wallet refresh after checkout', e); }
   }
   cart = [];
   window._appliedPromo = null;
@@ -13487,51 +13768,63 @@ async function advanceOrderStatus(orderId) {
     if (role !== 'boutique' && role !== 'entreprise') return;
     if (normalizeOrderStatus(o.status) === 'annulé' || normalizeOrderStatus(o.status) === 'livré') return;
     if (!o.shopStatus || typeof o.shopStatus !== 'object') o.shopStatus = {};
-    // Si déjà en livraison côté entreprise, le prochain clic marque livré
-    if ((role === 'entreprise' || o.companyId) &&
-        (normalizeOrderStatus(o.status) === 'livraison' ||
-         Object.values(o.shopStatus || {}).some(st => normalizeOrderStatus(st) === 'livraison'))) {
-      window._forceCompanyDelivered = true;
-    }
+    // Solde Allo : l'acheteur confirme avec le code — ne pas forcer « livré » côté vendeur.
+    window._forceCompanyDelivered = false;
 
     const sellerShopIds = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String);
-    if (!sellerShopIds.length) return;
+    const rank = { 'en cours': 0, 'preparation': 1, 'livraison': 2, 'livré': 3, 'annulé': -1 };
+    const isCompanyOrder = !!(o.companyId || o.payment === 'company_free');
 
-    // Seulement les boutiques présentes dans CETTE commande et appartenant au vendeur.
-    const relevantShopIds = [...new Set(normalizeOrderItems(o.items || []).map(it => {
+    // Boutiques de la commande appartenant au vendeur (catalogue entreprise inclus).
+    let relevantShopIds = [...new Set(normalizeOrderItems(o.items || []).map(it => {
       const sid = it.shopId || ((data.products || []).find(x => String(x.id) === String(it.productId)) || {}).shopId;
       return sid ? String(sid) : null;
-    }).filter(sid => sid && sellerShopIds.includes(sid)))];
-    if (!relevantShopIds.length) return;
+    }).filter(sid => sid && (!sellerShopIds.length || sellerShopIds.includes(sid))))];
 
-    const rank = { 'en cours': 0, 'preparation': 1, 'livraison': 2, 'livré': 3, 'annulé': -1 };
-    for (const sid of relevantShopIds) {
-      const current = normalizeOrderStatus(o.shopStatus[sid] || o.status);
-      const n = nextSellerStatus(current);
-      if (n) o.shopStatus[sid] = n;
+    // Fallback entreprise : catalogue sans shop_id exploitable → avancer le statut global.
+    if (!relevantShopIds.length && role === 'entreprise' && isCompanyOrder) {
+      const n = nextSellerStatus(o.status);
+      if (!n) return;
+      o.status = n;
+      Object.keys(o.shopStatus || {}).forEach(sid => {
+        const cur = normalizeOrderStatus(o.shopStatus[sid]);
+        const nn = nextSellerStatus(cur);
+        if (nn) o.shopStatus[sid] = nn;
+      });
+    } else {
+      if (!sellerShopIds.length && role !== 'entreprise') return;
+      if (!relevantShopIds.length) return;
+
+      for (const sid of relevantShopIds) {
+        const current = normalizeOrderStatus(o.shopStatus[sid] || o.status);
+        const n = nextSellerStatus(current);
+        if (n) o.shopStatus[sid] = n;
+      }
+
+      const allOrderShopIds = [...new Set(normalizeOrderItems(o.items || []).map(it => {
+        const sid = it.shopId || ((data.products || []).find(x => String(x.id) === String(it.productId)) || {}).shopId;
+        return sid ? String(sid) : null;
+      }).filter(Boolean))];
+      const statuses = allOrderShopIds.map(sid => normalizeOrderStatus(o.shopStatus[sid] || o.status));
+      const minRank = statuses.length
+        ? Math.min(...statuses.map(st => rank[st] != null ? rank[st] : 0))
+        : (rank[normalizeOrderStatus(o.status)] ?? 0);
+      o.status = Object.keys(rank).find(k => rank[k] === minRank) || 'en cours';
     }
 
-    // Le statut global tient compte uniquement des boutiques réellement présentes dans la commande.
-    const allOrderShopIds = [...new Set(normalizeOrderItems(o.items || []).map(it => {
-      const sid = it.shopId || ((data.products || []).find(x => String(x.id) === String(it.productId)) || {}).shopId;
-      return sid ? String(sid) : null;
-    }).filter(Boolean))];
-    const statuses = allOrderShopIds.map(sid => normalizeOrderStatus(o.shopStatus[sid] || o.status));
-    const minRank = statuses.length
-      ? Math.min(...statuses.map(st => rank[st] != null ? rank[st] : 0))
-      : (rank[normalizeOrderStatus(o.status)] ?? 0);
-    o.status = Object.keys(rank).find(k => rank[k] === minRank) || 'en cours';
-
-    // COD : livraison directe sans code. Solde Allo : même flux que la boutique,
-    // avec code saisi par l'acheteur pour libérer le paiement.
-    const isCompanySeller = currentUser.role === 'entreprise' || !!o.companyId;
+    // COD : sans code. Solde Allo : code à l'étape « livraison » (boutique et entreprise).
     const isCodOrder = (typeof isCodPayment === 'function') ? isCodPayment(o) : (o.payment === 'cod');
-    if (!isCodOrder && relevantShopIds.some(sid => normalizeOrderStatus(o.shopStatus[sid]) === 'livraison') && !o.deliveryCode) {
+    const reachedLivraison = normalizeOrderStatus(o.status) === 'livraison'
+      || relevantShopIds.some(sid => normalizeOrderStatus(o.shopStatus[sid]) === 'livraison')
+      || Object.values(o.shopStatus || {}).some(st => normalizeOrderStatus(st) === 'livraison');
+    if (!isCodOrder && reachedLivraison && !o.deliveryCode) {
       o.deliveryCode = generateDeliveryCode();
     }
     window._forceCompanyDelivered = false;
-    const advanced = relevantShopIds.map(sid => normalizeOrderStatus(o.shopStatus[sid]))
-      .sort((a,b) => (rank[b] || 0) - (rank[a] || 0))[0] || o.status;
+    const advanced = (relevantShopIds.length
+      ? relevantShopIds.map(sid => normalizeOrderStatus(o.shopStatus[sid]))
+          .sort((a,b) => (rank[b] || 0) - (rank[a] || 0))[0]
+      : null) || normalizeOrderStatus(o.status);
     if (!Array.isArray(o.timeline)) o.timeline = [];
     o.timeline.push({ status: advanced, date: new Date().toISOString(), by: currentUser && currentUser.id, shops: relevantShopIds });
 
@@ -13860,6 +14153,20 @@ function _paintOrdersList() {
         })
       : [];
 
+    // Quota épuisé (et pas de renouvellement possible) : les commandes à livrer sont masquées.
+    if (ordersMode === 'delivery' && isSellerRole && isCurrentSellerQuotaLocked()) {
+      const viewName = currentUser.role === 'entreprise' ? 'company-activation' : 'shop-activation';
+      const frL = lang !== 'en';
+      el.innerHTML = `<div class="empty" style="text-align:center;padding:28px 16px">
+        <div style="font-size:38px">🔒</div>
+        <div style="font-weight:800;margin:8px 0">${frL ? 'Quota épuisé' : 'Quota exhausted'}</div>
+        <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">${frL
+          ? 'Vos commandes à livrer sont masquées. Activez une formule avec votre solde Allo (rechargez-le si besoin) ou activez le renouvellement automatique.'
+          : 'Your orders to deliver are hidden. Activate a plan with your Allo balance (top it up if needed) or enable auto-renewal.'}</div>
+        <button class="btn btn-accent" onclick="switchView('${viewName}')">🔑 ${frL ? 'Activer une formule' : 'Activate a plan'}</button>
+      </div>`;
+      return;
+    }
     orders = ordersMode === 'delivery' ? toDeliverOrders : purchasedOrders;
   }
   orders = orders.slice().sort(function(a, b) {
@@ -13932,12 +14239,12 @@ function _paintOrdersList() {
     const isCompanyOrderEarly = !!(o.companyId || o.payment === 'company_free');
     const isCompanyOrder = !!(o.companyId || o.payment === 'company_free');
     const isEnterpriseSpace = currentUser.role === 'entreprise';
-    // Espace entreprise : pas de progression de statut (juste voir la commande)
-    let nxtSeller = isEnterpriseSpace && isCompanyOrder ? null : nextSellerStatus(displayStatus);
-    if (!nxtSeller && isCompanyOrderEarly && displayStatus === 'livraison' && isEnterpriseSpace && !isCompanyOrder) {
-      nxtSeller = 'livré';
-    }
     const isCodOrder = (typeof isCodPayment === 'function') ? isCodPayment(o) : (o.payment === 'cod');
+    // Solde Allo (entreprise + boutique) : progression en cours → préparation → livraison
+    // pour afficher le code. Espèces entreprise : pas de multi-étapes (bouton « Marquer comme livré »).
+    let nxtSeller = (isEnterpriseSpace && isCompanyOrder && isCodOrder)
+      ? null
+      : nextSellerStatus(displayStatus);
     // Espèces : pas de suivi multi-étapes — marquage livré en un clic uniquement
     const canAdvance = seller && nxtSeller && !isCodOrder && !orderIsDelivered(o);
     const statusIsDelivery = (displayStatus === 'livraison' || o.status === 'livraison');
@@ -13983,7 +14290,7 @@ function _paintOrdersList() {
           <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;letter-spacing:6px;color:var(--cyan);text-align:center;padding:8px 0">${o.deliveryCode}</div>
           <button type="button" class="btn btn-sm btn-ghost btn-block" id="copyCodeBtn-${o.id}" onclick="copyDeliveryCode('${o.id}','${String(o.deliveryCode).replace(/'/g,'')}')">${lang==='en'?'Copy code':'Copier le code'}</button>
         </div>` : '';
-    const waitHint = (seller && !isCodOrder && statusIsDelivery && !isCompanyOrder && o.deliveryCode)
+    const waitHint = (seller && !isCodOrder && statusIsDelivery && o.deliveryCode)
       ? `<div style="font-size:11px;color:var(--gold);margin-top:6px">⏳ ${t('waitingBuyerConfirm')}</div>` : '';
     // Bloc visible pour l'acheteur : saisie du code inline (plus seulement un bouton discret)
     const buyerConfirmBlock = canConfirmDelivery ? `
@@ -14002,10 +14309,10 @@ function _paintOrdersList() {
         </div>
         <button type="button" class="btn btn-accent btn-block" onclick="confirmDeliveryByBuyerInline('${o.id}')">${t('confirmDelivery')}</button>
       </div>` : '';
-    // Badge statut simplifié pour commandes entreprise (pas de pipeline multi-étapes)
+    // Badge statut : Solde Allo = vrai statut (pipeline). Espèces / company_free = VU / LIVRÉ simplifié.
     const companyDelivered = isCompanyOrder && (orderIsDelivered(o) || normalizeOrderStatus(displayStatus) === 'livré' || normalizeOrderStatus(o.status) === 'livré');
     let statusPillHtml = `<span class="status-pill ${stClass}">${stLabel}</span>`;
-    if (isCompanyOrder) {
+    if (isCompanyOrder && isCodOrder) {
       if (companyDelivered) {
         statusPillHtml = `<span class="status-pill status-ok">${lang==='en'?'DELIVERED':'LIVRÉ'}</span>`;
       } else if (isEnterpriseSpace) {
@@ -14337,10 +14644,10 @@ async function creditUserBalance(userId, amount, label, walletCtx) {
       .select('id,role,balance,wallet').eq('id', userId).maybeSingle();
     if (error || !profile || profile.role === 'admin') return false;
     const field = 'balance';
-    const { error: upErr } = await sb.from('profiles').update({
+    const { data: upRows, error: upErr } = await sb.from('profiles').update({
       [field]: Number(profile[field] || 0) + Number(amount)
-    }).eq('id', userId);
-    if (upErr) return false;
+    }).eq('id', userId).select('id');
+    if (upErr || !upRows || !upRows.length) { console.error('[Allo] credit profiles bloqué (RLS ?)', upErr); return false; }
     await sbAdminWriteWalletTx(userId, Number(amount), label);
     return true;
   }
@@ -14365,8 +14672,8 @@ async function debitUserBalance(userId, amount, label, walletCtx) {
     if (error || !profile || profile.role === 'admin') return false;
     const field = 'balance', avail = Number(profile[field] || 0), amt = Number(amount);
     if (amt > avail) return false;
-    const { error: upErr } = await sb.from('profiles').update({ [field]: avail - amt }).eq('id', userId);
-    if (upErr) return false;
+    const { data: upRows, error: upErr } = await sb.from('profiles').update({ [field]: avail - amt }).eq('id', userId).select('id');
+    if (upErr || !upRows || !upRows.length) return false;
     await sbAdminWriteWalletTx(userId, -amt, label);
     return true;
   }
@@ -14488,29 +14795,56 @@ function renderStock() {
   el.innerHTML = html;
 }
 
+function getClientAccountInfo(c) {
+  // Retrouve le vrai nom et le type du compte acheteur (boutique ou entreprise)
+  const uid = String(c.id || '');
+  const shop = (data.shops || []).find(sh => String(sh.ownerId || '') === uid);
+  const comp = (data.companies || []).find(co => String(co.ownerId || '') === uid);
+  const reg = (typeof registeredUsers !== 'undefined' ? registeredUsers : []).find(u => String(u.id || '') === uid);
+  const fr = lang !== 'en';
+  let type = 'client', icon = '👤', label = fr ? 'Client' : 'Client', name = c.name || '';
+  if (shop) { type = 'boutique'; icon = '🏪'; label = fr ? 'Boutique' : 'Shop'; name = shop.name || name; }
+  else if (comp) { type = 'entreprise'; icon = '🏢'; label = fr ? 'Entreprise' : 'Company'; name = comp.name || name; }
+  else if (reg && reg.role) {
+    if (reg.role === 'boutique') { type = 'boutique'; icon = '🏪'; label = fr ? 'Boutique' : 'Shop'; }
+    else if (reg.role === 'entreprise') { type = 'entreprise'; icon = '🏢'; label = fr ? 'Entreprise' : 'Company'; }
+    name = name || reg.name || '';
+  }
+  return { type, icon, label, name: name || (fr ? 'Compte sans nom' : 'Unnamed account') };
+}
+
 function renderClients() {
   if (!currentUser || (currentUser.role !== 'entreprise')) return;
   const el = document.getElementById('clientsList');
   if (!el) return;
-  const clients = data.clients.filter(c => c.companyId === currentUser.companyId);
+  const clients = data.clients.filter(c => String(c.companyId) === String(currentUser.companyId));
   const canManage = currentUser.role === 'entreprise';
+  const fr = lang !== 'en';
   if (!clients.length) {
     el.innerHTML = `<div class="empty">${t('noClient')}</div>`;
     return;
   }
-  el.innerHTML = clients.map(c => `
+  el.innerHTML = clients.map(c => {
+    const info = getClientAccountInfo(c);
+    const nPrices = (data.companyClientPrices || []).filter(r =>
+      String(r.companyId) === String(currentUser.companyId) && String(r.clientId) === String(c.id)).length;
+    const safeName = escapeCompanyText(info.name);
+    return `
     <div class="list-row" style="flex-wrap:wrap">
-      <div class="avatar">${String(c.name || '?').charAt(0)}</div>
+      <div class="avatar">${info.icon}</div>
       <div class="c-info">
-        <div class="c-name">${c.name}</div>
-        <div class="c-sub">${lang==='en'?'Client of this company':'Client de cette entreprise'} · ${formatMoney(c.balance)}</div>
+        <div class="c-name">${safeName}</div>
+        <div class="c-sub">${info.label} · ${formatMoney(c.balance)}</div>
+        <div class="c-sub" style="margin-top:3px">💰 ${nPrices
+          ? (fr ? `${nPrices} prix personnalisé${nPrices>1?'s':''}` : `${nPrices} custom price${nPrices>1?'s':''}`)
+          : (fr ? 'Prix normaux' : 'Standard prices')}</div>
       </div>
       <div class="c-action" style="flex-wrap:wrap">
         <button class="btn btn-sm btn-ghost" onclick="openModal('msgClient','${c.id}')" title="Message">✉</button>
-        ${canManage ? `<button class="btn btn-sm btn-ghost" onclick="openModal('clientPrices','${c.id}')" title="Prix personnalisés">💰</button><button class="btn btn-sm btn-danger" onclick="deleteClient('${c.id}')" title="Supprimer">✕</button>` : ''}
+        ${canManage ? `<button class="btn btn-sm ${nPrices?'btn-accent':'btn-ghost'}" onclick="openModal('clientPrices','${c.id}')" title="${fr?'Prix personnalisés':'Custom prices'}">💰 ${fr?'Prix':'Prices'}</button><button class="btn btn-sm btn-danger" onclick="deleteClient('${c.id}')" title="Supprimer">✕</button>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 async function deleteClient(id) {
@@ -15190,31 +15524,43 @@ function renderSearch() {
 
 function leaveAccountSpace() {
   if (!currentUser) return;
-  if (currentUser.role === 'boutique' || currentUser.role === 'entreprise') return;
-  const base = window._alloBaseRole || 'client';
-  currentUser.role = base;
-  // En quittant un espace client, ne pas laisser companyId d'une entreprise
-  // dont on n'est pas proprietaire (sinon Mon entreprise apparait a tort).
-  try {
-    const uidLeave = String(currentUser.id || '');
-    const ownsLeave = (data.companies || []).some(c => String(c.ownerId || '') === uidLeave
-      && String(c.id) === String(currentUser.companyId || ''));
-    if (currentUser.companyId && !ownsLeave) {
-      currentUser.companyId = null;
-    }
-  } catch (e) {}
+  // Quitter le catalogue privé d'une entreprise sans toucher au vrai rôle du compte.
+  window._activeClientCompanyId = null;
+  window._catalogQ = '';
+  window._catalogCat = 'all';
   window._alloBaseRole = null;
   buildSidebarNav(); buildNav();
   switchView('account');
   renderAccount();
 }
 
+function isAcceptedCompanyMember(companyId, userId) {
+  const uid = String(userId || (currentUser && currentUser.id) || '');
+  const cid = String(companyId || '');
+  if (!uid || !cid) return false;
+  // Membership réelle (table company_clients)
+  if ((data.clients || []).some(c => String(c.id) === uid && String(c.companyId || '') === cid)) return true;
+  // Demande déjà acceptée (filet si la ligne membership n'est pas encore synchronisée)
+  if ((data.companyClientRequests || []).some(r =>
+    String(r.requesterId) === uid &&
+    String(r.companyId) === cid &&
+    String(r.status || '') === 'accepted'
+  )) return true;
+  return false;
+}
+
 function getCompaniesForCurrentClient() {
   if (!currentUser) return [];
-  const ids = new Set((data.clients || [])
-    .filter(c => String(c.id) === String(currentUser.id))
-    .map(c => String(c.companyId || ''))
-    .filter(Boolean));
+  const uid = String(currentUser.id);
+  const ids = new Set();
+  (data.clients || []).forEach(c => {
+    if (String(c.id) === uid && c.companyId) ids.add(String(c.companyId));
+  });
+  (data.companyClientRequests || []).forEach(r => {
+    if (String(r.requesterId) === uid && String(r.status || '') === 'accepted' && r.companyId) {
+      ids.add(String(r.companyId));
+    }
+  });
   return (data.companies || []).filter(c => ids.has(String(c.id)));
 }
 
@@ -15250,9 +15596,9 @@ function renderClientSpace() {
   if (!directory || !panel) return;
 
   // Si une entreprise est ouverte, l'onglet Entreprises devient son catalogue privé.
-  // L'Accueil ne montre jamais ce catalogue.
+  // L'Accueil ne montre jamais ce catalogue. Le compte garde son vrai rôle (pas de thème client).
   const activeCompanyId = window._activeClientCompanyId ? String(window._activeClientCompanyId) : '';
-  if (currentUser.role === 'client' && activeCompanyId) {
+  if (activeCompanyId && isAcceptedCompanyMember(activeCompanyId, currentUser.id)) {
     const activeCompany = getCompanyById(activeCompanyId);
     const activeProducts = getVisibleProducts();
     const q = String(window._catalogQ || '').trim().toLowerCase();
@@ -15303,7 +15649,7 @@ function renderClientSpace() {
       const owner = String(c.ownerId || '') === String(currentUser.id);
       const pending = myPending.has(cid);
       let action = '';
-      if (mine) action = `<button class="btn btn-sm btn-accent" onclick="openClientCompanySpace('${cid}')">${lang==='en'?'Enter to shop':'Entrer pour faire les achats'}</button>`;
+      if (mine) action = `<button class="btn btn-sm btn-accent" onclick="openClientCompanySpace('${cid}', this)">${lang==='en'?'Enter to shop':'Entrer pour faire les achats'}</button>`;
       else if (pending) action = `<span class="badge">${lang==='en'?'Request pending':'Demande en attente'}</span>`;
       else if (canRequest && !owner) action = `<button class="btn btn-sm btn-ghost" onclick="requestToJoinCompany('${cid}')">${lang==='en'?'Become a client':'Devenir client'}</button>`;
       else if (owner) action = `<span class="badge">${lang==='en'?'Your company':'Votre entreprise'}</span>`;
@@ -15337,7 +15683,7 @@ function renderClientSpace() {
         }).join('') : `<div class="empty">${lang==='en'?'No client request.':'Aucune demande de client.'}</div>`}
       </div>
     </div>` : ''}
-    ${currentUser.role === 'client' ? `<div class="card" style="margin-top:12px">
+    ${['boutique','entreprise','client','user'].includes(String(currentUser.role || '')) ? `<div class="card" style="margin-top:12px">
       <b>📤 ${lang==='en'?'My pending requests':'Mes demandes en attente'}</b>
       <div style="margin-top:9px">${outgoing.length ? outgoing.map(r => { const c=getCompanyById(r.companyId); return `<div class="list-row"><div class="avatar">🏢</div><div class="c-info"><div class="c-name">${escapeCompanyText(c?.name || 'Entreprise')}</div><div class="c-sub">${lang==='en'?'Waiting for the company to accept your request.':'En attente de l’acceptation par l’entreprise.'}</div></div><div class="c-action"><button class="btn btn-sm btn-ghost" onclick="cancelCompanyClientRequest('${String(r.id)}')">${lang==='en'?'Cancel':'Annuler'}</button></div></div>`; }).join('') : `<div class="empty">${lang==='en'?'No pending request.':'Aucune demande en attente.'}</div>`}</div>
     </div>` : ''}`;
@@ -15370,8 +15716,43 @@ async function respondCompanyClientRequest(requestId,decision) {
     if(!owned||!req||String(req.companyId)!==String(owned.id))throw new Error(lang==='en'?'Request not found.':'Demande introuvable.');
     const res=await sb.from('company_client_requests').update({status:decision,responded_at:new Date().toISOString()}).eq('id',requestId).eq('status','pending').select('*').single();
     if(res.error||!res.data)throw(res.error||new Error(lang==='en'?'Request is no longer available.':'Cette demande n’est plus disponible.'));
+    // À l'acceptation : créer la membership (company_clients) pour que le compte puisse entrer et commander
+    // sans jamais changer son rôle (boutique/entreprise reste boutique/entreprise).
+    if (decision === 'accepted' && req.requesterId) {
+      try {
+        const up = await sb.from('company_clients').upsert({
+          company_id: req.companyId,
+          client_id: req.requesterId
+        }, { onConflict: 'company_id,client_id' });
+        if (up.error) {
+          // Fallback si contrainte différente : simple insert
+          const ins = await sb.from('company_clients').insert({
+            company_id: req.companyId,
+            client_id: req.requesterId
+          });
+          if (ins.error && !/duplicate|unique/i.test(String(ins.error.message || ''))) {
+            console.warn('[Allo] company_clients insert', ins.error);
+          }
+        }
+        if (!data.clients) data.clients = [];
+        const exists = data.clients.some(c => String(c.id) === String(req.requesterId) && String(c.companyId) === String(req.companyId));
+        if (!exists) {
+          data.clients.push({
+            id: req.requesterId,
+            membershipId: null,
+            companyId: req.companyId,
+            name: '',
+            identifiant: '',
+            phone: '',
+            balance: 0
+          });
+        }
+      } catch (eMem) {
+        console.warn('[Allo] company membership on accept', eMem);
+      }
+    }
     await sbLoadAllIntoData(); renderClientSpace();
-    alert(decision==='accepted'?(lang==='en'?'Client request accepted.':'Demande acceptée, le compte est maintenant votre client.'): (lang==='en'?'Client request rejected.':'Demande refusée.'));
+    alert(decision==='accepted'?(lang==='en'?'Request accepted. This account can now enter your company space and place orders.':'Demande acceptée. Ce compte peut maintenant entrer dans votre espace entreprise et passer des commandes.'): (lang==='en'?'Client request rejected.':'Demande refusée.'));
   }catch(e){console.error('[Allo] respond client request',e);alert((lang==='en'?'Action failed: ':'Action impossible : ')+(e.message||e));}
   finally{setModalActionBusy(false);}
 }
@@ -15381,25 +15762,41 @@ async function cancelCompanyClientRequest(requestId) {
   try{ const res=await sb.from('company_client_requests').update({status:'cancelled'}).eq('id',requestId).eq('requester_id',currentUser.id).eq('status','pending').select('*').single(); if(res.error||!res.data)throw(res.error||new Error('Demande introuvable')); await sbLoadAllIntoData(); renderClientSpace(); }catch(e){alert((lang==='en'?'Cancellation failed: ':'Impossible d’annuler : ')+(e.message||e));}
 }
 
-async function openClientCompanySpace(companyId) {
+async function openClientCompanySpace(companyId, btnEl) {
   if (!currentUser || !companyId) return;
-  const membership = (data.clients || []).find(c => String(c.id) === String(currentUser.id) && String(c.companyId || '') === String(companyId));
-  if (!membership) { alert(lang === 'en' ? 'Accept the company invitation first.' : 'Acceptez d’abord l’invitation de cette entreprise.'); return; }
+  // Uniquement si l'entreprise a déjà accepté la demande de CE compte.
+  if (!isAcceptedCompanyMember(companyId, currentUser.id)) {
+    alert(lang === 'en'
+      ? 'This company must accept your request before you can enter and place orders.'
+      : 'Cette entreprise doit d’abord accepter votre demande avant que vous puissiez entrer et commander.');
+    return;
+  }
   const company = getCompanyById(companyId);
   if (!company) { alert(lang === 'en' ? 'Company not found.' : 'Entreprise introuvable.'); return; }
-  // Mémoriser le vrai rôle avant d'entrer en client d'une entreprise
-  // (pour que l'onglet Profil puisse le restaurer).
-  if (!window._alloBaseRole) {
-    window._alloBaseRole = currentUser.role || 'client';
-  }
-  // On passe en mode client uniquement pour l'espace privé de cette entreprise.
-  // L'Accueil reste public ; le Profil restaure le vrai compte.
-  currentUser.role = 'client';
-  currentUser.companyId = company.id;
+  // Anti double-clic + animation de chargement sur le bouton « Entrer pour faire les achats »
+  // NB : le garde-fou global (« onceGuard ») met déjà le bouton en état chargement AVANT d'appeler
+  // cette fonction. On ne doit donc PAS se baser sur l'état du bouton pour bloquer, sinon la
+  // fonction s'arrête toujours immédiatement. On utilise un drapeau interne dédié.
+  if (window._enteringCompanySpace) return;
+  window._enteringCompanySpace = true;
+  const btn = (btnEl && btnEl.classList) ? btnEl
+    : (typeof event !== 'undefined' && event && event.currentTarget && event.currentTarget.classList ? event.currentTarget : null);
+  const weSetBusy = !!(btn && !btn.classList.contains('is-loading') && !btn.disabled);
+  if (weSetBusy) setButtonBusy(btn, true, actionBusyLabel('enter'));
+  // IMPORTANT : on ne change JAMAIS le rôle du compte (pas de thème « client »).
+  // Le compte reste boutique / entreprise et commande avec son vrai profil.
+  // On mémorise uniquement l'entreprise active pour afficher son catalogue privé.
   window._activeClientCompanyId = String(company.id);
   window._catalogCat = 'all'; window._catalogQ = ''; window._catalogPage = 1;
-  try { if (USE_SUPABASE && typeof sbLoadAllIntoData === 'function') await sbLoadAllIntoData(); } catch (e) { console.warn('[Allo] client company catalog refresh', e); }
-  buildSidebarNav(); buildNav(); switchView('client-space'); renderAll();
+  try {
+    // Laisser le navigateur afficher l'animation avant le chargement
+    await new Promise(r => setTimeout(r, 60));
+    try { if (USE_SUPABASE && typeof sbLoadAllIntoData === 'function') await sbLoadAllIntoData(); } catch (e) { console.warn('[Allo] client company catalog refresh', e); }
+    buildSidebarNav(); buildNav(); switchView('client-space'); renderAll();
+  } finally {
+    window._enteringCompanySpace = false;
+    if (weSetBusy && btn && document.body.contains(btn)) setButtonBusy(btn, false);
+  }
 }
 
 async function refreshAccountSellerProductsFromSupabase() {
@@ -16126,20 +16523,27 @@ function openModal(type, extra) {
   if (type === 'clientPrices' && currentUser && currentUser.role === 'entreprise') {
     const client = (data.clients || []).find(c => String(c.id) === String(extra) && String(c.companyId) === String(currentUser.companyId));
     if (!client) { alert(lang === 'en' ? 'Client not found.' : 'Client introuvable.'); return; }
+    const info = getClientAccountInfo(client);
     const products = getCompanyProductsForPricing();
+    const fr = lang !== 'en';
     const priceRows = products.length ? products.map(p => {
       const row = (data.companyClientPrices || []).find(r => String(r.companyId) === String(currentUser.companyId) && String(r.clientId) === String(client.id) && String(r.productId) === String(p.id));
       const value = row ? String(row.price) : '';
-      return `<div class="list-row" style="display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center">
-        <div><b>${displayProductName(p.name)}</b><div class="c-sub">Prix normal : ${formatMoney(getEffectivePrice(p))}</div></div>
-        <input class="price-client-input" data-product-id="${p.id}" type="number" min="0" step="1" value="${value}" placeholder="Prix client" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
+      const pname = displayProductName(p.name);
+      return `<div class="list-row price-client-row" data-name="${escapeCompanyText(String(pname).toLowerCase())}" style="display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center">
+        <div><b>${pname}</b><div class="c-sub">${fr?'Prix normal':'Normal price'} : ${formatMoney(getEffectivePrice(p))}${row ? ` · <span style="color:#34D399">${fr?'personnalisé':'custom'}</span>` : ''}</div></div>
+        <input class="price-client-input" data-product-id="${p.id}" type="number" min="0" step="1" value="${value}" placeholder="${fr?'Prix client':'Client price'}" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
       </div>`;
-    }).join('') : `<div class="empty">${lang === 'en' ? 'No company products yet.' : 'Aucun produit de l’entreprise pour le moment.'}</div>`;
+    }).join('') : `<div class="empty">${fr ? 'Aucun produit de l’entreprise pour le moment.' : 'No company products yet.'}</div>`;
     html = `<button class="modal-close" onclick="closeModal()">×</button>
-      <h3>💰 ${lang === 'en' ? 'Personal prices' : 'Prix personnalisés'}</h3>
-      <p class="sub">${lang === 'en' ? `Prices for ${client.name}. Leave a field empty to use the normal price.` : `Prix appliqués uniquement à ${client.name}. Laissez vide pour utiliser le prix normal.`}</p>
-      <div style="display:grid;gap:8px;max-height:55vh;overflow:auto">${priceRows}</div>
-      <button class="btn btn-accent btn-block" style="margin-top:12px" onclick="saveClientPrices('${client.id}')">${t('save')}</button>`;
+      <h3>💰 ${fr ? 'Prix personnalisés' : 'Personal prices'}</h3>
+      <p class="sub">${fr ? `${info.icon} ${escapeCompanyText(info.name)} (${info.label}). Ces prix s’appliquent uniquement à ce compte. Laissez vide pour utiliser le prix normal.` : `${info.icon} ${escapeCompanyText(info.name)} (${info.label}). These prices apply to this account only. Leave empty to use the normal price.`}</p>
+      <input type="search" placeholder="${fr?'Rechercher un produit…':'Search a product…'}" oninput="(function(q){q=String(q||'').toLowerCase();document.querySelectorAll('.price-client-row').forEach(function(r){r.style.display=(!q||r.getAttribute('data-name').indexOf(q)>-1)?'':'none';});})(this.value)" style="width:100%;margin:8px 0;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text)">
+      <div style="display:grid;gap:8px;max-height:50vh;overflow:auto">${priceRows}</div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-ghost" style="flex:0 0 auto" onclick="document.querySelectorAll('.price-client-input').forEach(function(i){i.value='';})">${fr?'Tout remettre au prix normal':'Reset all'}</button>
+        <button class="btn btn-accent" style="flex:1" onclick="saveClientPrices('${client.id}')">${t('save')}</button>
+      </div>`;
   }
 
   if (type === 'editBalance') {
@@ -16464,7 +16868,7 @@ function openModal(type, extra) {
       </div>
       <div class="card" style="padding:12px;margin-bottom:12px;border-color:rgba(139,92,246,.35)">
         <div style="font-size:12px;color:var(--text-muted)">${t('payBalance')}</div>
-        <div style="font-family:'JetBrains Mono';font-size:18px;font-weight:800;color:var(--accent-bright);margin-top:4px">${formatMoney(currentUser.balance||0)}</div>
+        <div style="font-family:'JetBrains Mono';font-size:18px;font-weight:800;color:var(--accent-bright);margin-top:4px">${formatMoney(getBuyerPayBalance())}</div>
         <p style="font-size:11px;color:var(--text-muted);margin-top:8px">${lang==='en'?'Top up your balance from Account / Wallet with Wave, Orange Money or MTN.':'Rechargez votre solde depuis Compte / Portefeuille via Wave, Orange Money ou MTN.'}</p>
       </div>
       <div class="pay-methods" style="margin-bottom:12px">
@@ -18425,11 +18829,14 @@ function isVariantPromoActive(v) {
   return true;
 }
 function getCompanyClientPrice(p, variant) {
-  if (!p || variant || !currentUser || !currentUser.companyId || !currentUser.id) return null;
-  const companyId = String(currentUser.companyId);
+  // Prix personnalisé fixé par l'entreprise FOURNISSEUR (celle qui possède le produit)
+  // pour le compte ACHETEUR connecté (boutique, entreprise ou client).
+  if (!p || variant || !currentUser || !currentUser.id) return null;
+  const supplierId = String(p.companyId || '');
+  if (!supplierId) return null;
   const clientId = String(currentUser.id);
   const row = (data.companyClientPrices || []).find(r =>
-    String(r.companyId) === companyId &&
+    String(r.companyId) === supplierId &&
     String(r.clientId) === clientId &&
     String(r.productId) === String(p.id)
   );
@@ -18480,34 +18887,6 @@ function tickPromoCountdowns() {
   });
 }
 
-async function creditUserBalance(userId, amount, label) {
-  if(!userId||userId==='admin')return false;
-  if(USE_SUPABASE&&sb){
-    const {data:profile,error}=await sb.from('profiles').select('id,role,balance,wallet').eq('id',userId).maybeSingle();
-    if(error||!profile||profile.role==='admin')return false;
-    const field=(profile.role==='boutique'||profile.role==='entreprise')?'wallet':'balance';
-    const {error:upErr}=await sb.from('profiles').update({[field]:Number(profile[field]||0)+Number(amount)}).eq('id',userId);
-    if(upErr)return false;
-    await sbAdminWriteWalletTx(userId,Number(amount),label);return true;
-  }
-  const reg=registeredUsers.find(u=>u.id===userId);let user=currentUser&&currentUser.id===userId?currentUser:null;
-  if(!user&&reg)user=reg;if(!user)return false;
-  const field=(user.role==='boutique'||user.role==='entreprise')?'wallet':'balance';
-  user[field]=(user[field]||0)+Number(amount);if(reg)reg[field]=user[field];saveRegisteredUsers();return true;
-}
-async function debitUserBalance(userId, amount, label) {
-  if(USE_SUPABASE&&sb){
-    const {data:profile,error}=await sb.from('profiles').select('id,role,balance,wallet').eq('id',userId).maybeSingle();
-    if(error||!profile||profile.role==='admin')return false;
-    const field=(profile.role==='boutique'||profile.role==='entreprise')?'wallet':'balance',avail=Number(profile[field]||0),amt=Number(amount);
-    if(amt>avail)return false;
-    const {error:upErr}=await sb.from('profiles').update({[field]:avail-amt}).eq('id',userId);
-    if(upErr)return false;await sbAdminWriteWalletTx(userId,-amt,label);return true;
-  }
-  const reg=registeredUsers.find(u=>u.id===userId);let user=currentUser&&currentUser.id===userId?currentUser:null;if(!user&&reg)user=reg;if(!user)return false;
-  const field=(user.role==='boutique'||user.role==='entreprise')?'wallet':'balance',avail=Number(user[field]||0);if(Number(amount)>avail)return false;
-  user[field]=avail-Number(amount);if(reg)reg[field]=user[field];saveRegisteredUsers();return true;
-}
 function alloRequestId(prefix) {
   try {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -18881,6 +19260,7 @@ async function refreshAdminRequestsFromSupabase() {
         amount:Number(r.amount||0), method:m?.name || (r.payment_method_id ? String(r.payment_method_id) : '—'),
         methodId:r.payment_method_id || null, comment:n.comment || n.legacy || '',
         proof:r.proof_url || null, status:r.status || 'pending',
+        walletScope:r.wallet_scope || 'profile', walletEntityId:r.wallet_entity_id || null,
         reason:r.status==='refused' ? (n.legacy || r.admin_note || '') : '', date:r.created_at, reviewedAt:r.updated_at || null };
     });
     const withdraws = (wd.data || []).map(r => {
@@ -19383,9 +19763,28 @@ function isShopAccountActive(shopId) {
   return getShopOrdersRemaining(shopId) > 0;
 }
 
+/** Vendeur connecté (boutique/entreprise) dont le quota est épuisé : il ne voit plus les commandes à livrer. */
+function isCurrentSellerQuotaLocked() {
+  try {
+    if (!currentUser) return false;
+    if (currentUser.role === 'entreprise') {
+      return !!currentUser.companyId && !isCompanyAccountActive(currentUser.companyId);
+    }
+    if (currentUser.role === 'boutique') {
+      const ids = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String);
+      const shop = (data.shops || []).find(s => ids.includes(String(s.id)));
+      const sid = currentUser.shopId || (shop && shop.id);
+      return !!sid && !isShopAccountActive(sid);
+    }
+  } catch (e) {}
+  return false;
+}
+
 async function persistSellerActivationState(entity, collection, ownerId) {
   if (!entity || !entity.id) return;
   try { saveAppData(); } catch (e) {}
+  // Mode Supabase : le quota vit dans seller_quota_accounts (serveur). On n'écrit plus de copie côté client.
+  return;
   if (!(typeof alloIsSupabaseMode === 'function' && alloIsSupabaseMode() && sb && alloUuid(entity.id))) return;
   const oid = ownerId || entity.ownerId || (currentUser && currentUser.id) || null;
   if (!oid || !alloUuid(oid)) return;
@@ -19420,6 +19819,8 @@ async function consumeCompanyOrderQuota(companyId) {
   const company = (data.companies || []).find(c => String(c.id) === String(companyId));
   if (!company) return;
   ensureCompanyActivationFields(company);
+  // Mode Supabase : le trigger SQL consomme le quota du vendeur à chaque commande (et renouvelle au solde).
+  if (typeof alloIsSupabaseMode === 'function' && alloIsSupabaseMode() && sb && alloUuid(company.id)) return;
   if (typeof alloIsSupabaseMode === 'function' && alloIsSupabaseMode() && sb && alloUuid(company.id)) {
     try {
       const { data: q, error: qe } = await sb.rpc('consume_seller_quota', { p_entity_type: 'entreprise', p_entity_id: company.id });
@@ -19465,6 +19866,7 @@ async function consumeShopOrderQuota(shopId) {
     return;
   }
   ensureShopActivationFields(shop);
+  if (typeof alloIsSupabaseMode === 'function' && alloIsSupabaseMode() && sb && alloUuid(shop.id)) return;
   if (typeof alloIsSupabaseMode === 'function' && alloIsSupabaseMode() && sb && alloUuid(shop.id)) {
     try {
       const { data: q, error: qe } = await sb.rpc('consume_seller_quota', { p_entity_type: 'boutique', p_entity_id: shop.id });
@@ -19546,9 +19948,6 @@ async function requestSellerActivation(entityType, planId) {
         p_entity_type: entityType,
         p_entity_id: entity.id,
         p_plan_id: String(plan.id || ''),
-        p_plan_name: String(plan.name || ''),
-        p_order_quota: quota,
-        p_price: price,
         p_request_id: requestId
       });
       if (ae) throw ae;
@@ -19559,7 +19958,14 @@ async function requestSellerActivation(entityType, planId) {
       }
     } catch (e) {
       console.error('[Allo] seller quota activation', e);
-      alert(lang==='en' ? 'Quota activation failed. No charge was made.' : 'Activation du quota impossible. Aucun débit n’a été effectué.');
+      const em = String((e && e.message) || '');
+      if (/insuffisant/i.test(em)) {
+        alert(lang==='en' ? 'Insufficient Allo balance. Top up your wallet first.' : 'Solde Allo insuffisant. Rechargez d’abord votre portefeuille.');
+      } else if (/gratuite/i.test(em)) {
+        alert(lang==='en' ? 'The free plan can only be used once.' : 'La formule gratuite ne peut être utilisée qu’une seule fois.');
+      } else {
+        alert(lang==='en' ? 'Quota activation failed. No charge was made.' : 'Activation du quota impossible. Aucun débit n’a été effectué.');
+      }
       return;
     }
   } else {
@@ -19570,8 +19976,12 @@ async function requestSellerActivation(entityType, planId) {
   }
 
   // Activation immédiate — pas de validation Super Admin
-  entity.orderQuotaTotal = Number(entity.ordersUsed || 0) + quota;
-  entity.activationLocked = false;
+  // Le quota restant est conservé : nouveau total = ancien total + quota de la formule.
+  const prevTotal = Number(entity.orderQuotaTotal || 0);
+  entity.orderQuotaTotal = (activationResult && activationResult.total_quota != null)
+    ? Number(activationResult.total_quota)
+    : (Math.max(prevTotal, Number(entity.ordersUsed || 0)) + quota);
+  entity.activationLocked = entity.ordersUsed >= entity.orderQuotaTotal;
   entity.activationPhase = price > 0 ? 'paid' : 'free';
   entity.currentPlanId = plan.id;
   entity.lastActivationAt = new Date().toISOString();
@@ -19623,70 +20033,59 @@ async function requestSellerActivation(entityType, planId) {
     : ('Formule activée ! +' + quota + ' commandes' + (price > 0 ? (' · ' + formatMoney(price) + ' débités') : '')));
 }
 
+/** Active / désactive le renouvellement automatique sur la formule préférée du vendeur. */
+async function setAutoRenew(entityType, enabled, planId) {
+  if (!currentUser) return;
+  let entity = null;
+  if (entityType === 'entreprise') {
+    entity = (data.companies || []).find(c => String(c.id) === String(currentUser.companyId));
+  } else {
+    const ids = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String);
+    entity = (data.shops || []).find(s => ids.includes(String(s.id)) && !s.companyId);
+  }
+  if (!entity) return;
+  if (!(typeof alloIsSupabaseMode === 'function' && alloIsSupabaseMode() && sb && alloUuid(entity.id))) {
+    alert(lang==='en' ? 'Auto-renewal requires an online connection.' : 'Le renouvellement automatique nécessite une connexion.');
+    return;
+  }
+  try {
+    const { data: r, error } = await sb.rpc('set_auto_renew', {
+      p_entity_type: entityType, p_entity_id: entity.id, p_enabled: !!enabled, p_plan_id: enabled ? String(planId || '') : null
+    });
+    if (error) throw error;
+    entity.autoRenew = !!r.auto_renew;
+    entity.autoRenewPlanId = r.auto_renew_plan_id || null;
+    entity.ordersUsed = Number(r.orders_used || 0);
+    entity.orderQuotaTotal = Number(r.total_quota || 0);
+    entity.activationLocked = !!r.quota_exhausted;
+    try { await updateWalletChip(); renderWallet(); } catch (e) {}
+    if (enabled) {
+      const pl = getActivationPlanById(planId);
+      alert(r.renewed_now
+        ? (lang==='en' ? 'Auto-renewal enabled and plan activated now.' : 'Renouvellement automatique activé et formule activée maintenant.')
+        : (lang==='en'
+            ? ('Auto-renewal enabled with « ' + ((pl && pl.name) || '') + ' ». It will be activated each time your quota runs out, if your wallet balance is enough.')
+            : ('Renouvellement automatique activé avec « ' + ((pl && pl.name) || '') + ' ». La formule s’activera à chaque fois que votre quota sera épuisé, si votre solde est suffisant.')));
+    } else {
+      alert(lang==='en' ? 'Auto-renewal disabled.' : 'Renouvellement automatique désactivé.');
+    }
+  } catch (e) {
+    console.error('[Allo] set_auto_renew', e);
+    alert((lang==='en' ? 'Could not update auto-renewal: ' : 'Impossible de modifier le renouvellement automatique : ') + ((e && e.message) || e));
+  }
+  if (entityType === 'entreprise') renderCompanyActivation(); else renderShopActivation();
+}
+
 function requestCompanyReactivation() {
   // Compat : ouvrir le choix de formule
   renderCompanyActivation();
 }
 
-async function adminValidateCompanyActivation(reqId) {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  const req = (data.activationRequests || data.companyActivationRequests || [])
-    .find(r => String(r.id) === String(reqId))
-    || (data.companyActivationRequests || []).find(r => String(r.id) === String(reqId));
-  if (!req || req.status !== 'pending') return;
+// Le Super Admin ne valide plus rien : les comptes activent eux-mêmes leurs formules avec leur solde Allo.
+async function adminValidateCompanyActivation() { return; }
+async function adminRefuseCompanyActivation() { return; }
 
-  const entityType = req.entityType || (req.shopId ? 'boutique' : 'entreprise');
-  let entity = null;
-  if (entityType === 'boutique') {
-    entity = (data.shops || []).find(c => String(c.id) === String(req.entityId || req.shopId));
-    if (entity) ensureShopActivationFields(entity);
-  } else {
-    entity = (data.companies || []).find(c => String(c.id) === String(req.entityId || req.companyId));
-    if (entity) ensureCompanyActivationFields(entity);
-  }
-  if (!entity) { alert('Compte introuvable'); return; }
-
-  const quota = Number(req.orderQuota) || 50;
-  entity.orderQuotaTotal = Number(entity.ordersUsed || 0) + quota;
-  entity.activationLocked = false;
-  entity.activationPhase = Number(req.amount || 0) > 0 ? 'paid' : 'free';
-  entity.currentPlanId = req.planId || null;
-  entity.lastActivationAt = new Date().toISOString();
-  req.status = 'validated';
-  req.reviewedAt = new Date().toISOString();
-
-  if (!adminConfig.companyActivationRevenue) adminConfig.companyActivationRevenue = 0;
-  adminConfig.companyActivationRevenue = Number(adminConfig.companyActivationRevenue || 0) + Number(req.amount || 0);
-  try { saveAdminConfig(); } catch (e) {}
-  try {
-    if (entityType === 'boutique') persistShopActivationState(entity);
-    else persistCompanyActivationState(entity);
-  } catch (e) {}
-  try { saveAppData(); } catch (e) {}
-  pushUserNotif(req.ownerId,
-    lang==='en'?'Account activated':'Compte activé',
-    lang==='en'
-      ? ('Plan « ' + (req.planName || '') + ' » active for ' + quota + ' orders.')
-      : ('Formule « ' + (req.planName || '') + ' » active pour ' + quota + ' commandes.'));
-  renderAdminCompanyActivations();
-  alert(lang==='en'?'Account activated.':'Compte activé.');
-}
-
-async function adminRefuseCompanyActivation(reqId) {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  const req = (data.activationRequests || []).find(r => String(r.id) === String(reqId))
-    || (data.companyActivationRequests || []).find(r => String(r.id) === String(reqId));
-  if (!req || req.status !== 'pending') return;
-  const reason = (prompt(lang==='en'?'Reason:':'Raison :') || '').trim() || (lang==='en'?'Refused':'Refusé');
-  req.status = 'refused';
-  req.reason = reason;
-  req.reviewedAt = new Date().toISOString();
-  try { saveAppData(); } catch (e) {}
-  pushUserNotif(req.ownerId, lang==='en'?'Activation refused':'Activation refusée', reason);
-  renderAdminCompanyActivations();
-}
-
-function saveActivationPlanFromModal() {
+async function saveActivationPlanFromModal() {
   if (!currentUser || currentUser.role !== 'admin') return;
   const name = (document.getElementById('mPlanName')?.value || '').trim();
   const quota = parseInt(document.getElementById('mPlanQuota')?.value, 10);
@@ -19699,38 +20098,59 @@ function saveActivationPlanFromModal() {
     return;
   }
   if (!adminConfig.activationPlans) adminConfig.activationPlans = [];
-  if (editId) {
-    const p = adminConfig.activationPlans.find(x => String(x.id) === String(editId));
-    if (p) {
-      p.name = name; p.orderQuota = quota; p.price = Math.max(0, price || 0);
-      p.target = target; p.description = desc; p.active = true;
-    }
-  } else {
-    adminConfig.activationPlans.push({
-      id: 'plan_' + Date.now(),
-      name, orderQuota: quota, price: Math.max(0, price || 0),
-      target, description: desc, active: true
+  const existing = editId ? adminConfig.activationPlans.find(x => String(x.id) === String(editId)) : null;
+  const plan = {
+    id: existing ? existing.id : ('plan_' + Date.now()),
+    name, orderQuota: quota, price: Math.max(0, price || 0),
+    target, description: desc, active: existing ? existing.active !== false : true
+  };
+  if (USE_SUPABASE && sb) {
+    const { error } = await sb.from('quota_plans').upsert({
+      id: plan.id, name: plan.name, order_quota: plan.orderQuota, price: plan.price,
+      target: plan.target, description: plan.description, active: plan.active,
+      updated_at: new Date().toISOString()
     });
+    if (error) {
+      console.error('[Allo] save plan', error);
+      alert((lang==='en'?'Could not save the plan: ':'Impossible d’enregistrer la formule : ') + (error.message || error));
+      return;
+    }
   }
+  if (existing) Object.assign(existing, plan); else adminConfig.activationPlans.push(plan);
   try { saveAdminConfig(); } catch (e) {}
   closeModal();
   renderAdminCompanyActivations();
   alert(lang==='en'?'Plan saved':'Formule enregistrée');
 }
 
-function deleteActivationPlan(planId) {
+async function deleteActivationPlan(planId) {
   if (!currentUser || currentUser.role !== 'admin') return;
   if (!confirm(lang==='en'?'Delete this plan?':'Supprimer cette formule ?')) return;
+  if (USE_SUPABASE && sb) {
+    const { error } = await sb.from('quota_plans').delete().eq('id', String(planId));
+    if (error) {
+      alert((lang==='en'?'Could not delete the plan: ':'Impossible de supprimer la formule : ') + (error.message || error));
+      return;
+    }
+  }
   adminConfig.activationPlans = (adminConfig.activationPlans || []).filter(p => String(p.id) !== String(planId));
   try { saveAdminConfig(); } catch (e) {}
   renderAdminCompanyActivations();
 }
 
-function toggleActivationPlan(planId) {
+async function toggleActivationPlan(planId) {
   if (!currentUser || currentUser.role !== 'admin') return;
   const p = (adminConfig.activationPlans || []).find(x => String(x.id) === String(planId));
   if (!p) return;
-  p.active = p.active === false ? true : false;
+  const next = p.active === false ? true : false;
+  if (USE_SUPABASE && sb) {
+    const { error } = await sb.from('quota_plans').update({ active: next, updated_at: new Date().toISOString() }).eq('id', String(planId));
+    if (error) {
+      alert((lang==='en'?'Could not update the plan: ':'Impossible de modifier la formule : ') + (error.message || error));
+      return;
+    }
+  }
+  p.active = next;
   try { saveAdminConfig(); } catch (e) {}
   renderAdminCompanyActivations();
 }
@@ -19757,6 +20177,7 @@ function renderSellerActivationUI(el, entity, entityType) {
 
   const tab = window._sellerActTab || 'quota';
   const fr = lang !== 'en';
+  const nearLimit = !locked && total > 0 && (used / total) >= 0.95;
   const title = entityType === 'entreprise'
     ? (fr ? 'Activation entreprise' : 'Company activation')
     : (fr ? 'Activation boutique' : 'Shop activation');
@@ -19770,8 +20191,9 @@ function renderSellerActivationUI(el, entity, entityType) {
   if (tab === 'quota') {
     body = `
       <div class="dll-hint">${fr
-        ? 'Chaque formule donne un quota de commandes reçues. Quand il est épuisé, payez une nouvelle formule avec votre solde Allo.'
-        : 'Each plan grants a received-orders quota. When empty, pay for a new plan with your Allo balance.'}</div>
+        ? 'Chaque formule donne un quota de commandes reçues. À 95 % vous pouvez déjà en activer une autre (le reste est conservé). Quand il est épuisé, activez une formule avec votre solde, ou activez le renouvellement automatique sur votre formule préférée (onglet Formules).'
+        : 'Each plan grants a received-orders quota. From 95% you can already activate another one (what is left is kept). When empty, activate a plan from your balance, or turn on auto-renewal on your preferred plan (Plans tab).'}</div>
+      ${nearLimit ? `<div class="dll-hint" style="color:#FBBF24">⚠️ ${fr?'Alerte : 95 % de votre quota est utilisé. Ouvrez l’onglet Formules pour en activer une autre.':'Alert: 95% of your quota is used. Open the Plans tab to activate another plan.'}</div>` : ''}
       <div class="dll-row ${locked ? 'locked-row' : 'current'}">
         <div class="dll-badge ${locked ? 'red' : 'green'}">${locked ? '🔒' : '✓'}
           <span class="lvl">${currentPlan ? String(currentPlan.orderQuota||0) : total}</span>
@@ -19807,26 +20229,39 @@ function renderSellerActivationUI(el, entity, entityType) {
         </div>
         <span class="dll-dot pending"></span>
       </div>` : ''}
-      ${locked && !pending ? `<div class="dll-hint" style="color:#FBBF24">${fr?'Quota épuisé — ouvrez l’onglet Formules pour continuer.':'Quota exhausted — open the Plans tab to continue.'}</div>` : ''}
+      ${locked ? `<div class="dll-hint" style="color:#FBBF24">${fr?'Quota épuisé — activez une formule (solde Allo suffisant requis) pour revoir vos commandes à livrer.':'Quota exhausted — activate a plan (enough Allo balance required) to see your orders to deliver again.'}</div>` : ''}
       ${!locked ? `<div class="dll-hint" style="color:#7CFC9A">${fr?'✓ Compte actif — vos clients peuvent commander.':'✓ Account active — customers can order.'}</div>` : ''}
     `;
   } else {
     if (!plans.length) {
       body = `<div class="dll-empty">${fr?'Aucune formule disponible':'No plans available'}</div>`;
     } else {
-      body = `<div class="dll-hint">${fr?'Choisissez une formule. Le paiement se fait immédiatement avec votre solde Allo.':'Pick a plan. Payment is taken immediately from your Allo balance.'}</div>` + plans.map(p => {
+      const autoPlan = entity.autoRenew ? getActivationPlanById(entity.autoRenewPlanId) : null;
+      const autoCard = entity.autoRenew
+        ? `<div class="dll-hint" style="color:#7CFC9A">🔁 ${fr?'Renouvellement automatique activé :':'Auto-renewal on:'} <b>${autoPlan ? String(autoPlan.name||'').replace(/</g,'') : (fr?'formule indisponible':'plan unavailable')}</b>
+            <div class="dll-row-actions"><button class="btn btn-sm btn-ghost" onclick="setAutoRenew('${entityType}', false)">${fr?'Désactiver':'Disable'}</button></div></div>`
+        : `<div class="dll-hint">🔁 ${fr?'Renouvellement automatique désactivé. Choisissez une formule préférée ci-dessous pour qu’elle s’active toute seule quand votre quota est épuisé (si votre solde suffit).':'Auto-renewal is off. Pick a preferred plan below to have it activate by itself when your quota runs out (if your balance is enough).'}</div>`;
+      body = autoCard + `<div class="dll-hint">${fr?'Choisissez une formule. Le paiement se fait immédiatement avec votre solde Allo, sans validation.':'Pick a plan. Payment is taken immediately from your Allo balance.'}</div>` + plans.map(p => {
         const isCurrent = currentPlan && String(currentPlan.id) === String(p.id) && !locked;
         const priceLabel = Number(p.price || 0) <= 0 ? (fr?'Gratuit':'Free') : formatMoney(p.price);
         const badgeClass = Number(p.price||0)<=0 ? 'green' : (isCurrent ? 'gold' : '');
         let actions = '';
         if (isCurrent) {
           actions = `<div class="dll-row-actions"><button class="btn btn-sm btn-ghost" disabled>✓ ${fr?'Formule actuelle':'Current plan'}</button></div>`;
-        } else if (pending) {
-          actions = `<div class="dll-row-actions"><button class="btn btn-sm btn-ghost" disabled>${fr?'Demande déjà envoyée':'Request already sent'}</button></div>`;
-        } else if (locked) {
+        } else if (locked || nearLimit) {
           actions = `<div class="dll-row-actions"><button class="btn btn-sm btn-accent" onclick="requestSellerActivation('${entityType}','${String(p.id).replace(/'/g,"\\\\'")}')">${fr?'Payer & activer':'Pay & activate'}</button></div>`;
         } else {
-          actions = `<div class="dll-row-actions"><button class="btn btn-sm btn-ghost" disabled>${fr?'Disponible au prochain verrouillage':'Available when locked'}</button></div>`;
+          actions = `<div class="dll-row-actions"><button class="btn btn-sm btn-ghost" disabled>${fr?'Disponible à partir de 95 % du quota':'Available from 95% usage'}</button></div>`;
+        }
+        if (Number(p.price || 0) > 0) {
+          const isAuto = entity.autoRenew && String(entity.autoRenewPlanId) === String(p.id);
+          const pid = String(p.id).replace(/'/g, "\\'");
+          const autoBtn = isAuto
+            ? `<button class="btn btn-sm btn-ghost" disabled>🔁 ${fr?'Renouvellement auto':'Auto-renewal'} ✓</button>`
+            : `<button class="btn btn-sm btn-ghost" onclick="setAutoRenew('${entityType}', true, '${pid}')">🔁 ${fr?'Renouveler auto':'Auto-renew'}</button>`;
+          actions = actions
+            ? actions.replace('</div>', autoBtn + '</div>')
+            : `<div class="dll-row-actions">${autoBtn}</div>`;
         }
         return `<div class="dll-row ${isCurrent?'current':''}">
           <div class="dll-badge ${badgeClass}">🔑<span class="lvl">${p.orderQuota||0}</span></div>
@@ -19851,11 +20286,13 @@ function renderSellerActivationUI(el, entity, entityType) {
   }
 
   el.innerHTML = `
-    <div class="dll-panel">
+    <div class="dll-panel ${tab==='plans' ? 'plans-split' : ''}">
+      <div class="dll-head">
       <div class="dll-title">${title}</div>
       <div class="dll-tabs">
         <button type="button" class="dll-tab ${tab==='quota'?'active':''}" onclick="window._sellerActTab='quota';renderSellerActivationUI(document.getElementById('${el.id}'), arguments[0], '${entityType}')">${fr?'Mon quota':'My quota'}</button>
         <button type="button" class="dll-tab ${tab==='plans'?'active':''}" onclick="window._sellerActTab='plans';renderSellerActivationUI(document.getElementById('${el.id}'), arguments[0], '${entityType}')">${fr?'Formules':'Plans'}</button>
+      </div>
       </div>
       <div class="dll-body" id="dllSellerBody">${body}</div>
       <div class="dll-footer">
@@ -19957,15 +20394,9 @@ function renderAdminCompanyActivations() {
         const stClass = st==='validated'||st==='paid'?'ok':(st==='refused'?'bad':'warn');
         const stLabel = st==='validated'?(fr?'Validé':'OK'):(st==='paid'?(fr?'Payé':'Paid'):(st==='refused'?(fr?'Refusé':'Refused'):(fr?'Attente':'Pending')));
         const safeId = String(r.id||'').replace(/'/g,"\\\\'");
-        const actions = st==='pending'
-          ? `<div style="font-size:11px;color:rgba(180,210,240,.7);margin-top:6px">${fr?'Ancienne demande — les nouvelles formules se paient au solde Allo.':'Legacy request — new plans are paid with Allo balance.'}</div>
-            <div class="dll-row-actions">
-              <button class="btn btn-sm btn-accent" onclick="adminValidateCompanyActivation('${safeId}')">${fr?'Valider (legacy)':'Approve (legacy)'}</button>
-              <button class="btn btn-sm btn-danger" onclick="adminRefuseCompanyActivation('${safeId}')">${fr?'Refuser':'Refuse'}</button>
-            </div>`
-          : (st==='paid'
-            ? `<div style="font-size:11px;color:#7CFC9A;margin-top:6px">${fr?'Payé au solde Allo — activé automatiquement':'Paid with Allo balance — auto-activated'}</div>`
-            : (r.reason ? `<div style="font-size:11px;color:#F87171;margin-top:6px">${String(r.reason).replace(/</g,'')}</div>` : ''));
+        const actions = (st==='paid'||st==='validated')
+          ? `<div style="font-size:11px;color:#7CFC9A;margin-top:6px">${fr?'Payé au solde Allo — activé automatiquement':'Paid with Allo balance — auto-activated'}</div>`
+          : (r.reason ? `<div style="font-size:11px;color:#F87171;margin-top:6px">${String(r.reason).replace(/</g,'')}</div>` : '');
         return `<div class="dll-row ${st==='pending'?'':'current'}">
           <div class="dll-badge ${st==='validated'?'green':(st==='refused'?'red':'gold')}">📋<span class="lvl">${r.orderQuota||0}</span></div>
           <div class="dll-main">
@@ -20036,12 +20467,14 @@ function renderAdminCompanyActivations() {
   }
 
   host.innerHTML = `
-    <div class="dll-panel">
+    <div class="dll-panel plans-split">
+      <div class="dll-head">
       <div class="dll-title">${fr?"Formules d'activation":'Activation plans'}</div>
       <div class="dll-tabs">
         <button type="button" class="dll-tab ${tab==='plans'?'active':''}" data-tab="plans">${fr?'Formules':'Plans'}</button>
         <button type="button" class="dll-tab ${tab==='requests'?'active':''}" data-tab="requests">${fr?'Historique':'History'}</button>
         <button type="button" class="dll-tab ${tab==='status'?'active':''}" data-tab="status">${fr?'Comptes':'Accounts'}</button>
+      </div>
       </div>
       <div class="dll-body">${body}</div>
       <div class="dll-footer">
@@ -20459,7 +20892,8 @@ function printInvoice(orderId) {
     return;
   }
   const html = `<!DOCTYPE html><html lang="${lang}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Allo — ${t('order')} #${String(o.id).slice(-8)}</title>
-<style>body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:800px;margin:auto}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #ddd;padding:8px;text-align:left}h1{color:#6D28D9}h2{margin-bottom:6px}.total{margin-top:16px;font-size:18px;font-weight:700}</style></head><body>
+<style>body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:800px;margin:auto}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #ddd;padding:8px;text-align:left}h1{color:#6D28D9}h2{margin-bottom:6px}.total{margin-top:16px;font-size:18px;font-weight:700}
+</style></head><body>
 <h1>Allo</h1><h2>${t('order')} #${String(o.id).slice(-8)}</h2><p>${new Date(o.date).toLocaleString(locale)}<br>${t('status') || 'Status'}: ${orderStatusLabel(o.status)}</p>
 <table><thead><tr><th>Produit</th><th>Qté</th><th>Prix</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="total">${t('total')}: ${formatMoney(o.total)}</p><p style="color:#666;font-size:12px">Allo — ${t('escrowHold')}</p></body></html>`;
@@ -20531,7 +20965,7 @@ async function chFetchPeers(ids){
 async function chLoad(){
   if (!chOn()) return;
   const me = String(currentUser.id);
-  if (CH.uid !== me) { CH.msgs = []; CH.peers = {}; CH.blocks = new Set(); CH.open = null; CH.uid = me; chStartRealtime(); }
+  if (CH.uid !== me) { CH.msgs = []; CH.peers = {}; CH.blocks = new Set(); CH.open = null; CH.loaded = false; CH.uid = me; chStartRealtime(); }
   const [m, b] = await Promise.all([
     sb.from('messages').select('*').is('target', null).not('receiver_id', 'is', null)
       .or('sender_id.eq.' + me + ',receiver_id.eq.' + me).order('created_at', { ascending: true }).limit(2000),
@@ -20812,7 +21246,23 @@ renderMessages = function(){
 const _chOrigSwitchView = switchView;
 switchView = function(v){ if (v !== 'messages') { chOverlayRemove(); CH.open = null; } return _chOrigSwitchView.apply(this, arguments); };
 const _chOrigCount = countUnreadMessages;
-countUnreadMessages = function(){ return CH.loaded ? chUnread() : _chOrigCount(); };
+countUnreadMessages = function(){
+  // Supabase = seule source de vérité du « lu » : on charge la messagerie dès la connexion
+  // (sans attendre l'ouverture de l'onglet Messages) et on n'utilise JAMAIS l'ancien
+  // compteur local `readBy`, qui n'est pas persisté et repart à zéro à chaque connexion.
+  if (chOn()) {
+    if (!CH.loaded || CH.uid !== String(currentUser.id)) {
+      if (!CH._loading && (!CH._triedAt || Date.now() - CH._triedAt > 15000)) {
+        CH._loading = true; CH._triedAt = Date.now();
+        chLoad().catch(function(e){ console.warn('[Allo] chat preload', e); })
+          .then(function(){ CH._loading = false; try { updateAllBadges(); } catch(e) {} });
+      }
+      return 0;
+    }
+    return chUnread();
+  }
+  return _chOrigCount();
+};
 
 // ===== APERÇU PUBLIC D'UNE ENTREPRISE (produits visibles, prix masqués jusqu'à acceptation de la demande) =====
 window._previewCompanyId = null; window._companyPreview = window._companyPreview || {};
@@ -22199,15 +22649,36 @@ function enhanceProductCardRatings() {
     'adminRemoveCategory','adminRemoveHashtag','adminRemoveZone','adminSetCategoryRate',
     // Commandes / livraison / paiement cash / activation
     'advanceOrderStatus','confirmDeliveryByBuyer','activateCashOnDelivery','toggleShopCod',
-    'requestSellerActivation','saveShopDeliveryHours',
+    'requestSellerActivation','saveShopDeliveryHours','confirmCheckout','validateCart',
     // Suppressions / enregistrements
     'deleteClient','deletePayMethod','togglePayMethod','deleteProduct',
     'saveAccountCompany','saveAdminCredentials','saveCategoryImage','removeCategoryImage',
     'saveClientBalance','saveClientPrices','sendSuggestionToAdmin','submitProductReview',
     'toggleSubscribe','markAllNotifsRead','cancelCompanyClientRequest',
     // Entreprises : entrer / aperçu
-    'openClientCompanySpace','openCompanyPreview'
+    'openClientCompanySpace','openCompanyPreview',
+    // Ajouts : profil / blocage / création produit
+    'saveCompleteProfile','chToggleBlock','openProductCreationWizard','setAutoRenew'
   ];
+  // Libellé affiché pendant le chargement selon le type d'action
+  function labelFor(name) {
+    if (/^(confirmCheckout|validateCart|activateCashOnDelivery|adminValidate|adminRefuse|adminCredit|confirmDelivery|advanceOrder)/.test(name)) return actionBusyLabel('pay');
+    if (/^(save|submit|admin(Add|Set|Certify|Revoke|Remove)|toggle|requestSeller|markAll)/.test(name)) return actionBusyLabel('save');
+    if (/^(send)/.test(name)) return actionBusyLabel('send');
+    if (/^(open|chOpen)/.test(name)) return actionBusyLabel('load');
+    return actionBusyLabel();
+  }
+  // Retrouve le bouton cliqué (handlers inline onclick="fn()")
+  function clickedButton() {
+    try {
+      const ev = window.event;
+      if (!ev || ev.type !== 'click') return null;
+      const el = ev.currentTarget && ev.currentTarget.nodeType === 1 ? ev.currentTarget : (ev.target && ev.target.closest ? ev.target.closest('button,.btn') : null);
+      if (!el || !el.classList) return null;
+      if (el.tagName !== 'BUTTON' && !el.classList.contains('btn')) return null;
+      return el;
+    } catch (e) { return null; }
+  }
   const inflight = new Set();
   names.forEach(function (name) {
     const orig = window[name];
@@ -22217,14 +22688,30 @@ function enhanceProductCardRatings() {
       try { key = name + '|' + JSON.stringify(Array.prototype.slice.call(arguments)); } catch (e) { key = name; }
       if (inflight.has(key)) return;
       inflight.add(key);
+      // Animation immédiate (spinner + libellé) sur le bouton cliqué
+      let btn = clickedButton();
+      let weSetBusy = false;
+      if (btn && !btn.disabled && !btn.classList.contains('is-loading')) {
+        const txt = (btn.textContent || '').trim();
+        const hasWords = /[A-Za-zÀ-ÿ]{3,}/.test(txt) && btn.children.length === 0;
+        setButtonBusy(btn, true, hasWords ? labelFor(name) : undefined);
+        weSetBusy = btn.classList.contains('is-loading');
+      }
+      const release = function () {
+        inflight.delete(key);
+        if (weSetBusy && btn && btn.classList.contains('is-loading')) {
+          // le bouton peut avoir été remplacé par un re-rendu : on ne touche que s'il existe encore
+          try { setButtonBusy(btn, false); } catch (e) {}
+        }
+        weSetBusy = false;
+      };
       let res;
       try { res = orig.apply(this, arguments); }
-      catch (err) { inflight.delete(key); throw err; }
+      catch (err) { release(); throw err; }
       if (res && typeof res.then === 'function') {
-        const release = function () { inflight.delete(key); };
         res.then(release, release);
       } else {
-        inflight.delete(key);
+        release();
       }
       return res;
     };
