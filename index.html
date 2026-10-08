@@ -19917,6 +19917,10 @@ async function consumeShopOrderQuota(shopId) {
 async function requestSellerActivation(entityType, planId) {
   if (!currentUser) return;
   const plan = getActivationPlanById(planId);
+  if (plan && Number(plan.price || 0) <= 0) {
+    alert(lang === 'en' ? 'The free plan is granted automatically, once, when you first open.' : 'La formule gratuite est offerte automatiquement une seule fois, à la première ouverture.');
+    return;
+  }
   if (!plan) {
     alert(lang === 'en' ? 'Plan not found' : 'Formule introuvable');
     return;
@@ -20180,7 +20184,7 @@ function renderSellerActivationUI(el, entity, entityType) {
   const used = Number(entity.ordersUsed || 0);
   const total = Number(entity.orderQuotaTotal || 0);
   const locked = !!entity.activationLocked;
-  const plans = getActivationPlans(entityType);
+  const plans = getActivationPlans(entityType).filter(p => Number(p.price || 0) > 0); // la formule gratuite n'est jamais proposée aux vendeurs
   const currentPlan = getActivationPlanById(entity.currentPlanId);
   const pending = (data.activationRequests || []).concat(data.companyActivationRequests || [])
     .find(r => String(r.entityId || r.companyId || r.shopId) === String(entity.id) && r.status === 'pending');
