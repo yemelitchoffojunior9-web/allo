@@ -4276,6 +4276,7 @@ html body input:focus::placeholder, html body textarea:focus::placeholder { opac
           <button class="btn btn-sm btn-ghost" id="btnAccountWithdraw" style="flex:1" onclick="openModal('requestWithdraw')">📤 Retrait</button>
           <button class="btn btn-sm btn-ghost" id="btnAccountWallet" style="flex:1" onclick="switchView('wallet')">💼 Portefeuille</button>
         </div>
+        <div id="alloNumberCard"></div>
         <div id="accountExtra"></div>
       </div>
 
@@ -4699,7 +4700,9 @@ function mapProfileToUser(p) {
     city: p.city || '',
     neighborhood: p.neighborhood || '',
     profile_completed: !!p.profile_completed,
-    is_active: p.is_active !== false
+    is_active: p.is_active !== false,
+    alloNumber: p.allo_number || null,
+    agentCode: p.agent_code || null
   };
 }
 
@@ -7252,7 +7255,7 @@ function init() {
         if (sess && sess.user) {
           const pr = await sb.from('profiles').select('*').eq('id', sess.user.id).maybeSingle();
           if (pr && pr.data) {
-            const allowedRoles = ['boutique','entreprise','admin'];
+            const allowedRoles = ['boutique','entreprise','admin','agent'];
             if (!allowedRoles.includes(String(pr.data.role || ''))) {
               // Réparer un ancien rôle grâce au type réellement choisi dans Auth.
               const metaRole = String(sess.user?.user_metadata?.role || '').toLowerCase().trim();
@@ -7274,6 +7277,7 @@ function init() {
               return;
             }
             currentUser = mapProfileToUser(pr.data);
+            if (currentUser.role === 'agent') { authReady = true; await alloOpenAgentSpace(); return; }
             // Fusion cache local si le cloud a des champs vides (sync multi-téléphone)
             try {
               const raw = localStorage.getItem('allo_current_user_profile');
@@ -7703,7 +7707,7 @@ async function doLogin() {
         await sb.auth.signOut();
         return;
       }
-      const allowedRoles = ['boutique','entreprise','admin'];
+      const allowedRoles = ['boutique','entreprise','admin','agent'];
       if (!allowedRoles.includes(String(profile.role || ''))) {
         // Le rôle choisi à l'inscription est aussi conservé dans Supabase Auth.
         // Si le profil a gardé un ancien rôle, on le répare automatiquement.
@@ -7733,6 +7737,7 @@ async function doLogin() {
         if (errEl) { errEl.textContent = lang==='en' ? 'This account is disabled by the administrator.' : 'Ce compte a été désactivé par le Super Admin.'; errEl.classList.add('show'); }
         return;
       }
+      if (currentUser.role === 'agent') { await alloOpenAgentSpace(); return; }
       cart = [];
       const returnAfterLogin = _authReturnView;
       await sbLoadAllIntoData();
@@ -8242,6 +8247,9 @@ async function renderAdminHome() {
       <div class="row-info" style="margin-top:8px">
         <div class="info-box purple" style="cursor:pointer" onclick="switchView('admin-company-activation')"><b>${(adminConfig.activationPlans||[]).length}</b><span>${lang==='en'?'Plans':'Formules'}</span></div>
         <div class="info-box cyan" style="cursor:pointer" onclick="switchView('admin-zones')"><b>${getAdminDeliveryZones().length}</b><span>${lang==='en'?'Zones':'Zones'}</span></div>
+      </div>
+      <div class="row-info" style="margin-top:8px">
+        <div class="info-box purple" style="cursor:pointer" onclick="alloAdminAgents()"><b>👥</b><span>Agents Allo</span></div>
       </div>
       <div class="row-info" style="margin-top:8px">
         <div class="info-box cyan" style="cursor:pointer" onclick="switchView('admin-feedback')"><b>${(data.feedback||[]).length}</b><span>${t('adminFeedback')}</span></div>
@@ -14592,7 +14600,7 @@ async function adjustSpaceWallet(ctx, amount, label) {
     user_id: ctx.ownerId,
     amount: Math.round(Number(amount)),
     type: Number(amount) >= 0 ? 'credit' : 'debit',
-    reference: 'space_' + ctx.scope + '_' + String(ctx.entityId),
+    reference: 'space_' + ctx.scope + '_' + String(ctx.entityId) + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     description: label || '',
     wallet_scope: ctx.scope,
     wallet_entity_id: ctx.entityId
@@ -14732,7 +14740,7 @@ function renderWallet() {
       <div style="display:flex;gap:8px;margin:10px 0 14px;flex-wrap:wrap">
         <button class="btn btn-sm btn-accent" style="flex:1" onclick="openModal('requestTopUp')">➕ ${lang==='en'?'Top up':'Recharger'}</button>
         <button class="btn btn-sm btn-ghost" style="flex:1" onclick="openModal('requestWithdraw')">📤 ${lang==='en'?'Withdraw':'Retrait'}</button>
-      </div>`;
+      </div>${alloWalletExtras()}`;
     }
   }
 
@@ -19141,6 +19149,7 @@ function renderTransactions() {
 }
 async function adminValidateTopUp(id) {
   if (!currentUser || currentUser.role !== 'admin') return;
+  if (!(await alloAskPassword())) return;
   const req = (data.topUpRequests || []).find(r => String(r.id) === String(id));
   if (!req || req.status !== 'pending') return;
 
@@ -19191,6 +19200,7 @@ async function adminRefuseTopUp(id) {
 
 async function adminValidateWithdraw(id) {
   if (!currentUser || currentUser.role !== 'admin') return;
+  if (!(await alloAskPassword())) return;
   const req = (data.withdrawRequests || []).find(r => String(r.id) === String(id));
   if (!req || req.status !== 'pending') return;
 
@@ -22718,6 +22728,245 @@ function enhanceProductCardRatings() {
     wrapped.__onceGuarded = true;
     window[name] = wrapped;
   });
+})();
+
+
+/* ===== ALLO AGENTS : espace agent, retrait chez un agent, gestion Super Admin ===== */
+(function () {
+  const inp = 'width:100%;padding:11px;margin:4px 0 8px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit';
+  const css = '#aOv{display:none;position:fixed;inset:0;z-index:99998;background:var(--bg);overflow:auto}#aOv .aw{max-width:560px;margin:0 auto;padding:16px 14px 90px}#aOv h2{font-size:19px;margin:6px 0 10px}#aOv h3{font-size:14px;margin:20px 0 8px;color:var(--accent-bright)}#aOv .ac{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}#aOv input,#aOv select,#aDlg input,#aDlg select{' + inp + '}#aOv .ar{display:flex;gap:8px;align-items:center;justify-content:space-between}#aOv small,#aDlg small{color:var(--text-muted)}#aOv .ok,#aDlg .ok{color:var(--green)}#aOv .ko,#aDlg .ko{color:var(--red)}#aOv .kv{display:flex;gap:8px}#aOv .kv>div{flex:1;background:var(--surface-2);border-radius:10px;padding:10px;text-align:center}#aOv .kv b{display:block;font-size:17px}#aOv .bar{height:6px;border-radius:4px;background:var(--surface-2);margin-top:6px;overflow:hidden}#aOv .bar i{display:block;height:100%;background:var(--accent)}#aOv .nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:99999}#aOv .nav button{flex:1;background:none;border:0;color:var(--text-muted);font:inherit;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0}#aOv .nav button b{font-size:20px}#aOv .nav button.on{color:var(--accent-bright)}#aDlg{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px}#aDlg .dbox{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;width:100%;max-width:360px;max-height:90vh;overflow:auto;color:var(--text)}';
+  const E = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const M = n => formatMoney(Number(n || 0));
+  const V = id => (document.getElementById(id)?.value || '').trim();
+  const ts = d => new Date(d).toLocaleString('fr-FR');
+  const rpc = async (f, a) => { const r = await sb.rpc(f, a); if (r.error) throw new Error(r.error.message); return r.data; };
+  const msg = (id, t, ok) => { const e = document.getElementById(id); if (e) e.innerHTML = '<span class="' + (ok ? 'ok' : 'ko') + '">' + E(t) + '</span>'; };
+  const once = f => async (...a) => { if (once.b) return; once.b = 1; try { return await f(...a); } finally { once.b = 0; } };
+  const sty = () => { if (!document.getElementById('aCss')) { const s = document.createElement('style'); s.id = 'aCss'; s.textContent = css; document.head.appendChild(s); } };
+  const ov = h => {
+    sty();
+    let o = document.getElementById('aOv');
+    if (!o) { o = document.createElement('div'); o.id = 'aOv'; document.body.appendChild(o); }
+    o.innerHTML = '<div class="aw">' + h + '</div>'; o.style.display = 'block';
+  };
+  window.aClose = () => { const o = document.getElementById('aOv'); if (o) o.style.display = 'none'; };
+  /* Fenêtres intégrées (les boîtes prompt/confirm/alert du navigateur sont bloquées dans certains navigateurs) */
+  const dlg = (t, body, ok, cancel) => new Promise(res => {
+    sty();
+    const d = document.createElement('div'); d.id = 'aDlg';
+    d.innerHTML = '<div class="dbox"><b>' + t + '</b><div style="margin-top:8px">' + body + '</div><div id="dMsg" class="ko" style="min-height:4px"></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-ghost" style="flex:1" id="dNo">' + (cancel || 'Annuler') + '</button>' + (ok ? '<button class="btn btn-accent" style="flex:1" id="dOk">' + ok + '</button>' : '') + '</div></div>';
+    document.body.appendChild(d);
+    const done = v => { d.remove(); res(v); };
+    d.querySelector('#dNo').onclick = () => done(null);
+    const b = d.querySelector('#dOk'); if (b) b.onclick = () => done([...d.querySelectorAll('input,select')].map(i => i.value));
+  });
+  const info = (t, html) => dlg(t, html, null, 'Fermer');
+  window.alloAskPassword = () => new Promise(async res => {
+    for (;;) {
+      const r = await dlg('🔐 Confirmez avec votre mot de passe', '<input type="password" autocomplete="current-password" placeholder="Mot de passe">', 'Valider');
+      if (!r) return res(false);
+      const x = await sb.auth.signInWithPassword({ email: currentUser.email || alloAuthEmail(currentUser.identifier), password: r[0] });
+      if (!x.error) return res(true);
+      await info('Mot de passe incorrect', '<span class="ko">Réessayez.</span>');
+    }
+  });
+
+  /* ---------- Espace agent (onglets) ---------- */
+  const AG = { tab: 'home', a: null, ops: [], s: {}, t: null };
+  const TABS = [['home', '🏠', 'Accueil'], ['dep', '➕', 'Recharger'], ['hist', '📋', 'Historique'], ['me', '👤', 'Profil']];
+  const row = x => '<div class="ac ar"><div><b>' + (x.kind === 'deposit' ? '➕ Recharge' : '💵 Retrait') + ' · n°' + x.allo_number + '</b><br><small>' + ts(x.created_at) + (x.status === 'reversed' ? ' · annulée' : '') + '</small></div><div style="text-align:right"><b>' + (x.kind === 'deposit' ? '' : 'Remettre ') + M(x.amount) + '</b><br><small>+' + Number(x.agent_commission).toFixed(2) + ' F</small></div></div>';
+  window.alloAgentLogout = async () => { try { await sb.auth.signOut(); } catch (e) {} location.reload(); };
+  window.alloAgentPw = async () => {
+    const a = document.getElementById('aPw1').value, b = document.getElementById('aPw2').value;
+    if (a.length < 8 || a !== b) return msg('aMsgPw', '8 caractères minimum, deux saisies identiques');
+    const r = await sb.auth.updateUser({ password: a, data: { must_change_password: false } });
+    if (r.error) return msg('aMsgPw', r.error.message);
+    alloOpenAgentSpace();
+  };
+  const agLoad = async () => {
+    const [p, o, s] = await Promise.all([
+      sb.from('agent_profiles').select('*').eq('user_id', currentUser.id).maybeSingle(),
+      sb.from('agent_operations').select('*').eq('agent_id', currentUser.id).order('created_at', { ascending: false }).limit(100),
+      sb.from('agent_settings').select('*').eq('id', 1).maybeSingle()
+    ]);
+    AG.a = p.data; AG.ops = o.data || []; AG.s = s.data || {};
+  };
+  window.alloAgentTab = t => { AG.tab = t; AG.t = null; agRender(); };
+  window.alloOpenAgentSpace = async () => {
+    const u = (await sb.auth.getUser()).data.user;
+    if (u && u.user_metadata && u.user_metadata.must_change_password) {
+      ov('<h2>🔐 Nouveau mot de passe</h2><div class="ac"><small>Remplacez le mot de passe provisoire pour continuer.</small><input id="aPw1" type="password" placeholder="Nouveau mot de passe (8 caractères min.)"><input id="aPw2" type="password" placeholder="Confirmer"><button class="btn btn-accent" style="width:100%" onclick="alloAgentPw()">Enregistrer</button><div id="aMsgPw"></div></div>');
+      return;
+    }
+    await agLoad(); agRender();
+  };
+  function agRender() {
+    const a = AG.a;
+    if (!a) { ov('<h2>Compte agent introuvable</h2><button class="btn btn-ghost" onclick="alloAgentLogout()">Déconnexion</button>'); return; }
+    const day = new Date().toLocaleDateString('fr-FR');
+    const todayDep = AG.ops.filter(x => x.kind === 'deposit' && x.status === 'done' && new Date(x.created_at).toLocaleDateString('fr-FR') === day).reduce((s, x) => s + Number(x.amount), 0);
+    const lim = a.daily_limit != null ? Number(a.daily_limit) : Number(AG.s.default_daily_limit || 0);
+    let c = '';
+    if (AG.tab === 'home') {
+      c = '<div class="kv" style="margin:10px 0"><div><small>Float disponible</small><b>' + M(a.float_balance) + '</b></div><div><small>Commissions</small><b>' + M(a.commission_balance) + '</b></div></div>' +
+        '<div class="ac"><div class="ar"><small>Recharges aujourd\'hui</small><b>' + M(todayDep) + ' / ' + M(lim) + '</b></div><div class="bar"><i style="width:' + (lim ? Math.min(100, todayDep * 100 / lim) : 0) + '%"></i></div></div>' +
+        '<button class="btn btn-accent" style="width:100%" onclick="alloAgentTab(\'dep\')">➕ Nouvelle recharge</button><h3>Dernières opérations</h3>' + (AG.ops.slice(0, 5).map(row).join('') || '<small>Aucune opération pour le moment.</small>');
+    } else if (AG.tab === 'dep') {
+      c = '<h2>Recharger un client</h2><div id="aStep"></div>';
+    } else if (AG.tab === 'hist') {
+      c = '<h2>Historique</h2>' + (AG.ops.map(row).join('') || '<small>Aucune opération pour le moment.</small>');
+    } else {
+      c = '<h2>Mon profil</h2><div class="ac"><b>' + E(a.full_name) + '</b><br><small>Agent ' + E(currentUser.agentCode || '') + ' · ' + E(a.city || '') + ' · ' + E(a.phone || '') + '</small><br><small class="' + (a.status === 'active' ? 'ok' : 'ko') + '">' + (a.status === 'active' ? 'Compte actif' : 'Compte suspendu') + '</small></div>' +
+        '<h3>Mes commissions : ' + M(a.commission_balance) + '</h3><div class="ac"><input id="aPay" inputmode="decimal" placeholder="Montant à demander (F)"><button class="btn btn-ghost" style="width:100%" onclick="alloAgentPayout()">Demander le paiement</button><div id="aMsg2"></div></div>' +
+        '<h3>Mot de passe</h3><div class="ac"><input id="aPw1" type="password" placeholder="Nouveau mot de passe (8 caractères min.)"><input id="aPw2" type="password" placeholder="Confirmer"><button class="btn btn-ghost" style="width:100%" onclick="alloAgentPw()">Changer le mot de passe</button><div id="aMsgPw"></div></div>' +
+        '<button class="btn btn-ghost" style="width:100%;margin-top:10px" onclick="alloAgentLogout()">Déconnexion</button>';
+    }
+    ov('<div class="ar"><b style="font-size:17px">🏪 Agent ' + E(currentUser.agentCode || '') + '</b><small>' + E(a.full_name) + '</small></div>' + (a.status !== 'active' ? '<div class="ac ko">Compte suspendu : aucune opération possible.</div>' : '') + c +
+      '<div class="nav">' + TABS.map(t => '<button class="' + (AG.tab === t[0] ? 'on' : '') + '" onclick="alloAgentTab(\'' + t[0] + '\')"><b>' + t[1] + '</b>' + t[2] + '</button>').join('') + '</div>');
+    if (AG.tab === 'dep') agStep1();
+  }
+  function agStep1() {
+    document.getElementById('aStep').innerHTML = '<div class="ac"><b>1. Identifier le client</b><input id="aNum" inputmode="numeric" placeholder="Numéro Allo du client"><button class="btn btn-accent" style="width:100%" onclick="alloAgentCheck()">Vérifier le compte</button><div id="aMsg"></div></div>';
+  }
+  function agStep2() {
+    document.getElementById('aStep').innerHTML = '<div class="ac" style="text-align:center"><small>Compte n°' + AG.t.n + '</small><h2 style="margin:4px 0">' + E(AG.t.name) + '</h2><small>Vérifiez que c\'est bien le bon client avant de continuer.</small></div><div class="ac"><b>2. Montant et validation</b><input id="aAmt" inputmode="numeric" placeholder="Montant (F)"><input id="aPwd" type="password" autocomplete="current-password" placeholder="Votre mot de passe pour valider"><button class="btn btn-accent" style="width:100%" onclick="alloAgentDeposit()">Valider la recharge</button><button class="btn btn-ghost" style="width:100%;margin-top:6px" onclick="alloAgentTab(\'dep\')">Changer de compte</button><div id="aMsg"></div></div>';
+  }
+  window.alloAgentCheck = once(async () => {
+    const n = Number(V('aNum')); if (!n) return msg('aMsg', 'Saisissez le numéro Allo du client');
+    try {
+      const l = await rpc('agent_lookup_account', { p_allo_number: n });
+      if (!l.found) return msg('aMsg', 'Aucun compte avec ce numéro');
+      AG.t = { n, name: l.name }; agStep2();
+    } catch (e) { msg('aMsg', e.message); }
+  });
+  window.alloAgentDeposit = once(async () => {
+    const t = AG.t, m = Number(V('aAmt')), pw = document.getElementById('aPwd').value;
+    if (!t) return;
+    if (!(m > 0)) return msg('aMsg', 'Saisissez le montant');
+    if (!pw) return msg('aMsg', 'Saisissez votre mot de passe pour valider');
+    try {
+      const r = await rpc('agent_deposit', { p_allo_number: t.n, p_amount: m, p_request_id: crypto.randomUUID(), p_password: pw });
+      if (r && r.ok === false) return msg('aMsg', r.error);
+      await agLoad();
+      document.getElementById('aStep').innerHTML = '<div class="ac" style="text-align:center"><h2 class="ok">✓ Recharge effectuée</h2><p><b>' + E(t.name) + '</b> (n°' + t.n + ')<br>crédité de <b>' + M(m) + '</b></p><small>Commission : ' + Number(r.commission).toFixed(2) + ' F · Float restant : ' + M(r.agent_float) + '</small><button class="btn btn-accent" style="width:100%;margin-top:12px" onclick="alloAgentTab(\'dep\')">Nouvelle recharge</button></div>';
+    } catch (e) { msg('aMsg', e.message); }
+  });
+  window.alloAgentPayout = once(async () => {
+    try { await rpc('agent_request_payout', { p_amount: Number(V('aPay')) }); msg('aMsg2', '✓ Demande envoyée au Super Admin', 1); } catch (e) { msg('aMsg2', e.message); }
+  });
+
+  /* ---------- Côté client : numéro Allo + retrait chez un agent ---------- */
+  const fp = () => { const s = window._aS || {}; return s.withdraw_fee_pct == null ? 1 : Number(s.withdraw_fee_pct); };
+  const numCard = inModal => {
+    const n = currentUser && currentUser.alloNumber;
+    if (!n || currentUser.role === 'admin' || currentUser.role === 'agent') return '';
+    return '<div style="margin:0 0 12px;padding:12px;border:1px solid var(--accent);border-radius:14px;background:var(--surface)"><div style="font-size:12px;color:var(--text-muted)">Mon numéro Allo</div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b style="font-size:30px;letter-spacing:1px;font-family:\'JetBrains Mono\',monospace">' + n + '</b><button class="btn btn-sm btn-ghost" onclick="alloCopyNum(this)">Copier</button></div><small style="color:var(--text-muted)">Recharge : donnez ce numéro à un agent Allo. Retrait : choisissez un agent et validez avec votre mot de passe.</small><button class="btn btn-sm btn-accent" style="width:100%;margin-top:8px" onclick="' + (inModal ? 'closeModal();' : '') + 'alloUserWithdraw()">🏪 Retirer chez un agent</button></div>';
+  };
+  window.alloCopyNum = btn => { try { navigator.clipboard.writeText(String(currentUser.alloNumber)); if (btn) btn.textContent = 'Copié ✓'; } catch (e) {} };
+  window.alloWalletExtras = () => numCard(false);
+  /* Le numéro apparaît aussi sur la page Profil et dans les fenêtres Recharger / Retrait */
+  const wrap = (name, f) => { const o = window[name]; if (typeof o === 'function') window[name] = function () { const r = o.apply(this, arguments); try { f.apply(this, arguments); } catch (e) {} return r; }; };
+  wrap('renderAccount', () => { const e = document.getElementById('alloNumberCard'); if (e) e.innerHTML = numCard(false); });
+  wrap('openModal', t => {
+    if ((t === 'requestTopUp' || t === 'requestWithdraw') && currentUser && currentUser.alloNumber) {
+      const c = document.getElementById('modalContent'); if (c) c.insertAdjacentHTML('afterbegin', numCard(true));
+    }
+  });
+  window.alloWdPrev = () => {
+    const s = window._aS || {}, m = Number(V('wAmt')) || 0, f = Math.round(m * fp() / 100), on = (s.fee_mode || 'on_top') === 'on_top';
+    const e = document.getElementById('wPrev'); if (e) e.innerHTML = '<small>Frais ' + f + ' F · vous recevez <b>' + M(on ? m : m - f) + '</b> · débité <b>' + M(on ? m + f : m) + '</b></small>';
+  };
+  window.alloUserWithdraw = async () => {
+    window._aS = (await sb.from('agent_settings').select('*').eq('id', 1).maybeSingle()).data || {};
+    ov('<div class="ar"><h2>🏪 Retrait chez un agent</h2><button class="btn btn-sm btn-ghost" onclick="aClose()">✕</button></div><div id="wStep"></div>');
+    wStep1();
+  };
+  function wStep1() {
+    document.getElementById('wStep').innerHTML = '<div class="ac"><b>1. Identifier l\'agent</b><input id="wCode" placeholder="Numéro de l\'agent (ex : A1)"><button class="btn btn-accent" style="width:100%" onclick="alloWdCheck()">Vérifier l\'agent</button><div id="aMsg"></div></div>';
+  }
+  window.alloWdCheck = once(async () => {
+    const c = V('wCode'); if (!c) return msg('aMsg', 'Saisissez le numéro de l\'agent');
+    try {
+      const l = await rpc('lookup_agent', { p_code: c });
+      if (!l.found) return msg('aMsg', 'Agent introuvable ou inactif');
+      window._wA = l;
+      document.getElementById('wStep').innerHTML = '<div class="ac" style="text-align:center"><small>Agent ' + E(l.agent_code) + '</small><h2 style="margin:4px 0">' + E(l.name) + '</h2><small>' + E(l.city || '') + ' · vérifiez que c\'est bien votre agent.</small></div><div class="ac"><b>2. Montant et validation</b><input id="wAmt" inputmode="numeric" placeholder="Montant à recevoir (F)" oninput="alloWdPrev()"><div id="wPrev"><small>Frais de retrait : ' + fp() + ' %</small></div><input id="wPwd" type="password" autocomplete="current-password" placeholder="Votre mot de passe pour valider"><button class="btn btn-accent" style="width:100%" onclick="alloDoWithdraw()">Valider le retrait</button><button class="btn btn-ghost" style="width:100%;margin-top:6px" onclick="alloUserWithdraw()">Changer d\'agent</button><div id="aMsg"></div></div>';
+    } catch (e) { msg('aMsg', e.message); }
+  });
+  window.alloDoWithdraw = once(async () => {
+    const l = window._wA, m = Number(V('wAmt')), pw = document.getElementById('wPwd').value;
+    if (!l) return;
+    if (!(m > 0)) return msg('aMsg', 'Saisissez le montant');
+    if (!pw) return msg('aMsg', 'Saisissez votre mot de passe pour valider');
+    try {
+      const r = await rpc('agent_withdraw', { p_agent_code: l.agent_code, p_amount: m, p_request_id: crypto.randomUUID(), p_password: pw });
+      if (r && r.ok === false) return msg('aMsg', r.error);
+      document.getElementById('wStep').innerHTML = '<div class="ac" style="text-align:center"><h2 class="ok">✓ Retrait validé</h2><p>Montrez cet écran à <b>' + E(r.agent_name) + '</b> (' + E(r.agent_code) + ')</p><h2>Vous recevez ' + M(r.cash_to_receive) + '</h2><small>Frais ' + M(r.fee) + ' · débité ' + M(r.debited) + '</small><button class="btn btn-accent" style="width:100%;margin-top:12px" onclick="aClose()">Terminé</button></div>';
+      try { await sbLoadAllIntoData(); renderWallet(); updateWalletChip(); } catch (e) {}
+    } catch (e) { msg('aMsg', e.message); }
+  });
+
+  /* ---------- Super Admin : agents, paramètres, paiements, annulations ---------- */
+  const fn = async b => {
+    const r = await sb.functions.invoke('manage-agent', { body: b });
+    if (r.error) { let m = r.error.message; try { m = (await r.error.context.json()).error || m; } catch (e) {} throw new Error(m); }
+    if (r.data && r.data.error) throw new Error(r.data.error);
+    return r.data;
+  };
+  const ADM = { n: {}, f: {} };
+  window.alloAdminAgents = async () => {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    const [ag, pr, st, po, op, fin] = await Promise.all([
+      sb.from('agent_profiles').select('*').order('created_at'),
+      sb.from('profiles').select('id,agent_code').eq('role', 'agent'),
+      sb.from('agent_settings').select('*').eq('id', 1).maybeSingle(),
+      sb.from('agent_payout_requests').select('*').eq('status', 'pending').order('created_at'),
+      sb.from('agent_operations').select('*').order('created_at', { ascending: false }).limit(15),
+      sb.rpc('admin_finance_summary')
+    ]);
+    const code = {}, nm = {}; (pr.data || []).forEach(p => code[p.id] = p.agent_code); (ag.data || []).forEach(a => { nm[a.user_id] = a.full_name; ADM.n[a.user_id] = (code[a.user_id] || '') + ' · ' + a.full_name; ADM.f[a.user_id] = a.float_balance; });
+    const s = st.data || {};
+    const list = (ag.data || []).map(a => '<div class="ac"><div class="ar"><b>' + E(code[a.user_id] || '') + ' · ' + E(a.full_name) + '</b><small class="' + (a.status === 'active' ? 'ok' : 'ko') + '">' + (a.status === 'active' ? 'actif' : 'suspendu') + '</small></div><small>' + E(a.city || '') + ' ' + E(a.phone || '') + '</small><div class="kv" style="margin:8px 0"><div><small>Float</small><b>' + M(a.float_balance) + '</b></div><div><small>Commissions</small><b>' + M(a.commission_balance) + '</b></div></div><button class="btn btn-sm btn-accent" style="width:100%;margin-bottom:6px" onclick="alloAdFloat(\'' + a.user_id + '\')">💰 Donner du float</button><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" onclick="alloAdStatus(\'' + a.user_id + '\',\'' + (a.status === 'active' ? 'suspended' : 'active') + '\')">' + (a.status === 'active' ? 'Suspendre' : 'Réactiver') + '</button><button class="btn btn-sm btn-ghost" onclick="alloAdPw(\'' + a.user_id + '\')">Mot de passe</button></div></div>').join('') || '<small>Aucun agent pour le moment.</small>';
+    const pays = (po.data || []).map(r => '<div class="ac ar"><div><b>' + E(nm[r.agent_id] || '') + '</b><br><small>' + ts(r.created_at) + '</small></div><div style="text-align:right"><b>' + M(r.amount) + '</b><br><button class="btn btn-sm btn-accent" onclick="alloAdPayout(\'' + r.id + '\',true)">Payé</button> <button class="btn btn-sm btn-ghost" onclick="alloAdPayout(\'' + r.id + '\',false)">Refuser</button></div></div>').join('') || '<small>Aucune demande en attente.</small>';
+    const ops = (op.data || []).map(x => '<div class="ac ar"><div><b>' + (x.kind === 'deposit' ? '➕' : '💵') + ' ' + E(code[x.agent_id] || '') + ' → n°' + x.allo_number + '</b><br><small>' + ts(x.created_at) + (x.status === 'reversed' ? ' · annulée' : '') + '</small></div><div style="text-align:right"><b>' + M(x.amount) + '</b><br>' + (x.status === 'done' ? '<button class="btn btn-sm btn-ghost" onclick="alloAdRev(\'' + x.id + '\')">Annuler</button>' : '') + '</div></div>').join('') || '<small>Aucune opération.</small>';
+    const sel = v => (s.fee_mode || 'on_top') === v ? ' selected' : '';
+    const f = fin.data || {}, fr = (l, v, c) => '<div class="ar" style="margin:5px 0"><small>' + l + '</small><b class="' + (c || '') + '">' + M(v) + '</b></div>';
+    const finHtml = '<h3>💰 Finances</h3><div class="ac">' + fr('Revenus des quotas', f.quota_revenue) + fr('Frais de retrait encaissés', f.withdraw_fees) + fr('Revenu net (quotas + agents)', f.net_revenue, Number(f.net_revenue) < 0 ? 'ko' : 'ok') + '<hr style="border:0;border-top:1px solid var(--border);margin:8px 0">' + fr('Soldes dus aux utilisateurs', f.user_balances) + fr('Float détenu par les agents', f.agent_float) + fr('Commissions agents dues', f.commissions_owed) + fr('Montant retirable estimé', f.withdrawable, Number(f.withdrawable) < 0 ? 'ko' : 'ok') + '<small>Estimation d\'après les opérations enregistrées (float vendu, recharges et retraits manuels validés, commissions payées). Ne retirez jamais les soldes des utilisateurs.</small></div>';
+    ov('<div class="ar"><h2>👥 Agents Allo</h2><div><button class="btn btn-sm btn-ghost" onclick="alloAdminAgents()">Actualiser</button> <button class="btn btn-sm btn-ghost" onclick="aClose()">✕</button></div></div>' + finHtml +
+      '<h3>Agents</h3>' + list +
+      '<h3>Nouvel agent</h3><div class="ac"><input id="aN" placeholder="Nom complet"><input id="aP" placeholder="Téléphone"><input id="aC" placeholder="Ville"><input id="aD" placeholder="Pièce d\'identité (numéro)"><input id="aI" placeholder="Identifiant de connexion (ex : agent-douala1)"><input id="aL" inputmode="numeric" placeholder="Plafond journalier (vide = plafond général)"><button class="btn btn-accent" style="width:100%" onclick="alloAdCreate()">Créer l\'agent</button><div id="aCred"></div></div>' +
+      '<h3>Paramètres (appliqués aux prochaines opérations)</h3><div class="ac"><small>Frais de retrait payés par le client (%)</small><input id="sF" inputmode="decimal" value="' + (s.withdraw_fee_pct == null ? '' : s.withdraw_fee_pct) + '"><small>Commission de l\'agent sur un retrait (%)</small><input id="sW" inputmode="decimal" value="' + (s.agent_withdraw_commission_pct == null ? '' : s.agent_withdraw_commission_pct) + '"><small>Commission de l\'agent sur une recharge (%)</small><input id="sD" inputmode="decimal" value="' + (s.agent_deposit_commission_pct == null ? '' : s.agent_deposit_commission_pct) + '"><small>Frais de retrait</small><select id="sM"><option value="on_top"' + sel('on_top') + '>En plus du montant</option><option value="included"' + sel('included') + '>Inclus dans le montant</option></select><small>Plafond journalier par défaut (F)</small><input id="sL" inputmode="numeric" value="' + (s.default_daily_limit == null ? '' : s.default_daily_limit) + '"><button class="btn btn-accent" style="width:100%" onclick="alloAdSettings()">Enregistrer les paramètres</button><div id="sMsg"></div></div>' +
+      '<h3>Paiements de commissions demandés</h3>' + pays + '<h3>Dernières opérations</h3>' + ops);
+  };
+  window.alloAdCreate = once(async () => {
+    try {
+      const r = await fn({ action: 'create', full_name: V('aN'), phone: V('aP'), city: V('aC'), id_document: V('aD'), identifier: V('aI'), daily_limit: V('aL') || null });
+      ADM.n[r.user_id] = r.agent_code + ' · ' + V('aN'); ADM.f[r.user_id] = 0;
+      document.getElementById('aCred').innerHTML = '<div class="ac"><b class="ok">✓ Agent ' + E(r.agent_code) + ' créé</b><br>Identifiant : <b>' + E(r.identifier) + '</b><br>Mot de passe provisoire : <b>' + E(r.temp_password) + '</b><br><small>Notez-le maintenant, il ne sera plus affiché. L\'agent devra le changer à sa première connexion.</small><button class="btn btn-sm btn-accent" style="width:100%;margin-top:8px" onclick="alloAdFloat(\'' + r.user_id + '\')">💰 Donner du float maintenant</button></div>';
+    } catch (e) { msg('aCred', e.message); }
+  });
+  window.alloAdFloat = async id => {
+    const r = await dlg('💰 Donner du float', '<small>' + E(ADM.n[id] || '') + '<br>Float actuel : ' + M(ADM.f[id]) + '</small><input inputmode="numeric" placeholder="Montant du float (F)"><input placeholder="Note (ex : cash reçu en main propre)"><small>Un montant négatif retire du float.</small>', 'Créditer');
+    if (!r) return;
+    const amt = Number(r[0]); if (!amt) return info('Montant invalide', 'Saisissez un montant différent de 0.');
+    try { await rpc('admin_credit_agent_float', { p_agent_id: id, p_amount: amt, p_note: r[1] || 'Float' }); await alloAdminAgents(); info('✓ Float mis à jour', M(amt) + ' ajoutés au float de ' + E(ADM.n[id] || '')); } catch (e) { info('Erreur', '<span class="ko">' + E(e.message) + '</span>'); }
+  };
+  window.alloAdStatus = async (id, st) => {
+    const r = await dlg(st === 'suspended' ? 'Suspendre cet agent ?' : 'Réactiver cet agent ?', '<small>' + E(ADM.n[id] || '') + '</small>', 'Confirmer'); if (!r) return;
+    try { await fn({ action: 'set_status', user_id: id, status: st }); alloAdminAgents(); } catch (e) { info('Erreur', '<span class="ko">' + E(e.message) + '</span>'); }
+  };
+  window.alloAdPw = async id => {
+    const r = await dlg('Réinitialiser le mot de passe ?', '<small>' + E(ADM.n[id] || '') + '</small><p>Un nouveau mot de passe provisoire sera généré.</p>', 'Réinitialiser'); if (!r) return;
+    try { const x = await fn({ action: 'reset_password', user_id: id }); info('Nouveau mot de passe', 'Mot de passe provisoire : <b>' + E(x.temp_password) + '</b><br><small>Notez-le maintenant, il ne sera plus affiché.</small>'); } catch (e) { info('Erreur', '<span class="ko">' + E(e.message) + '</span>'); }
+  };
+  window.alloAdSettings = async () => {
+    try { await rpc('admin_update_agent_settings', { p_changes: { withdraw_fee_pct: Number(V('sF')), agent_withdraw_commission_pct: Number(V('sW')), agent_deposit_commission_pct: Number(V('sD')), fee_mode: V('sM'), default_daily_limit: Number(V('sL')) } }); msg('sMsg', '✓ Paramètres enregistrés', 1); } catch (e) { msg('sMsg', e.message); }
+  };
+  window.alloAdPayout = async (id, ok) => { try { await rpc('admin_process_payout', { p_id: id, p_approve: ok, p_note: '' }); alloAdminAgents(); } catch (e) { info('Erreur', '<span class="ko">' + E(e.message) + '</span>'); } };
+  window.alloAdRev = async id => {
+    const r = await dlg('Annuler cette opération ?', '<input placeholder="Motif de l\'annulation">', 'Annuler l\'opération'); if (!r || !r[0].trim()) return;
+    try { await rpc('admin_reverse_agent_operation', { p_op_id: id, p_reason: r[0].trim() }); alloAdminAgents(); } catch (e) { info('Erreur', '<span class="ko">' + E(e.message) + '</span>'); }
+  };
 })();
 
 </script>
