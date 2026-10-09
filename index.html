@@ -22971,6 +22971,63 @@ function enhanceProductCardRatings() {
     const r = await dlg('Annuler cette opération ?', '<input placeholder="Motif de l\'annulation">', 'Annuler l\'opération'); if (!r || !r[0].trim()) return;
     try { await rpc('admin_reverse_agent_operation', { p_op_id: id, p_reason: r[0].trim() }); alloAdminAgents(); } catch (e) { info('Erreur', '<span class="ko">' + E(e.message) + '</span>'); }
   };
+
+  /* ---------- Bouton « Retour » du téléphone : navigation interne au lieu de quitter le site ---------- */
+  (function () {
+    const vs = []; let curV = 'home', popping = false, armed = false, exitUntil = 0;
+    const en = () => typeof lang !== 'undefined' && lang === 'en';
+    const toast = t => {
+      let e = document.getElementById('aToast');
+      if (!e) { e = document.createElement('div'); e.id = 'aToast'; e.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(20,20,30,.95);color:#fff;padding:10px 16px;border-radius:20px;font-size:13px;z-index:100001;border:1px solid var(--border);transition:opacity .3s'; document.body.appendChild(e); }
+      e.textContent = t; e.style.opacity = '1'; clearTimeout(toast.t); toast.t = setTimeout(() => { e.style.opacity = '0'; }, 2000);
+    };
+    const trap = () => { try { history.pushState({ alloTrap: 1 }, ''); } catch (e) {} };
+    const arm = () => {
+      if (armed) return; armed = true;
+      try { history.replaceState({ alloBase: 1 }, ''); } catch (e) {}
+      trap();
+    };
+    ['pointerdown', 'touchstart', 'click'].forEach(ev => document.addEventListener(ev, arm, { once: true, capture: true, passive: true }));
+    const swr = window.switchView;
+    if (typeof swr === 'function') window.switchView = function (v) {
+      const r = swr.apply(this, arguments);
+      try {
+        const a = document.querySelector('.view.active'); const nv = a ? String(a.id).replace(/^view-/, '') : curV;
+        if (nv !== curV) { if (!popping) { vs.push(curV); if (vs.length > 30) vs.shift(); } curV = nv; }
+      } catch (e) {}
+      return r;
+    };
+    ['enterApp', 'doLogout'].forEach(n => { const o = window[n]; if (typeof o === 'function') window[n] = function () { vs.length = 0; const r = o.apply(this, arguments); try { const a = document.querySelector('.view.active'); curV = a ? String(a.id).replace(/^view-/, '') : 'home'; } catch (e) {} return r; }; });
+    const backLayer = () => {
+      const d = document.getElementById('aDlg');
+      if (d) { const n = d.querySelector('#dNo'); if (n) n.click(); else d.remove(); return true; }
+      if (window._profileCompletionRequired) return true;
+      const m = document.getElementById('modalOverlay');
+      if (m && m.classList.contains('show')) { closeModal(); return true; }
+      const s = document.getElementById('sidebar');
+      if (s && s.classList.contains('open')) { closeSidebar(); return true; }
+      const o = document.getElementById('aOv');
+      if (o && o.style.display === 'block') {
+        if (currentUser && currentUser.role === 'agent') { if (AG.tab !== 'home') { alloAgentTab('home'); return true; } return false; }
+        aClose(); return true;
+      }
+      return false;
+    };
+    const prevView = () => {
+      if (!vs.length) return false;
+      const p = vs.pop(); popping = true;
+      try { switchView(p); } finally { popping = false; }
+      return true;
+    };
+    window.addEventListener('popstate', () => {
+      if (!armed) return;
+      if (backLayer() || prevView()) { trap(); return; }
+      if (Date.now() < exitUntil) { armed = false; history.back(); return; }
+      exitUntil = Date.now() + 2000;
+      toast(en() ? 'Press back again to exit' : 'Appuyez encore sur Retour pour quitter');
+      trap();
+    });
+  })();
 })();
 
 </script>
