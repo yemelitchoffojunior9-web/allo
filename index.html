@@ -7068,26 +7068,126 @@ function applyStaticI18n() {
 
 // Message translation cache
 const msgTranslateCache = {};
-async function translateText(text, targetLang) {
-  if (!text || !text.trim()) return text;
-  const key = targetLang + '::' + text;
-  if (msgTranslateCache[key]) return msgTranslateCache[key];
+/* ===== Traduction automatique des messages =====
+   - La langue d'origine est DÉTECTÉE automatiquement (pas de mots-clés devinés).
+   - Si le message est déjà dans la langue de l'utilisateur : rien n'est traduit.
+   - Résultats gardés en mémoire + sur l'appareil pour ne pas retraduire. */
+const ALLO_TR_LS_KEY = 'allo_tr_cache_v1';
+let _alloTrStore = null;
+const _alloTrFail = {};
+
+function _alloTrLoad() {
+  if (_alloTrStore) return _alloTrStore;
+  try { _alloTrStore = JSON.parse(localStorage.getItem(ALLO_TR_LS_KEY) || '{}') || {}; } catch (_) { _alloTrStore = {}; }
+  return _alloTrStore;
+}
+function _alloTrSave() {
   try {
-    const langpair = targetLang === 'en' ? 'fr|en' : 'en|fr';
-    // Detect roughly if already in target language
-    const hasFr = /[àâäéèêëïîôùûüçœ]/i.test(text) || /\b(le|la|les|des|une|vous|nous|bonjour|merci)\b/i.test(text);
-    const hasEn = /\b(the|and|you|your|please|hello|thanks|order)\b/i.test(text);
-    if (targetLang === 'fr' && hasFr && !hasEn) return text;
-    if (targetLang === 'en' && hasEn && !hasFr) return text;
-    const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text.slice(0, 450)) + '&langpair=' + langpair;
-    const res = await fetch(url);
-    const json = await res.json();
-    const out = json?.responseData?.translatedText || text;
-    msgTranslateCache[key] = out;
-    return out;
-  } catch (e) {
-    return text;
+    const st = _alloTrLoad();
+    const keys = Object.keys(st);
+    if (keys.length > 300) keys.slice(0, keys.length - 300).forEach(k => delete st[k]);
+    localStorage.setItem(ALLO_TR_LS_KEY, JSON.stringify(st));
+  } catch (_) {}
+}
+
+/** Estimation locale (secours) : 'fr' | 'en' | null. */
+function alloGuessLang(text) {
+  const t = ' ' + String(text || '').toLowerCase().replace(/[^a-zàâäéèêëïîôùûüçœ'’\s]/g, ' ') + ' ';
+  const fr = (t.match(/ (le|la|les|des|une|un|du|de|et|est|vous|nous|je|tu|il|elle|mon|ma|mes|bonjour|bonsoir|salut|merci|svp|pour|avec|pas|oui|non|combien|prix|livraison|commande|disponible|quand|comment|s'il|j'ai|c'est|ça|cela|très|bien|produit) /g) || []).length + (/[àâéèêëîôùûçœ]/.test(t) ? 1 : 0);
+  const en = (t.match(/ (the|and|is|are|you|your|i|we|my|me|it|this|that|please|hello|hi|thanks|thank|for|with|not|yes|no|how|much|price|delivery|order|available|when|what|do|have|can|good|product|want|need) /g) || []).length;
+  if (fr === en) return null;
+  return fr > en ? 'fr' : 'en';
+}
+
+async function _alloFetchJson(url, ms) {
+  const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), ms || 8000) : null;
+  try {
+    const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally { if (timer) clearTimeout(timer); }
+}
+
+function _alloSplitText(text, max) {
+  if (text.length <= max) return [text];
+  const parts = [];
+  let rest = text;
+  while (rest.length > max) {
+    let cut = Math.max(rest.lastIndexOf('. ', max), rest.lastIndexOf('! ', max), rest.lastIndexOf('? ', max), rest.lastIndexOf('\n', max));
+    if (cut < max * 0.4) cut = rest.lastIndexOf(' ', max);
+    if (cut < 1) cut = max;
+    parts.push(rest.slice(0, cut + 1).trim());
+    rest = rest.slice(cut + 1);
   }
+  if (rest.trim()) parts.push(rest.trim());
+  return parts;
+}
+
+/** Retourne { ok, same, out, from } — same=true : déjà dans la langue cible. */
+async function alloTranslate(text, targetLang) {
+  const raw = String(text == null ? '' : text);
+  const target = targetLang === 'en' ? 'en' : 'fr';
+  const trimmed = raw.trim();
+  // Rien à traduire : vide, sans lettres (emojis, nombres, liens seuls)
+  if (!trimmed || !/[a-zA-Zàâäéèêëïîôùûüçœ]/.test(trimmed.replace(/https?:\/\/\S+/g, ''))) return { ok: true, same: true, out: raw, from: null };
+
+  const key = target + '::' + trimmed;
+  const store = _alloTrLoad();
+  if (store[key]) return store[key];
+  if (_alloTrFail[key] && Date.now() - _alloTrFail[key] < 60000) return { ok: false, same: true, out: raw, from: null };
+
+  // 1) Google Translate (détection automatique de la langue d'origine)
+  try {
+    const chunks = _alloSplitText(trimmed, 900);
+    let from = null;
+    const outs = [];
+    for (const c of chunks) {
+      const j = await _alloFetchJson('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + target + '&dt=t&q=' + encodeURIComponent(c));
+      if (!Array.isArray(j) || !Array.isArray(j[0])) throw new Error('format');
+      if (!from && typeof j[2] === 'string') from = j[2].toLowerCase().split('-')[0];
+      outs.push(j[0].map(x => (x && x[0]) || '').join(''));
+    }
+    const result = (from === target)
+      ? { ok: true, same: true, out: raw, from }
+      : { ok: true, same: false, out: outs.join(' ').trim() || raw, from };
+    store[key] = result; _alloTrSave();
+    return result;
+  } catch (e1) { /* essai suivant */ }
+
+  // 2) MyMemory (secours) : on estime la langue d'origine localement
+  try {
+    const guess = alloGuessLang(trimmed);
+    if (guess === target) { const r = { ok: true, same: true, out: raw, from: guess }; store[key] = r; _alloTrSave(); return r; }
+    const src = guess || (target === 'fr' ? 'en' : 'fr');
+    const chunks = _alloSplitText(trimmed, 450);
+    const outs = [];
+    for (const c of chunks) {
+      const j = await _alloFetchJson('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(c) + '&langpair=' + src + '|' + target);
+      const o = j && j.responseData && j.responseData.translatedText;
+      if (!o || /MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(o)) throw new Error('mymemory');
+      outs.push(o);
+    }
+    const r = { ok: true, same: false, out: outs.join(' ').trim(), from: src };
+    store[key] = r; _alloTrSave();
+    return r;
+  } catch (e2) {
+    _alloTrFail[key] = Date.now();
+    return { ok: false, same: true, out: raw, from: null };
+  }
+}
+
+/** Compatibilité : renvoie directement le texte traduit (ou l'original). */
+async function translateText(text, targetLang) {
+  const r = await alloTranslate(text, targetLang);
+  return (r.ok && !r.same) ? r.out : text;
+}
+
+function alloLangName(code, uiLang) {
+  const fr = uiLang !== 'en';
+  if (code === 'fr') return fr ? 'français' : 'French';
+  if (code === 'en') return fr ? 'anglais' : 'English';
+  try { return new Intl.DisplayNames([uiLang === 'en' ? 'en' : 'fr'], { type: 'language' }).of(code) || code; } catch (_) { return code || ''; }
 }
 
 // No demo accounts — users register via Supabase (admin = profiles.role)
@@ -15050,14 +15150,39 @@ function renderMessages() {
   el.innerHTML = html;
   try { updateAllBadges(); } catch(e) {}
 
-  // Auto-translate messages into the user's language
+  // Traduction automatique vers la langue de l'utilisateur (messages reçus uniquement)
   msgs.forEach(async m => {
     const box = document.getElementById('tr-' + m.id);
     if (!box) return;
-    const translated = await translateText(m.text, lang);
-    if (translated && translated.trim() && translated.trim().toLowerCase() !== m.text.trim().toLowerCase()) {
-      box.querySelector('.tr-body').textContent = translated;
-      box.style.display = 'block';
+    const mine = m.from === currentUser.id || m.from === currentUser.email;
+    if (mine) return;
+    let r;
+    try { r = await alloTranslate(m.text, lang); } catch (_) { return; }
+    if (!r || !r.ok || r.same) return;
+    const card = box.closest('[data-msg-id]');
+    const orig = card && card.querySelector('.msg-original');
+    if (!card || !orig || !document.body.contains(card)) return;
+    const fr = lang !== 'en';
+    const from = r.from ? alloLangName(r.from, lang) : '';
+    box.querySelector('.lbl').textContent = '🌐 ' + (fr ? 'Traduit automatiquement' : 'Translated automatically') + (from ? (fr ? ' · langue d’origine : ' + from : ' · from ' + from) : '');
+    box.querySelector('.tr-body').textContent = r.out;
+    box.style.display = 'block';
+    orig.parentNode.insertBefore(box, orig);           // la traduction passe en premier
+    orig.style.display = 'none';
+    orig.style.opacity = '.75';
+    if (!box.querySelector('.msg-orig-toggle')) {
+      const tg = document.createElement('button');
+      tg.type = 'button';
+      tg.className = 'btn btn-sm btn-ghost msg-orig-toggle';
+      tg.style.cssText = 'margin-top:6px;font-size:11px;padding:4px 8px';
+      tg.textContent = fr ? 'Voir l’original' : 'Show original';
+      tg.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        const hidden = orig.style.display === 'none';
+        orig.style.display = hidden ? 'block' : 'none';
+        tg.textContent = hidden ? (fr ? 'Masquer l’original' : 'Hide original') : (fr ? 'Voir l’original' : 'Show original');
+      });
+      box.appendChild(tg);
     }
   });
 }
