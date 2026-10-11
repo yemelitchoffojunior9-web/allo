@@ -7177,6 +7177,24 @@ async function alloTranslate(text, targetLang) {
   }
 }
 
+/** Résultat déjà connu (sans réseau) ou null. */
+function alloTranslateCached(text, targetLang) {
+  const raw = String(text == null ? '' : text);
+  const target = targetLang === 'en' ? 'en' : 'fr';
+  const trimmed = raw.trim();
+  if (!trimmed || !/[a-zA-Zàâäéèêëïîôùûüçœ]/.test(trimmed.replace(/https?:\/\/\S+/g, ''))) return { ok: true, same: true, out: raw, from: null };
+  return _alloTrLoad()[target + '::' + trimmed] || null;
+}
+function alloTranslateFailed(text, targetLang) {
+  const target = targetLang === 'en' ? 'en' : 'fr';
+  const k = target + '::' + String(text == null ? '' : text).trim();
+  return !!(_alloTrFail[k] && Date.now() - _alloTrFail[k] < 60000);
+}
+function alloTranslateReset(text, targetLang) {
+  const target = targetLang === 'en' ? 'en' : 'fr';
+  delete _alloTrFail[target + '::' + String(text == null ? '' : text).trim()];
+}
+
 /** Compatibilité : renvoie directement le texte traduit (ou l'original). */
 async function translateText(text, targetLang) {
   const r = await alloTranslate(text, targetLang);
@@ -21168,6 +21186,69 @@ const CH = { msgs: [], peers: {}, blocks: new Set(), open: null, chan: null, loa
 '.ch-in{display:flex;flex:none;gap:8px;align-items:flex-end;padding:8px 0 6px;background:var(--bg,#0f0f14);position:relative;z-index:5;flex-shrink:0;width:100%;box-sizing:border-box}.ch-in textarea{flex:1;resize:none;max-height:120px;min-height:42px;border-radius:21px;padding:10px 14px;font-size:16px;line-height:1.35;overflow-y:auto;box-sizing:border-box;-webkit-user-select:text;user-select:text}'+
 '.ch-btn{width:42px;height:42px;border-radius:50%;border:0;background:#25d366;color:#000;font-size:18px;flex:none}.ch-b audio{max-width:220px;height:36px}'; document.head.appendChild(st); })();
 
+/* ----- Traduction automatique dans le chat ----- */
+(function(){ const st = document.createElement('style'); st.textContent =
+'.ch-trnote{font-size:10.5px;opacity:.75;margin-top:3px}.ch-trnote a{color:#53bdeb;text-decoration:underline;cursor:pointer}';
+document.head.appendChild(st); })();
+CH.showOrig = new Set();
+let _chTrT = null; const _chTrBusy = {};
+function chTrTarget(){ return lang === 'en' ? 'en' : 'fr'; }
+function chTrInfo(m){
+  if (!m || m.kind === 'audio' || !m.body) return null;
+  const c = alloTranslateCached(m.body, chTrTarget());
+  return (c && c.ok && !c.same) ? c : null;
+}
+function chTrRefresh(){
+  try {
+    const v = document.getElementById('view-messages');
+    if (!v || !v.classList.contains('active')) return;
+    if (CH.open) chPane(true); else chList();
+  } catch (e) {}
+}
+function chTrKick(list){
+  const target = chTrTarget();
+  (list || []).forEach(m => {
+    if (!m || m.kind === 'audio' || !m.body) return;
+    if (alloTranslateCached(m.body, target)) return;
+    const k = target + '::' + m.body;
+    if (_chTrBusy[k]) return;
+    _chTrBusy[k] = 1;
+    alloTranslate(m.body, target).then(r => {
+      delete _chTrBusy[k];
+      if (r && r.ok && !r.same) { clearTimeout(_chTrT); _chTrT = setTimeout(chTrRefresh, 120); }
+    }).catch(() => { delete _chTrBusy[k]; });
+  });
+}
+function chToggleOrig(el){
+  const b = el && el.closest ? el.closest('.ch-b') : null; if (!b) return;
+  const id = b.getAttribute('data-mid');
+  if (CH.showOrig.has(id)) CH.showOrig.delete(id); else CH.showOrig.add(id);
+  chPane(true);
+}
+function chTrRetry(el){
+  const b = el && el.closest ? el.closest('.ch-b') : null; if (!b) return;
+  const id = b.getAttribute('data-mid');
+  const m = CH.msgs.find(x => String(x.id) === id); if (!m) return;
+  alloTranslateReset(m.body, chTrTarget());
+  chTrKick([m]);
+  el.textContent = lang === 'en' ? 'Translating…' : 'Traduction…';
+}
+function chBubbleBody(m, mine, fr){
+  if (m.kind === 'audio' && m.audio_url) return `<audio controls preload="none" src="${chEsc(m.audio_url)}"></audio>`;
+  if (mine || m.kind === 'audio') return chEsc(m.body);
+  const info = chTrInfo(m);
+  if (info) {
+    const shown = CH.showOrig.has(String(m.id));
+    const from = info.from ? alloLangName(info.from, lang) : '';
+    return chEsc(shown ? m.body : info.out) +
+      `<div class="ch-trnote">🌐 ${fr ? 'Traduit' : 'Translated'}${from ? ' · ' + chEsc(from) : ''} · <a onclick="chToggleOrig(this)">${shown ? (fr ? 'Voir la traduction' : 'Show translation') : (fr ? 'Voir l’original' : 'Show original')}</a></div>`;
+  }
+  if (m.body && alloTranslateFailed(m.body, chTrTarget())) {
+    const g = alloGuessLang(m.body);
+    if (g && g !== chTrTarget()) return chEsc(m.body) + `<div class="ch-trnote">🌐 <a onclick="chTrRetry(this)">${fr ? 'Traduire ce message' : 'Translate this message'}</a></div>`;
+  }
+  return chEsc(m.body);
+}
 function chEsc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function chOn(){ return !!(typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb && currentUser && alloUuid(currentUser.id)); }
 function chName(id){ const p = CH.peers[String(id)]; return (p && p.name) || (lang === 'en' ? 'User' : 'Utilisateur'); }
@@ -21252,9 +21333,12 @@ function chList(){
   const el = document.getElementById('messagesList'); if (!el) return;
   CH.open = null; chOverlayRemove();
   const me = String(currentUser.id), fr = lang !== 'en';
-  const rows = chConvos().map(c => {
+  const _convos = chConvos();
+  chTrKick(_convos.filter(c => String(c.last.sender_id) !== me).map(c => c.last));
+  const rows = _convos.map(c => {
     const l = c.last, mine = String(l.sender_id) === me;
-    const txt = l.kind === 'audio' ? '🎤 ' + (fr ? 'Message vocal' : 'Voice message') : l.body;
+    const _inf = (!mine && l.kind !== 'audio') ? chTrInfo(l) : null;
+    const txt = l.kind === 'audio' ? '🎤 ' + (fr ? 'Message vocal' : 'Voice message') : (_inf ? _inf.out : l.body);
     return `<div class="ch-row" onclick="chOpen('${c.peer}')">${chAvatar(c.peer)}<div class="ch-mid"><div class="ch-nm">${chEsc(chName(c.peer))}${CH.blocks.has(c.peer) ? ' 🚫' : ''}</div><div class="ch-last">${mine ? '<span class="ch-tk' + (l.read_at ? ' seen' : '') + '">' + (l.delivered_at || l.read_at ? '✓✓' : '✓') + '</span> ' : ''}${chEsc(txt)}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--text-muted)">${chTime(l.created_at)}</div>${c.unread ? '<div class="ch-unread">' + c.unread + '</div>' : ''}</div></div>`;
   }).join('');
   el.innerHTML = `<input id="chSearch" placeholder="${fr ? 'Rechercher une personne, boutique ou entreprise…' : 'Search a person, shop or company…'}" oninput="chSearch(this.value)" style="width:100%;margin-bottom:8px"><div id="chResults"></div>` +
@@ -21296,10 +21380,11 @@ function chPane(keep){
   const old = document.getElementById('chScroll'), draft = (document.getElementById('chText') || {}).value || '';
   const sameShell = keep && old && CH.shell === peer + '|' + blocked;
   const msgs = CH.msgs.filter(m => (String(m.sender_id) === me && String(m.receiver_id) === peer) || (String(m.sender_id) === peer && String(m.receiver_id) === me));
+  chTrKick(msgs.filter(m => String(m.sender_id) !== me));
   const bubbles = msgs.map(m => {
     const mine = String(m.sender_id) === me;
-    const body = m.kind === 'audio' && m.audio_url ? `<audio controls preload="none" src="${chEsc(m.audio_url)}"></audio>` : chEsc(m.body);
-    return `<div class="ch-b ${mine ? 'ch-me' : 'ch-ot'}">${body}<div class="ch-meta">${chTime(m.created_at)} ${mine ? chTicks(m) : ''}</div></div>`;
+    const body = chBubbleBody(m, mine, fr);
+    return `<div class="ch-b ${mine ? 'ch-me' : 'ch-ot'}" data-mid="${chEsc(m.id)}">${body}<div class="ch-meta">${chTime(m.created_at)} ${mine ? chTicks(m) : ''}</div></div>`;
   }).join('');
   if (sameShell) {
     const atBottom = old.scrollHeight - old.scrollTop - old.clientHeight < 80;
