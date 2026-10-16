@@ -4613,6 +4613,7 @@ html body input:focus::placeholder, html body textarea:focus::placeholder { opac
         <div class="section-head"><h2><span class="bar"></span> <span id="notifsTitle">Notifications</span></h2>
           <button class="link" id="notifsMarkAll" onclick="markAllNotifsRead()">Tout lu</button>
         </div>
+        <div id="alloPushCard"></div>
         <div id="notifsList"></div>
       </div>
 
@@ -24901,5 +24902,149 @@ html body .order-role-badge{color:#ffb3c7!important}
 })();
 </script>
 
+
+<style id="alloPushCss">
+.apush-card{margin:0 0 12px;padding:12px 14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--border);display:flex;gap:10px;align-items:center;font-size:13px;line-height:1.35}
+.apush-card .t{flex:1}.apush-card b{display:block;margin-bottom:2px}.apush-card .s{color:var(--text-muted);font-size:12px}
+.apush-btn{border:0;border-radius:10px;padding:8px 12px;font-weight:700;background:var(--accent);color:#fff;font-size:13px}
+.apush-btn.g{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
+#alloPushBanner{position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9000;max-width:520px;margin:0 auto;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+</style>
+<script id="alloPushJs">
+(function(){
+  'use strict';
+  var SW_URL='./push-sw.js', SW_SCOPE='./push-scope/', DIS='allo_push_dismissed_at', OFF='allo_push_user_off';
+  var key=null, keyTries=0, busy=false, lastUid=null, pending=null;
+  function L(){ try{ return lang==='en'?'en':'fr'; }catch(e){ return 'fr'; } }
+  var T={fr:{
+    ask:'Activer les notifications ?',askS:'Messages, commandes et nouveautés de vos boutiques, même app fermée.',
+    shopS:'Soyez prévenu à chaque nouveau produit de cette boutique, même app fermée.',
+    on:'Activer',later:'Plus tard',enabled:'Notifications activées sur cet appareil',off:'Désactiver',test:'Tester',
+    blocked:'Notifications bloquées',blockedS:'Autorisez-les dans les réglages du navigateur pour ce site.',
+    ios:'Notifications sur iPhone',iosS:'Ajoutez d’abord Allo à l’écran d’accueil (Partager → Sur l’écran d’accueil), puis rouvrez l’app.',
+    err:'Activation impossible pour le moment.',sent:'Notification de test envoyée.'},
+  en:{ask:'Enable notifications?',askS:'Messages, orders and news from your shops, even when the app is closed.',
+    shopS:'Get notified of every new product from this shop, even when the app is closed.',
+    on:'Enable',later:'Later',enabled:'Notifications enabled on this device',off:'Turn off',test:'Test',
+    blocked:'Notifications blocked',blockedS:'Allow them in your browser settings for this site.',
+    ios:'Notifications on iPhone',iosS:'First add Allo to your Home Screen (Share → Add to Home Screen), then reopen the app.',
+    err:'Could not enable right now.',sent:'Test notification sent.'}};
+  function tr(k){ return T[L()][k]; }
+  function toast(m){ try{ alloToast(m); }catch(e){} }
+  function supported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function iosNeedsInstall(){ try{ return alloInstallEnv().isIOS && !isAlloRunningAsApp() && !supported(); }catch(e){ return false; } }
+  function logged(){ try{ return isLoggedIn(); }catch(e){ return false; } }
+  function u8(s){ var p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/')),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a; }
+  function sameKey(buf,k){ var a=new Uint8Array(buf),b=u8(k); if(a.length!==b.length)return false; for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false; return true; }
+
+  async function getKey(){
+    if(key) return key;
+    if(keyTries>=3) return null; keyTries++;
+    try{ var r=await sb.rpc('get_push_public_key'); key=(r&&r.data)||null; }catch(e){ key=null; }
+    return key;
+  }
+  function waitActive(reg){ return new Promise(function(res,rej){
+    if(reg.active) return res(); var w=reg.installing||reg.waiting; if(!w) return rej(new Error('no sw'));
+    var t=setTimeout(function(){rej(new Error('sw timeout'));},15000);
+    w.addEventListener('statechange',function(){ if(w.state==='activated'){clearTimeout(t);res();} else if(w.state==='redundant'){clearTimeout(t);rej(new Error('sw redundant'));} }); }); }
+  async function getReg(create){
+    var reg=await navigator.serviceWorker.getRegistration(SW_SCOPE);
+    if(reg&&reg.scope.indexOf('push-scope')<0) reg=null;
+    if(!reg&&create) reg=await navigator.serviceWorker.register(SW_URL,{scope:SW_SCOPE});
+    if(reg) await waitActive(reg);
+    return reg;
+  }
+  async function ensure(){ // permission déjà accordée
+    var k=await getKey(); if(!k) return false;
+    var reg=await getReg(true), sub=await reg.pushManager.getSubscription();
+    if(sub&&sub.options&&sub.options.applicationServerKey&&!sameKey(sub.options.applicationServerKey,k)){ await sub.unsubscribe(); sub=null; }
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(k)});
+    var j=sub.toJSON();
+    var r=await sb.rpc('register_push_subscription',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_user_agent:navigator.userAgent,p_lang:L()});
+    if(r.error) throw r.error;
+    return true;
+  }
+  async function enable(){
+    if(busy||!logged()||!supported()) return false; busy=true;
+    try{
+      var perm=Notification.permission;
+      if(perm==='default') perm=await Notification.requestPermission();
+      if(perm!=='granted') return false;
+      localStorage.removeItem(OFF);
+      var ok=await ensure(); if(!ok) toast(tr('err')); return ok;
+    }catch(e){ console.warn('[Allo push]',e); toast(tr('err')); return false; }
+    finally{ busy=false; render(); hideBanner(); }
+  }
+  async function currentSub(){ try{ var reg=await getReg(false); return reg?await reg.pushManager.getSubscription():null; }catch(e){ return null; } }
+  async function disable(){
+    var sub=await currentSub();
+    if(sub){ try{ await sb.rpc('unregister_push_subscription',{p_endpoint:sub.endpoint}); }catch(e){} try{ await sub.unsubscribe(); }catch(e){} }
+    localStorage.setItem(OFF,'1'); render();
+  }
+  async function test(){ try{ var r=await sb.rpc('send_test_push'); if(r.error) throw r.error; toast(tr('sent')); }catch(e){ toast(tr('err')); } }
+  async function sync(){
+    if(!logged()) return;
+    if(iosNeedsInstall()){ render(); return; }
+    if(!supported()) return;
+    getKey();
+    if(Notification.permission==='granted'&&!localStorage.getItem(OFF)){ try{ await ensure(); }catch(e){ console.warn('[Allo push] sync',e); } }
+    render();
+    setTimeout(function(){ maybeBanner(); },4000);
+  }
+  async function render(){
+    var el=document.getElementById('alloPushCard'); if(!el) return;
+    if(!logged()){ el.innerHTML=''; return; }
+    if(iosNeedsInstall()){ el.innerHTML='<div class="apush-card"><span>📲</span><div class="t"><b>'+tr('ios')+'</b><span class="s">'+tr('iosS')+'</span></div></div>'; return; }
+    if(!supported()||!(await getKey())){ el.innerHTML=''; return; }
+    var p=Notification.permission, sub=p==='granted'?await currentSub():null;
+    if(p==='denied'){ el.innerHTML='<div class="apush-card"><span>🔕</span><div class="t"><b>'+tr('blocked')+'</b><span class="s">'+tr('blockedS')+'</span></div></div>'; return; }
+    if(p==='granted'&&sub&&!localStorage.getItem(OFF)){
+      el.innerHTML='<div class="apush-card"><span>🔔</span><div class="t"><b>'+tr('enabled')+'</b></div><button class="apush-btn g" data-a="test">'+tr('test')+'</button><button class="apush-btn g" data-a="off">'+tr('off')+'</button></div>'; return; }
+    el.innerHTML='<div class="apush-card"><span>🔔</span><div class="t"><b>'+tr('ask')+'</b><span class="s">'+tr('askS')+'</span></div><button class="apush-btn" data-a="on">'+tr('on')+'</button></div>';
+  }
+  document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('#alloPushCard [data-a],#alloPushBanner [data-a]'); if(!b)return;
+    var a=b.getAttribute('data-a'); if(a==='on')enable(); else if(a==='off')disable(); else if(a==='test')test(); else if(a==='no'){ localStorage.setItem(DIS,String(Date.now())); hideBanner(); } });
+  function hideBanner(){ var b=document.getElementById('alloPushBanner'); if(b)b.remove(); }
+  async function maybeBanner(shop){
+    if(!logged()||!supported()||Notification.permission!=='default'||localStorage.getItem(OFF)||document.getElementById('alloPushBanner')) return;
+    var d=+localStorage.getItem(DIS)||0; if(!shop&&Date.now()-d<7*864e5) return;
+    if(!(await getKey())) return;
+    var b=document.createElement('div'); b.id='alloPushBanner'; b.className='apush-card'; b.style.background='var(--surface-3)';
+    b.innerHTML='<span>🔔</span><div class="t"><b>'+tr('ask')+'</b><span class="s">'+(shop?tr('shopS'):tr('askS'))+'</span></div><button class="apush-btn" data-a="on">'+tr('on')+'</button><button class="apush-btn g" data-a="no">'+tr('later')+'</button>';
+    document.body.appendChild(b);
+  }
+  // Liens profonds (clic sur une notification)
+  function runPending(n){
+    if(!pending) return; n=n||0;
+    if(!logged()){ if(n<40) setTimeout(function(){runPending(n+1);},500); return; }
+    var p=pending;
+    try{
+      if(p.open==='chat'&&p.peer){ pending=null; chatWithOwner(p.peer); }
+      else if(p.open==='product'&&p.id){
+        var has=(data.products||[]).some(function(x){return String(x.id)===String(p.id);});
+        if(!has&&n<40){ setTimeout(function(){runPending(n+1);},500); return; }
+        pending=null; if(has) openProductDetail(p.id);
+      } else if(p.open==='orders'){ pending=null; switchView('orders'); }
+      else { pending=null; switchView('notifs'); }
+    }catch(e){ pending=null; }
+  }
+  function handleOpen(search){ try{ var q=new URLSearchParams(search||''); if(!q.get('open'))return; pending={open:q.get('open'),peer:q.get('peer'),id:q.get('id')}; runPending(); }catch(e){} }
+  if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message',function(e){
+    var m=e.data||{}; if(m.type==='allo-push-open') handleOpen(m.url);
+    else if(m.type==='allo-push'&&m.payload&&(m.payload.kind==='product'||m.payload.kind==='raw')) toast((m.payload.title||'')+' — '+(m.payload.body||'')); });
+  if(location.search.indexOf('open=')>=0){ handleOpen(location.search); try{ history.replaceState(null,'',location.pathname+location.hash); }catch(e){} }
+  // Connexion / déconnexion
+  setInterval(function(){ var id=logged()?String(currentUser.id):null; if(id!==lastUid){ lastUid=id; if(id) sync(); else hideBanner(); } },2500);
+  var lo=window.doLogout; if(typeof lo==='function') window.doLogout=async function(){
+    try{ var s=await currentSub(); if(s) await Promise.race([sb.rpc('unregister_push_subscription',{p_endpoint:s.endpoint}),new Promise(function(r){setTimeout(r,1500);})]); }catch(e){}
+    return lo.apply(this,arguments); };
+  var rn=window.renderNotifs; if(typeof rn==='function') window.renderNotifs=function(){ var r=rn.apply(this,arguments); try{render();}catch(e){} return r; };
+  var ts=window.toggleSubscribe; if(typeof ts==='function') window.toggleSubscribe=function(shopId){
+    var r=ts.apply(this,arguments);
+    Promise.resolve(r).then(function(){ try{ if((data.subscriptions||[]).some(function(s){return String(s.shopId)===String(shopId)&&String(s.userId)===String(currentUser.id);})) maybeBanner(true); }catch(e){} });
+    return r; };
+  window.AlloPush={enable:enable,disable:disable,test:test,sync:sync,render:render};
+})();
+</script>
 </body>
 </html>
