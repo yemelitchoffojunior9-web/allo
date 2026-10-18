@@ -5980,9 +5980,7 @@ async function sbLoadAllIntoData() {
     data.wishlist = (wishlist.data || []).map(w => ({
       userId: w.user_id, productId: w.product_id, date: w.created_at
     }));
-    data.promoCodes = (promoCodes.data || []).map(p => ({
-      id: p.id, code: p.code, pct: Number(p.pct), active: p.active
-    }));
+    data.promoCodes = (promoCodes.data || []).map(mapPromoRow);
     data.returns = (returns.data || []).map(r => ({
       id: r.id, orderId: r.order_id, userId: r.user_id, reason: r.reason,
       status: r.status, date: r.created_at
@@ -10308,6 +10306,7 @@ function buildSidebarNav() {
     items.push({ view: '__export', label: lang === 'en' ? 'Export my data' : 'Exporter mes données', ico: '💾' });
   }
 
+  try { if (window.alloSvcMenu) alloSvcMenu(items, role); } catch (e) { console.warn(e); }
   const activeView = document.querySelector('.view.active')?.id?.replace('view-', '') || 'home';
   el.innerHTML = items.map(it => `
     <button class="sidebar-item ${it.view === activeView ? 'active' : ''}" data-view="${it.view}" onclick="sidebarGo('${it.view}')">
@@ -10329,6 +10328,7 @@ function sidebarGo(view) {
   }
 
   closeSidebar();
+  if (String(view).indexOf('__svc-') === 0) { alloSvc.open(view.slice(6)); return; }
   if (view === '__install') {
     installPWA();
     return;
@@ -12575,7 +12575,11 @@ function groupCartByShop() {
     }
 
     const variant = item.variantId && p.variants ? p.variants.find(v => v.id === item.variantId) : null;
-    const unit = typeof getEffectivePriceForBuyer === 'function' ? getEffectivePriceForBuyer(p, variant) : (variant ? variant.price : p.price);
+    let unit = typeof getEffectivePriceForBuyer === 'function' ? getEffectivePriceForBuyer(p, variant) : (variant ? variant.price : p.price);
+    const ap = window._appliedPromo;
+    if (ap && ap.scoped && promoApplies(ap, p)) {
+      unit = Math.round((variant ? variant.price : p.price) * (1 - ap.pct / 100));
+    }
     const line = unit * item.qty;
     groups[key].items.push({ item, p, line, unit, variant });
     groups[key].subtotal += line;
@@ -12675,7 +12679,7 @@ function renderCart() {
       <input id="promoInput" type="text" placeholder="Code promo" value="${window._appliedPromo?window._appliedPromo.code:''}" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:14px">
       <button class="btn btn-sm btn-ghost" onclick="applyPromoCode()">${t('applyPromo')}</button>
     </div>
-    ${window._appliedPromo ? `<div style="font-size:12px;color:var(--green);margin-top:6px">−${window._appliedPromo.pct}% (−${formatMoney(discount)})</div>` : ''}
+    ${window._appliedPromo ? `<div style="font-size:12px;color:var(--green);margin-top:6px">−${window._appliedPromo.pct}%${discount ? ' (−' + formatMoney(discount) + ')' : ' sur les produits concernés'}</div>` : ''}
   </div>`;
   html += `<div class="cart-grand">
     <div class="label">${t('grandTotal')} (${groups.length} ${t('invoicesCount')})</div>
@@ -15399,6 +15403,7 @@ function renderShopsBrowser() {
         <div class="shop-card-body">
           <h3>${shop.name}${(typeof isShopCertified==='function'&&isShopCertified(shop))?' '+certBadgeHTML('lg'):''}</h3>
           <p>${displayShopDesc(shop.description, shop)}</p>
+          ${window.alloShopCodes ? alloShopCodes(shop) : ''}
           ${(typeof isShopCertified==='function'&&isShopCertified(shop))?'<p style="font-size:12px;color:var(--green);margin-bottom:8px">✓ '+t('certGuarantee')+'</p>':''}
           <div class="shop-meta">
             <span>${prods.length} ${prods.length>1?t('products_s'):t('product_s')}</span>
@@ -15465,6 +15470,7 @@ function renderShopsBrowser() {
       <div class="shop-card-body">
         <h3>${s.name}${(typeof isShopCertified==='function'&&isShopCertified(s))?' '+certBadgeHTML():''}</h3>
         <p>${displayShopDesc(s.description, s)}</p>
+        ${window.alloShopCodes ? alloShopCodes(s) : ''}
         <div class="shop-meta">
           <span>${prods.length} ${prods.length>1?t('products_s'):t('product_s')}</span>
           <span>👥 ${formatSubscribersLabel(countShopSubscribers(s.id))}</span>
@@ -21132,11 +21138,38 @@ function renderWishlist() {
   el.innerHTML = '<div class="products-grid">' + products.map(p => productCardHTML(p, true)).join('') + '</div>';
 }
 
+function mapPromoRow(p) {
+  return {
+    id: p.id, code: String(p.code || '').toUpperCase(),
+    pct: Number(p.discount_pct != null ? p.discount_pct : p.pct) || 0,
+    active: p.active !== false && (!p.expires_at || new Date(p.expires_at) > new Date()),
+    shopId: p.shop_id || null, companyId: p.company_id || null, ownerId: p.owner_id || null,
+    productIds: Array.isArray(p.product_ids) ? p.product_ids.map(String) : null,
+    expiresAt: p.expires_at || null, description: p.description || '',
+    scoped: !!(p.shop_id || p.company_id)
+  };
+}
+// Un code de boutique/entreprise ne vaut que pour ses produits (tous, ou ceux choisis).
+function promoApplies(promo, p) {
+  if (!promo || !p) return false;
+  if (!promo.scoped) return true;
+  const sh = (data.shops || []).find(x => String(x.id) === String(p.shopId));
+  const cid = p.companyId || (sh && sh.companyId) || '';
+  const sellerOk = promo.shopId ? String(p.shopId) === String(promo.shopId) : String(cid) === String(promo.companyId);
+  if (!sellerOk) return false;
+  return !promo.productIds || promo.productIds.includes(String(p.id));
+}
+
 function applyPromoCode() {
   const code = (document.getElementById('promoInput')?.value || '').trim().toUpperCase();
   const found = (data.promoCodes || []).find(p => p.active && p.code === code);
   if (!found) {
     alert(t('promoInvalid'));
+    window._appliedPromo = null;
+    return;
+  }
+  if (found.scoped && !groupCartByShop().some(g => g.items.some(x => promoApplies(found, x.p)))) {
+    alert('Ce code ne s’applique à aucun produit de votre panier.');
     window._appliedPromo = null;
     return;
   }
@@ -21147,6 +21180,7 @@ function applyPromoCode() {
 
 function getPromoDiscount(amount) {
   if (!window._appliedPromo) return 0;
+  if (window._appliedPromo.scoped) return 0;
   return Math.round(amount * (window._appliedPromo.pct / 100));
 }
 
@@ -25422,5 +25456,881 @@ try { const v = document.getElementById('view-messages'); if (v && v.classList.c
 .product-card.pc-compact .pcc-name{text-shadow:0 1px 3px rgba(0,0,0,.55)}
 .product-card.pc-compact.pct-gold .pcc-name{color:#2a1a00!important;text-shadow:none}
 </style>
+<style id="allo-svc-css">
+#svcPanel{display:none;position:fixed;inset:0;z-index:99999;flex-direction:column;background:#0a1a3a;color:#fff;padding-top:env(safe-area-inset-top,0)}
+#svcPanel .svc-h{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#0a2152;font-size:17px}
+#svcPanel .svc-h button{background:none;border:0;color:#fff;font-size:28px}
+#svcPanel .svc-b{flex:1;overflow:auto;padding:14px 16px calc(24px + env(safe-area-inset-bottom,0))}
+#svcPanel label{display:block;margin:12px 0 4px;font-size:13px;opacity:.8}
+#svcPanel input,#svcPanel select,#svcPanel textarea{width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:15px;margin-bottom:6px}
+#svcPanel h4{margin:18px 0 8px}#svcPanel .btn{margin:6px 6px 0 0}
+.svc-row{background:rgba(255,255,255,.07);border-radius:12px;padding:12px;margin:10px 0}
+.svc-meta{font-size:12.5px;opacity:.75;margin:3px 0}.svc-price{font-weight:700;color:#ffd54a;margin:4px 0}
+.svc-tag{font-size:11px;background:rgba(255,255,255,.15);padding:2px 8px;border-radius:10px;margin-left:4px}
+.svc-code{background:#16a34a33;border:1px dashed #4ade80;border-radius:10px;padding:10px;margin:8px 0}.svc-code b{font-size:20px;letter-spacing:3px}
+.svc-kpis{display:flex;gap:8px;margin:8px 0}.svc-kpis div{flex:1;background:rgba(255,255,255,.08);border-radius:10px;padding:10px;text-align:center;font-size:12px}.svc-kpis b{display:block;font-size:20px}
+.svc-bars{display:flex;align-items:flex-end;gap:2px;height:64px}.svc-bars i{flex:1;background:#3b9cff;border-radius:2px}
+.product-card.svc-card{position:relative;padding:12px;display:flex;flex-direction:column;gap:4px;cursor:pointer;background:linear-gradient(160deg,#0f766e,#134e4a)!important;color:#fff}
+.svc-card .svc-badge{position:absolute;top:8px;left:8px;font-size:10px;font-weight:700;background:#ffd54a;color:#2a1a00;border-radius:8px;padding:2px 7px}
+.svc-card .svc-ico{font-size:38px;text-align:center;margin-top:18px}.svc-card .svc-name{font-weight:700}
+.shop-code{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;padding:8px 10px;border-radius:10px;border:1px dashed #f5b301;background:rgba(245,179,1,.12);font-size:13px}.shop-code small{opacity:.75;margin-left:4px}.shop-code button{border:0;border-radius:8px;padding:6px 12px;background:#f5b301;color:#2a1a00;font-weight:700;font-size:12px}
+.svc-offer{width:100%;margin-top:6px;padding:7px;border-radius:10px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.25);color:#fff;font-size:12px}
+</style>
+<script id="allo-services-module">
+(function(){
+'use strict';
+const CATS=['Maçon','Plombier','Électricien','Mécanicien','Répétiteur','Coiffure & beauté','Menuisier','Peintre','Informatique','Ménage','Déménagement','Autre service'];
+const MODES={fixed:'Prix fixe',from:'À partir de',hour:'Par heure',quote:'Sur devis'};
+const ST={demande:'📨 Demande envoyée',devis:'💬 Devis proposé',accepte:'✅ Accepté',en_cours:'🔧 En cours',termine:'🏁 Terminé',annule:'✖ Annulé'};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fc=n=>Number(n||0).toLocaleString('fr-FR')+' FCFA';
+const U=()=>{try{return currentUser}catch(e){return null}};
+const D=()=>{try{return data}catch(e){return {products:[],orders:[],reviews:[]}}};
+const isSeller=()=>{const u=U();return !!u&&(u.role==='boutique'||u.role==='entreprise')};
+const isSvc=p=>!!(p&&p.attrs&&p.attrs.type==='service');
+const P=id=>(D().products||[]).find(x=>String(x.id)===String(id));
+const sha=async s=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+let ACC={};
+
+/* ---------- Panneau ---------- */
+function panel(title,html){
+  let el=$('#svcPanel');
+  if(!el){el=document.createElement('div');el.id='svcPanel';document.body.appendChild(el)}
+  el.innerHTML='<div class="svc-h"><b>'+title+'</b><button onclick="alloSvc.close()">×</button></div><div class="svc-b">'+html+'</div>';
+  el.style.display='flex';
+}
+const need=()=>{if(!U()){alert('Connectez-vous pour continuer.');return false}return true};
+const fail=e=>{console.warn('[Allo svc]',e);alert('Action impossible : '+(e&&e.message||e))};
+
+/* ---------- Cartes ---------- */
+function svcCard(p){
+  const a=p.attrs||{},revs=(D().reviews||[]).filter(r=>String(r.productId)===String(p.id));
+  const note=revs.length?(revs.reduce((s,r)=>s+(+r.stars||0),0)/revs.length).toFixed(1)+' ★ ('+revs.length+')':'Nouveau';
+  const price=a.mode==='quote'?'Sur devis':(a.mode==='from'?'dès ':'')+fc(p.price)+(a.mode==='hour'?' / h':'');
+  const shop=(typeof getShopName==='function'?getShopName(p.shopId):'')||'';
+  return '<div class="product-card svc-card" onclick="alloSvc.request(\''+p.id+'\')">'
+   +'<span class="svc-badge">🛠 SERVICE</span><div class="svc-ico">'+esc(p.icon&&p.icon!=='📦'?p.icon:'🛠')+'</div>'
+   +'<div class="svc-name">'+esc(p.name)+'</div><div class="svc-meta">'+esc(p.cat||'')+(a.zone?' · 📍 '+esc(a.zone):'')+'</div>'
+   +'<div class="svc-meta">'+esc(shop)+' · '+note+'</div><div class="svc-price">'+price+'</div>'
+   +'<button class="btn btn-accent btn-sm" onclick="event.stopPropagation();alloSvc.request(\''+p.id+'\')">Demander</button></div>';
+}
+const _pc=window.productCardHTML;
+if(typeof _pc==='function')window.productCardHTML=function(p){
+  if(isSvc(p))return svcCard(p);
+  let h=_pc.apply(this,arguments);
+  if(p&&!(U()&&String(p.ownerId)===String(U().id)))
+    h=h.replace(/<\/div>\s*$/,'<button class="svc-offer" onclick="event.stopPropagation();alloSvc.offer(\''+p.id+'\')">💬 Faire une offre</button></div>');
+  return h;
+};
+const _gp=window.getEffectivePriceForBuyer;
+if(typeof _gp==='function')window.getEffectivePriceForBuyer=function(p){
+  const b=_gp.apply(this,arguments),o=p&&ACC[p.id];return(o&&o<b)?o:b;
+};
+
+/* ---------- Publier un service ---------- */
+function publish(){
+  if(!need())return;
+  if(!isSeller())return alert('Un compte boutique ou entreprise est nécessaire pour publier un service.');
+  panel('🛠 Publier un service','<label>Titre</label><input id="sv-n" placeholder="Ex : Maçon — murs, dalles, carrelage">'
+   +'<label>Catégorie</label><select id="sv-c">'+CATS.map(c=>'<option>'+c+'</option>').join('')+'</select>'
+   +'<label>Type de tarif</label><select id="sv-m">'+Object.keys(MODES).map(k=>'<option value="'+k+'">'+MODES[k]+'</option>').join('')+'</select>'
+   +'<label>Prix (FCFA, vide si sur devis)</label><input id="sv-p" type="number" inputmode="numeric">'
+   +'<label>Zone d’intervention</label><input id="sv-z" placeholder="Ville / quartier">'
+   +'<label>Description</label><textarea id="sv-d" rows="3"></textarea>'
+   +'<button class="btn btn-accent btn-block" onclick="alloSvc.savePublish()">Publier (gratuit)</button>');
+}
+async function savePublish(){
+  try{
+    const u=U(),name=$('#sv-n').value.trim(),mode=$('#sv-m').value,price=parseInt($('#sv-p').value,10)||0;
+    if(!name||(mode!=='quote'&&!price))return alert('Renseignez le titre et le prix.');
+    let shopId=u.shopId;
+    if(u.role==='entreprise'){const s=await ensureCompanyCatalogForCurrentUser();shopId=s&&s.id}
+    if(!shopId&&typeof getSellerShopIds==='function')shopId=(getSellerShopIds()||[])[0];
+    const p={name,description:$('#sv-d').value.trim(),price,stock:999,icon:'🛠',cat:$('#sv-c').value,shopId,ownerId:u.id,
+      companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:[],variants:[],attrs:{type:'service',mode,zone:$('#sv-z').value.trim()}};
+    await sbUpsertProduct(p);await sbLoadAllIntoData();renderAll();close();alert('Service publié ✔');
+  }catch(e){fail(e)}
+}
+
+/* ---------- Demandes de service (gratuit, code d'arrivée) ---------- */
+function request(pid){
+  const p=P(pid);if(!p||!need())return;
+  panel('Demander : '+esc(p.name),'<p class="svc-meta">'+esc(p.cat||'')+' · '+(p.attrs&&p.attrs.mode==='quote'?'Sur devis':fc(p.price))+'</p>'
+   +'<label>Décrivez votre besoin</label><textarea id="sr-m" rows="4"></textarea><label>Quand ?</label><input id="sr-w" placeholder="Ex : demain matin">'
+   +'<p class="svc-meta">Aucun paiement à l’avance : vous payez le prestataire directement après le travail.</p>'
+   +'<button class="btn btn-accent btn-block" onclick="alloSvc.sendRequest(\''+pid+'\')">Envoyer la demande</button>');
+}
+async function sendRequest(pid){
+  try{
+    const p=P(pid),u=U(),m=$('#sr-m').value.trim();if(!m)return alert('Décrivez votre besoin.');
+    const code=String(Math.floor(1000+Math.random()*9000));
+    const {data:r,error}=await sb.from('svc_requests').insert({product_id:p.id,provider_id:p.ownerId,client_id:u.id,client_name:u.name||u.email||'Client',
+      message:m,when_text:$('#sr-w').value.trim(),status:'demande',arrival_hash:await sha(code)}).select().single();
+    if(error)throw error;try{localStorage.setItem('svc_code_'+r.id,code)}catch(e){}
+    alert('Demande envoyée ✔');viewRequests();
+  }catch(e){fail(e)}
+}
+async function viewRequests(){
+  if(!need())return;panel('📥 Demandes de service','Chargement…');
+  try{
+    const u=U(),{data:rows,error}=await sb.from('svc_requests').select('*').or('client_id.eq.'+u.id+',provider_id.eq.'+u.id).order('created_at',{ascending:false});
+    if(error)throw error;
+    const h=(rows||[]).map(r=>{
+      const prov=String(r.provider_id)===String(u.id),p=P(r.product_id),code=(()=>{try{return localStorage.getItem('svc_code_'+r.id)}catch(e){return null}})();
+      let b='';
+      if(prov&&r.status==='demande')b+=btn(r.id,'quote','Envoyer un devis');
+      if(prov&&['demande','devis'].includes(r.status))b+=btn(r.id,'decline','Refuser','ghost');
+      if(prov&&r.status==='accepte')b+=btn(r.id,'start','Je suis arrivé (saisir le code)');
+      if(!prov&&['demande','devis'].includes(r.status))b+=btn(r.id,'accept',r.status==='devis'?'Accepter le devis':'Confirmer');
+      if(!prov&&r.status==='en_cours')b+=btn(r.id,'finish','Travail terminé ✔');
+      return '<div class="svc-row"><b>'+esc(p?p.name:'Service')+'</b> <span class="svc-tag">'+ST[r.status]+'</span>'
+       +'<div class="svc-meta">'+(prov?'De '+esc(r.client_name):'Prestataire')+' · '+esc(r.when_text||'')+'</div><div>'+esc(r.message)+'</div>'
+       +(r.quote_amount?'<div class="svc-price">Devis : '+fc(r.quote_amount)+'</div>':'')
+       +(!prov&&r.status==='accepte'&&code?'<div class="svc-code">Code d’arrivée à donner au prestataire : <b>'+code+'</b></div>':'')+b+'</div>';
+    }).join('')||'<p class="svc-meta">Aucune demande pour le moment.</p>';
+    panel('📥 Demandes de service',h);
+  }catch(e){fail(e)}
+}
+const btn=(id,a,l,c)=>'<button class="btn btn-sm '+(c==='ghost'?'btn-ghost':'btn-accent')+'" onclick="alloSvc.act(\''+id+'\',\''+a+'\')">'+l+'</button> ';
+async function act(id,a){
+  try{
+    let up=null;
+    if(a==='quote'){const v=parseInt(prompt('Montant du devis (FCFA) :'),10);if(!v)return;up={status:'devis',quote_amount:v}}
+    if(a==='decline')up={status:'annule'};
+    if(a==='accept')up={status:'accepte'};
+    if(a==='finish')up={status:'termine',finished_at:new Date().toISOString()};
+    if(a==='start'){
+      const {data:r}=await sb.from('svc_requests').select('arrival_hash').eq('id',id).single();
+      const c=prompt('Code donné par le client :');if(!c)return;
+      if(await sha(c.trim())!==r.arrival_hash)return alert('Code incorrect.');
+      up={status:'en_cours',started_at:new Date().toISOString()};
+    }
+    const {error}=await sb.from('svc_requests').update(up).eq('id',id);if(error)throw error;viewRequests();
+  }catch(e){fail(e)}
+}
+
+/* ---------- Faire une offre ---------- */
+async function offer(pid){
+  const p=P(pid);if(!p||!need())return;
+  const v=parseInt(prompt('Prix actuel : '+fc(p.price)+'\nVotre offre (FCFA) :'),10);if(!v)return;
+  if(v>=p.price||v<p.price*0.5)return alert('Proposez entre 50 % et 99 % du prix.');
+  try{const u=U(),{error}=await sb.from('price_offers').insert({product_id:p.id,seller_id:p.ownerId,buyer_id:u.id,buyer_name:u.name||u.email||'Client',amount:v,status:'pending'});
+    if(error)throw error;alert('Offre envoyée ✔ Le vendeur va répondre.');}catch(e){fail(e)}
+}
+async function loadAcc(){
+  try{const u=U();if(!u||!sb)return;const {data:r}=await sb.from('price_offers').select('product_id,final_amount').eq('buyer_id',u.id).eq('status','accepted');
+    ACC={};(r||[]).forEach(x=>{ACC[x.product_id]=x.final_amount})}catch(e){}
+}
+async function viewOffers(){
+  if(!need())return;panel('💬 Offres','Chargement…');
+  try{
+    const u=U(),{data:rows,error}=await sb.from('price_offers').select('*').or('buyer_id.eq.'+u.id+',seller_id.eq.'+u.id).order('created_at',{ascending:false});
+    if(error)throw error;
+    const h=(rows||[]).map(o=>{
+      const sel=String(o.seller_id)===String(u.id),p=P(o.product_id);let b='';
+      if(sel&&o.status==='pending')b=ob(o.id,'ok','Accepter')+ob(o.id,'counter','Contre-offre')+ob(o.id,'no','Refuser','ghost');
+      if(!sel&&o.status==='countered')b=ob(o.id,'okc','Accepter '+fc(o.counter_amount))+ob(o.id,'no','Refuser','ghost');
+      const lab={pending:'⏳ En attente',countered:'🔁 Contre-offre',accepted:'✅ Acceptée',refused:'✖ Refusée'}[o.status];
+      return '<div class="svc-row"><b>'+esc(p?p.name:'Produit')+'</b> <span class="svc-tag">'+lab+'</span>'
+       +'<div class="svc-meta">Prix : '+fc(p&&p.price)+' · Offre : '+fc(o.amount)+(o.counter_amount?' · Contre : '+fc(o.counter_amount):'')+(sel?' · '+esc(o.buyer_name):'')+'</div>'
+       +(!sel&&o.status==='accepted'?'<div class="svc-code">Prix accepté : '+fc(o.final_amount)+' — ajoutez le produit au panier.</div>':'')+b+'</div>';
+    }).join('')||'<p class="svc-meta">Aucune offre.</p>';
+    panel('💬 Offres',h);
+  }catch(e){fail(e)}
+}
+const ob=(id,a,l,c)=>'<button class="btn btn-sm '+(c==='ghost'?'btn-ghost':'btn-accent')+'" onclick="alloSvc.offerAct(\''+id+'\',\''+a+'\')">'+l+'</button> ';
+async function offerAct(id,a){
+  try{
+    const {data:o}=await sb.from('price_offers').select('*').eq('id',id).single();let up;
+    if(a==='ok')up={status:'accepted',final_amount:o.amount};
+    if(a==='okc')up={status:'accepted',final_amount:o.counter_amount};
+    if(a==='no')up={status:'refused'};
+    if(a==='counter'){const v=parseInt(prompt('Votre contre-offre (FCFA) :'),10);if(!v)return;up={status:'countered',counter_amount:v}}
+    const {error}=await sb.from('price_offers').update(up).eq('id',id);if(error)throw error;await loadAcc();viewOffers();
+  }catch(e){fail(e)}
+}
+
+/* ---------- Livreurs indépendants ---------- */
+async function viewDrivers(){
+  if(!need())return;panel('🏍 Livreurs','Chargement…');
+  try{
+    const u=U();let h='';
+    const {data:me}=await sb.from('drivers').select('*').eq('user_id',u.id).maybeSingle();
+    if(!me){
+      h+='<h4>Devenir livreur</h4><label>Zone</label><input id="dr-z" placeholder="Ville / quartiers"><label>Véhicule</label><input id="dr-v" placeholder="Moto, vélo…"><label>Téléphone</label><input id="dr-t" type="tel">'
+       +'<button class="btn btn-accent btn-block" onclick="alloSvc.drvJoin()">M’inscrire comme livreur</button>';
+    }else{
+      const {data:open}=await sb.from('delivery_jobs').select('*').eq('status','open').order('created_at',{ascending:false}).limit(30);
+      const {data:mine}=await sb.from('delivery_jobs').select('*').eq('driver_id',u.id).in('status',['taken','picked']);
+      h+='<button class="btn btn-sm '+(me.online?'btn-accent':'btn-ghost')+'" onclick="alloSvc.drvOnline('+!me.online+')">'+(me.online?'🟢 En ligne':'⚪ Hors ligne')+'</button> <span class="svc-meta">'+esc(me.zone)+' · '+(me.jobs_done||0)+' courses</span>';
+      h+='<h4>Mes courses</h4>'+((mine||[]).map(j=>job(j,j.status==='taken'?'<button class="btn btn-sm btn-accent" onclick="alloSvc.jobAct(\''+j.id+'\',\'picked\')">Colis récupéré</button>':'<button class="btn btn-sm btn-accent" onclick="alloSvc.jobAct(\''+j.id+'\',\'delivered\')">Livré ✔</button>')).join('')||'<p class="svc-meta">Aucune.</p>');
+      if(me.online)h+='<h4>Courses disponibles</h4>'+((open||[]).map(j=>job(j,'<button class="btn btn-sm btn-accent" onclick="alloSvc.jobTake(\''+j.id+'\')">Prendre</button>')).join('')||'<p class="svc-meta">Aucune course pour le moment.</p>');
+    }
+    if(isSeller())h+='<h4>Demander un livreur</h4><input id="jb-a" placeholder="Adresse de retrait"><input id="jb-b" placeholder="Adresse de livraison"><input id="jb-f" type="number" placeholder="Frais de course (FCFA)"><button class="btn btn-accent btn-block" onclick="alloSvc.jobNew()">Publier la course</button>';
+    panel('🏍 Livreurs',h);
+  }catch(e){fail(e)}
+}
+const job=(j,b)=>'<div class="svc-row"><b>'+fc(j.fee)+'</b><div class="svc-meta">📦 '+esc(j.pickup)+'</div><div class="svc-meta">🏠 '+esc(j.dropoff)+'</div>'+b+'</div>';
+async function drvJoin(){try{const u=U(),{error}=await sb.from('drivers').insert({user_id:u.id,name:u.name||u.email,zone:$('#dr-z').value.trim(),vehicle:$('#dr-v').value.trim(),phone:$('#dr-t').value.trim(),online:true});if(error)throw error;viewDrivers()}catch(e){fail(e)}}
+async function drvOnline(v){try{await sb.from('drivers').update({online:v}).eq('user_id',U().id);viewDrivers()}catch(e){fail(e)}}
+async function jobNew(){try{const u=U(),f=parseInt($('#jb-f').value,10)||0,a=$('#jb-a').value.trim(),b=$('#jb-b').value.trim();if(!a||!b||!f)return alert('Remplissez les 3 champs.');
+  const {error}=await sb.from('delivery_jobs').insert({seller_id:u.id,pickup:a,dropoff:b,fee:f,status:'open'});if(error)throw error;alert('Course publiée ✔');viewDrivers()}catch(e){fail(e)}}
+async function jobTake(id){try{const {data:r}=await sb.from('delivery_jobs').update({driver_id:U().id,status:'taken'}).eq('id',id).eq('status','open').select();
+  if(!r||!r.length)alert('Course déjà prise.');viewDrivers()}catch(e){fail(e)}}
+async function jobAct(id,s){try{await sb.from('delivery_jobs').update({status:s}).eq('id',id).eq('driver_id',U().id);
+  if(s==='delivered'){const {data:d}=await sb.from('drivers').select('jobs_done').eq('user_id',U().id).single();await sb.from('drivers').update({jobs_done:(d.jobs_done||0)+1}).eq('user_id',U().id)}viewDrivers()}catch(e){fail(e)}}
+
+/* ---------- Statistiques vendeur ---------- */
+async function viewStats(){
+  if(!need())return;panel('📊 Statistiques','Chargement…');
+  try{
+    const u=U(),mine=(D().products||[]).filter(p=>String(p.ownerId)===String(u.id)),ids=mine.map(p=>p.id);
+    let views=[];try{const r=await sb.from('product_views').select('product_id,viewed_at').in('product_id',ids.length?ids:['x']).limit(5000);views=r.data||[]}catch(e){}
+    const vBy={},hr=Array(24).fill(0);views.forEach(v=>{vBy[v.product_id]=(vBy[v.product_id]||0)+1;if(v.viewed_at)hr[new Date(v.viewed_at).getHours()]++});
+    const sold={};(D().orders||[]).forEach(o=>{if(/annul/i.test(o.status||''))return;(typeof normalizeOrderItems==='function'?normalizeOrderItems(o.items||[]):[]).forEach(it=>{if(ids.map(String).includes(String(it.productId)))sold[it.productId]=(sold[it.productId]||0)+(+it.qty||+it.quantity||1)})});
+    const rq=(await sb.from('svc_requests').select('status').eq('provider_id',u.id)).data||[],of=(await sb.from('price_offers').select('status').eq('seller_id',u.id)).data||[];
+    const tv=views.length,ts=Object.values(sold).reduce((a,b)=>a+b,0),mx=Math.max(1,...hr),peak=hr.indexOf(Math.max(...hr));
+    const rows=mine.map(p=>({p,v:vBy[p.id]||0,l:typeof getProductLikeCount==='function'?getProductLikeCount(p.id):0,s:sold[p.id]||0})).sort((a,b)=>b.v-a.v).slice(0,8);
+    panel('📊 Statistiques','<div class="svc-kpis"><div><b>'+tv+'</b>vues</div><div><b>'+ts+'</b>ventes</div><div><b>'+(tv?(ts/tv*100).toFixed(1):0)+'%</b>conversion</div></div>'
+     +'<div class="svc-kpis"><div><b>'+rq.length+'</b>demandes</div><div><b>'+rq.filter(r=>r.status==='termine').length+'</b>terminées</div><div><b>'+of.length+'</b>offres reçues</div></div>'
+     +'<h4>Vues par heure'+(tv?' (pic : '+peak+'h)':'')+'</h4><div class="svc-bars">'+hr.map(n=>'<i style="height:'+Math.max(2,n/mx*60)+'px"></i>').join('')+'</div>'
+     +'<h4>Top produits</h4>'+(rows.map(r=>'<div class="svc-row"><b>'+esc(r.p.name)+'</b><div class="svc-meta">👁 '+r.v+' · ❤ '+r.l+' · 🛒 '+r.s+'</div></div>').join('')||'<p class="svc-meta">Pas encore de données.</p>'));
+  }catch(e){fail(e)}
+}
+
+
+/* ---------- Codes promo vendeur ---------- */
+const codeUp=()=>{const d=D();return d.promoCodes||(d.promoCodes=[])};
+async function refreshCodes(){const r=await sb.from('promo_codes').select('*');if(!r.error)D().promoCodes=(r.data||[]).map(window.mapPromoRow)}
+function copy(code,btn){
+  const done=()=>{if(btn){const t=btn.textContent;btn.textContent='Copié ✔';setTimeout(()=>{btn.textContent=t},1500)}};
+  try{navigator.clipboard.writeText(code).then(done,()=>fb())}catch(e){fb()}
+  function fb(){const t=document.createElement('textarea');t.value=code;document.body.appendChild(t);t.select();try{document.execCommand('copy')}catch(e){}t.remove();done()}
+}
+function viewCodes(){
+  if(!need())return;
+  if(!isSeller())return alert('Réservé aux boutiques et entreprises.');
+  const u=U(),mine=codeUp().filter(c=>String(c.ownerId)===String(u.id));
+  const prods=(D().products||[]).filter(p=>String(p.ownerId)===String(u.id)&&!isSvc(p)).slice(0,80);
+  const rows=mine.map(c=>'<div class="svc-row"><b>'+esc(c.code)+'</b> <span class="svc-tag">−'+c.pct+'%</span> <span class="svc-tag">'+(c.active?'🟢 Actif':'⚪ Désactivé')+'</span>'
+    +'<div class="svc-meta">'+(c.productIds?c.productIds.length+' produit(s)':'Tous mes produits')+(c.expiresAt?' · jusqu’au '+new Date(c.expiresAt).toLocaleDateString('fr-FR'):'')+'</div>'
+    +'<button class="btn btn-sm btn-accent" onclick="alloSvc.copy(\''+esc(c.code)+'\',this)">Copier</button> '
+    +'<button class="btn btn-sm btn-ghost" onclick="alloSvc.codeToggle(\''+c.id+'\','+(!c.active)+')">'+(c.active?'Désactiver':'Activer')+'</button> '
+    +'<button class="btn btn-sm btn-ghost" onclick="alloSvc.codeDel(\''+c.id+'\')">Supprimer</button></div>').join('')||'<p class="svc-meta">Aucun code pour le moment.</p>';
+  panel('🏷 Mes codes promo','<h4>Créer un code</h4><label>Code</label><input id="cp-c" placeholder="Ex : BIENVENUE10" style="text-transform:uppercase">'
+   +'<label>Réduction (%)</label><input id="cp-p" type="number" inputmode="numeric" min="1" max="90">'
+   +'<label>Produits concernés</label><select id="cp-s" onchange="document.getElementById(\'cp-l\').style.display=this.value===\'some\'?\'block\':\'none\'"><option value="all">Tous mes produits</option><option value="some">Certains produits</option></select>'
+   +'<div id="cp-l" style="display:none;max-height:180px;overflow:auto">'+prods.map(p=>'<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" class="cp-ck" value="'+p.id+'" style="width:auto;margin:0"> '+esc(p.name)+'</label>').join('')+'</div>'
+   +'<label>Expire le (optionnel)</label><input id="cp-e" type="date">'
+   +'<p class="svc-meta">Le code remplace la promotion éventuelle des produits concernés. Il s’affiche sur votre carte avec un bouton « Copier ».</p>'
+   +'<button class="btn btn-accent btn-block" onclick="alloSvc.codeSave()">Créer le code</button><h4>Mes codes</h4>'+rows);
+}
+async function codeSave(){
+  try{
+    const u=U(),code=$('#cp-c').value.trim().toUpperCase(),pct=parseFloat($('#cp-p').value);
+    if(!/^[A-Z0-9_-]{3,20}$/.test(code))return alert('Code : 3 à 20 lettres ou chiffres.');
+    if(!(pct>=1&&pct<=90))return alert('Réduction entre 1 et 90 %.');
+    let ids=null;
+    if($('#cp-s').value==='some'){ids=[...document.querySelectorAll('.cp-ck:checked')].map(x=>x.value);if(!ids.length)return alert('Choisissez au moins un produit.')}
+    const row={code,discount_pct:pct,active:true,owner_id:u.id,product_ids:ids,expires_at:$('#cp-e').value?new Date($('#cp-e').value+'T23:59:59').toISOString():null};
+    if(u.role==='entreprise')row.company_id=u.companyId;
+    else row.shop_id=u.shopId||(typeof getSellerShopIds==='function'?(getSellerShopIds()||[])[0]:null);
+    const {error}=await sb.from('promo_codes').insert(row);
+    if(error){if(/duplicate|unique/i.test(error.message))return alert('Ce code existe déjà, choisissez-en un autre.');throw error}
+    await refreshCodes();try{renderAll()}catch(e){}viewCodes();
+  }catch(e){fail(e)}
+}
+async function codeToggle(id,on){try{const {error}=await sb.from('promo_codes').update({active:on}).eq('id',id);if(error)throw error;await refreshCodes();try{renderAll()}catch(e){}viewCodes()}catch(e){fail(e)}}
+async function codeDel(id){if(!confirm('Supprimer ce code ?'))return;try{const {error}=await sb.from('promo_codes').delete().eq('id',id);if(error)throw error;await refreshCodes();try{renderAll()}catch(e){}viewCodes()}catch(e){fail(e)}}
+/* Affichage sur la carte boutique (la boutique, ou le catalogue de l'entreprise) */
+window.alloShopCodes=function(shop){
+  if(!shop)return '';
+  const now=Date.now(),list=codeUp().filter(c=>c.scoped&&c.active&&(!c.expiresAt||new Date(c.expiresAt)>now)
+    &&((c.shopId&&String(c.shopId)===String(shop.id))||(c.companyId&&String(c.companyId)===String(shop.companyId||''))));
+  return list.map(c=>'<div class="shop-code" onclick="event.stopPropagation()"><span>🏷 <b>'+esc(c.code)+'</b> −'+c.pct+'% <small>'+(c.productIds?c.productIds.length+' produit(s)':'tous les produits')+'</small></span>'
+    +'<button onclick="event.stopPropagation();alloSvc.copy(\''+esc(c.code)+'\',this)">Copier</button></div>').join('');
+};
+
+/* ---------- Menu + init ---------- */
+window.alloSvcMenu=function(items,role){
+  const at=Math.max(0,items.findIndex(i=>i.view==='account'));
+  const add=[];
+  if(role!=='admin'){
+    add.push({view:'__svc-jobs',label:'Emplois',ico:'💼'});
+    if(isSeller())add.push({view:'__svc-publish',label:'Publier un service',ico:'🛠'},{view:'__svc-codes',label:'Mes codes promo',ico:'🏷'},{view:'__svc-stats',label:'Statistiques',ico:'📊'});
+    add.push({view:'__svc-requests',label:'Demandes de service',ico:'📥'},{view:'__svc-offers',label:'Offres de prix',ico:'💬'},{view:'__svc-drivers',label:'Livreurs',ico:'🏍'});
+  }
+  items.splice(at,0,...add);
+};
+const api={open(t){({publish:function(){return (window.alloJobs&&window.alloJobs.hub)?window.alloJobs.hub():publish()},jobs:function(){return window.alloJobs&&window.alloJobs.browse()},requests:viewRequests,offers:viewOffers,drivers:viewDrivers,stats:viewStats,codes:viewCodes}[t]||(()=>{}))()},
+  close(){const e=$('#svcPanel');if(e)e.style.display='none'},
+  copy,codeSave,codeToggle,codeDel,publish,savePublish,request,sendRequest,act,offer,offerAct,drvJoin,drvOnline,jobNew,jobTake,jobAct,SVC_CATS:CATS};
+function close(){api.close()}
+window.alloSvc=api;
+setTimeout(loadAcc,2500);setInterval(()=>{if(U())loadAcc()},120000);
+})();
+
+</script>
+<style id="allo-jobs-css">
+.product-card.jcard{--a:#ffb627;--on:#1b1300;--glow:rgba(255,182,39,.22);--bg1:#1b3163;--bg2:#091330;--mute:rgba(255,255,255,.7);
+  position:relative;display:block!important;height:auto!important;padding:0!important;overflow:hidden!important;
+  border:1px solid rgba(255,255,255,.12)!important;border-left:4px solid var(--a)!important;border-radius:16px!important;
+  background:radial-gradient(110% 130% at 0% 0%,var(--glow),transparent 58%),linear-gradient(165deg,var(--bg1),var(--bg2))!important;
+  box-shadow:0 10px 24px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  animation:none!important;transform:none!important;color:#fff;cursor:default;text-align:left;
+  font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.product-card.jcard.jcard-seek{--a:#2fd9b3;--on:#03231c;--glow:rgba(47,217,179,.2);--bg1:#0e4a53;--bg2:#05202a}
+.products-grid .product-card.jcard{grid-column:1/-1}
+.jcard *{box-sizing:border-box}
+.jcard-top{display:flex;align-items:center;gap:2px;padding:10px 4px 0 0}
+.jcard-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 16px 6px 8px;background:var(--a);color:var(--on);font-size:10.5px;font-weight:800;letter-spacing:.03em;white-space:nowrap;flex:none;
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 50%,100% 100%,0 100%)}
+.jcard-tools{margin-left:auto;display:flex;align-items:center}
+.jcard-ic{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:30px;height:38px;padding:0 4px;border:0;background:none;color:rgba(255,255,255,.85);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;border-radius:10px}
+.jcard-ic:active{background:rgba(255,255,255,.12)}
+.jcard-ic.on{color:#ff6b81}.jcard-ic.on svg{fill:currentColor;animation:jcPop .35s ease}
+@keyframes jcPop{40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.jcard-main{display:flex;gap:12px;align-items:center;padding:10px 14px 0 12px}
+.jcard-ava{position:relative;width:54px;height:54px;flex:none;border-radius:50%;padding:2px;background:conic-gradient(from 200deg,var(--a),rgba(255,255,255,.3),var(--a))}
+.jcard-ava>i{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;overflow:hidden;background:#11214a;font-style:normal;font-weight:800;font-size:21px;color:var(--a)}
+.jcard-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.jcard-ava em{position:absolute;right:-3px;bottom:-3px;width:22px;height:22px;border-radius:50%;background:var(--a);display:grid;place-items:center;font-size:12px;font-style:normal;border:2px solid var(--bg2)}
+.jcard-tt{min-width:0;flex:1}
+.jcard-title{margin:0;font-size:18px;line-height:1.2;font-weight:800;letter-spacing:-.01em;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.jcard-sub{margin-top:3px;font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jcard-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:11px 14px 0 12px}
+.jcard-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;font-size:13px;font-weight:600;background:rgba(255,255,255,.1);color:#fff}
+.jcard-chip svg{color:var(--a)}
+.jcard-chip.pay{background:var(--a);color:var(--on);font-weight:800}.jcard-chip.pay svg{color:var(--on)}
+.jcard-chip.urg{background:#c81e1e;color:#fff;font-weight:800}
+.jcard-stamp{font-weight:800;font-size:13px;letter-spacing:.06em;color:var(--a);border:1.5px solid var(--a);border-radius:6px;padding:3px 9px;transform:rotate(-2deg);background:rgba(0,0,0,.2);margin-right:2px}
+.jcard-desc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
+.jcard.open .jcard-desc{grid-template-rows:1fr}
+.jcard-desc>div{overflow:hidden;min-height:0}
+.jcard-desc p{margin:12px 14px 0 12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.14);font-size:14px;line-height:1.55;color:rgba(255,255,255,.86);white-space:pre-wrap;overflow-wrap:anywhere}
+.jcard-desc p.none{font-style:italic;opacity:.75}
+.jcard-del{margin:10px 0 0 12px;display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid rgba(255,120,110,.5);color:#ff9a90;border-radius:999px;padding:7px 12px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.jcard-foot{display:flex;gap:6px;padding:12px}
+.jcard-call svg{flex:none}
+.jcard-call{flex:1 1 auto;min-width:0;height:46px;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 6px;border:0;border-radius:13px;background:var(--a);color:var(--on);font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jcard-call:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.3)}
+.jcard-call:disabled{opacity:.45;box-shadow:none}
+.jcard-sq{flex:none;width:42px;height:46px;display:grid;place-items:center;border-radius:13px;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.07);color:#fff;cursor:pointer;padding:0;font:inherit}
+.jcard-sq.wa{background:#25d366;border-color:#25d366;color:#06260f;box-shadow:0 3px 0 rgba(0,0,0,.3)}
+.jcard-sq:active{transform:translateY(2px)}
+.jcard-descbtn svg{transition:transform .25s}
+.jcard.open .jcard-descbtn svg{transform:rotate(180deg)}
+.jcard button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.product-card.jcard.jc-pv{pointer-events:none}
+.jcard-exp .jcard-hide{display:none!important}
+@media (prefers-reduced-motion:reduce){.jcard-desc,.jcard-descbtn svg,.jcard-ic.on svg{transition:none;animation:none}}
+
+/* ============ Hub, formulaire, liste ============ */
+.jh-tile{display:flex;gap:14px;align-items:center;width:100%;text-align:left;margin:10px 0;padding:16px;border-radius:16px;border:1px solid rgba(255,255,255,.14);border-left:5px solid var(--t,#3b9cff);background:rgba(255,255,255,.06);color:#fff;font:inherit;cursor:pointer}
+.jh-tile:active{background:rgba(255,255,255,.12)}
+.jh-tile .ico{font-size:30px;flex:none}
+.jh-tile b{display:block;font-size:16px;margin-bottom:2px}
+.jh-tile span{font-size:13px;opacity:.75;line-height:1.4}
+.jf{--fa:#ffb627}.jf[data-k=seek]{--fa:#4fe0c1}
+.jf small{opacity:.6;font-weight:400}
+.jf-chips,.jf-seg{display:flex;flex-wrap:wrap;gap:7px}
+.jf-chip,.jf-seg button{border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;border-radius:999px;padding:8px 14px;font:inherit;font-size:13.5px;cursor:pointer}
+.jf-chip.on,.jf-seg button.on{background:var(--fa);border-color:var(--fa);color:#14100a;font-weight:700}
+.jf-two{display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
+.jf-check{display:flex!important;align-items:center;gap:10px;opacity:1!important;font-size:14px!important;margin:12px 0 0!important}
+#svcPanel .jf-check input{width:20px;height:20px;margin:0;accent-color:var(--fa)}
+.jf-count{font-size:11.5px;opacity:.6;text-align:right}
+.jf-prev{margin-top:22px;padding-top:6px;border-top:1px dashed rgba(255,255,255,.2)}
+.jf-prev h4{margin:14px 0 12px!important;font-size:14px;opacity:.85}
+.jf-go{margin-top:18px!important;min-height:48px;font-size:16px}
+.jf-hint{font-size:12px;opacity:.65;margin:2px 0 0}
+.jb-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.08);margin-bottom:10px}
+.jb-seg button{border:0;background:none;color:#fff;padding:10px 4px;border-radius:10px;font:inherit;font-size:13px;line-height:1.2;cursor:pointer;opacity:.78}
+.jb-seg button.on{background:#fff;color:#0a1a3a;font-weight:700;opacity:1}
+.jb-row{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
+.jb-count{font-size:12.5px;opacity:.7;margin:12px 0 4px}
+.jb-list{margin-top:10px}
+.jb-empty{text-align:center;padding:34px 16px;border:1.5px dashed rgba(255,255,255,.22);border-radius:16px;margin-top:12px}
+.jb-empty b{display:block;font-size:16px;margin-bottom:6px}
+.jb-empty p{margin:0 0 14px;opacity:.75;font-size:13.5px;line-height:1.5}
+
+/* ============ Feuille (commentaires / téléchargement) ============ */
+#jcSheet{position:fixed;inset:0;z-index:100001;display:none;align-items:flex-end;justify-content:center;background:rgba(3,8,20,.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#jcSheet.show{display:flex}
+#jcSheet .js-box{width:min(560px,100%);max-height:88vh;max-height:88dvh;display:flex;flex-direction:column;background:#0f1d3b;color:#fff;border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom,0);animation:jsUp .26s cubic-bezier(.2,.8,.2,1);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif}
+@keyframes jsUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#jcSheet .js-box{animation:none}}
+#jcSheet .js-h{display:flex;align-items:center;gap:10px;padding:16px 16px 10px}
+#jcSheet .js-h b{font-size:17px}
+#jcSheet .js-sub{font-size:12.5px;opacity:.65;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#jcSheet .js-x{margin-left:auto;background:none;border:0;color:#fff;font-size:28px;line-height:1;cursor:pointer;padding:0 4px}
+#jcSheet .js-list{flex:1;overflow:auto;padding:4px 16px 10px;min-height:120px}
+#jcSheet .js-c{display:flex;gap:10px;margin:12px 0}
+#jcSheet .js-ca{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.12);font-weight:700;font-size:14px}
+#jcSheet .js-cb{min-width:0;flex:1}
+#jcSheet .js-cn{font-size:13px;font-weight:700}
+#jcSheet .js-cn i{font-style:normal;font-weight:600;font-size:11px;margin-left:6px;padding:2px 7px;border-radius:999px;background:rgba(255,182,39,.2);color:#ffb627}
+#jcSheet .js-cn span{font-weight:400;opacity:.55;font-size:11.5px;margin-left:6px}
+#jcSheet .js-ct{font-size:14px;line-height:1.5;margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
+#jcSheet .js-empty{text-align:center;opacity:.7;font-size:14px;padding:30px 10px;line-height:1.5}
+#jcSheet .js-form{display:flex;gap:8px;align-items:flex-end;padding:10px 16px 14px;border-top:1px solid rgba(255,255,255,.1)}
+#jcSheet textarea{flex:1;min-height:44px;max-height:120px;resize:none;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#fff;padding:11px 13px;font:inherit;font-size:15px}
+#jcSheet .js-send{height:44px;padding:0 18px;border-radius:14px;border:0;background:#ffb627;color:#14100a;font:inherit;font-weight:700;cursor:pointer}
+#jcSheet .js-send:disabled{opacity:.5}
+#jcSheet .js-login{padding:14px 16px 18px;text-align:center;border-top:1px solid rgba(255,255,255,.1)}
+#jcSheet .js-prev{flex:1;overflow:auto;padding:6px 16px 10px;display:flex;justify-content:center;align-items:flex-start;min-height:180px}
+#jcSheet .js-prev img{max-width:100%;max-height:60vh;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#jcSheet .js-spin{opacity:.7;align-self:center;font-size:14px}
+#jcSheet .js-row{display:flex;gap:8px;padding:8px 16px 16px}
+#jcSheet .js-b{flex:1;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+#jcSheet .js-b.main{background:#ffb627;border-color:#ffb627;color:#14100a;font-weight:800;flex:1.6}
+#jcSheet .js-b:disabled{opacity:.5}
+
+</style>
+
+<script id="allo-jobs-module">
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const U=()=>{try{return currentUser}catch(e){return null}};
+const D=()=>{try{return data}catch(e){return {products:[],reviews:[]}}};
+const SB=()=>{try{return sb}catch(e){return null}};
+const toast=m=>{try{alloToast(m)}catch(e){alert(m)}};
+const isSeller=()=>{const u=U();return !!u&&(u.role==='boutique'||u.role==='entreprise')};
+const isJob=p=>!!(p&&p.attrs&&p.attrs.type==='service'&&(p.attrs.kind==='offer'||p.attrs.kind==='seek'));
+const P=id=>(D().products||[]).find(x=>String(x.id)===String(id));
+const CATS=(window.alloSvc&&window.alloSvc.SVC_CATS)||['Maçon','Plombier','Électricien','Mécanicien','Informatique','Autre service'];
+const CONTRACTS=['CDI','CDD','Stage','Freelance','Journalier','Temps partiel','Apprentissage'];
+const PAYM={month:'par mois',day:'par jour',hour:'par heure'};
+const EXP=['Débutant accepté','1 à 2 ans','3 à 5 ans','Plus de 5 ans'];
+const fc=n=>Number(n||0).toLocaleString('fr-FR')+' FCFA';
+let F={kind:'offer',contract:'CDI',photoMode:'none',photoData:''};
+let CUR=null,SHEET_MODE='';
+
+/* ---------- Icônes ---------- */
+const PATHS={
+  heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  chat:'<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  down:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  wallet:'<path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  chev:'<polyline points="6 9 12 15 18 9"/>',
+  trash:'<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/>'
+};
+const ic=(n,s)=>'<svg viewBox="0 0 24 24" width="'+(s||16)+'" height="'+(s||16)+'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+PATHS[n]+'</svg>';
+
+/* ---------- Données ---------- */
+const likeN=id=>{try{return Number(getProductLikeCount(id))||0}catch(e){return 0}};
+const isLiked=id=>{try{return !!(U()&&isInWishlist(id))}catch(e){return false}};
+const cmts=id=>(D().reviews||[]).filter(r=>String(r.productId)===String(id));
+const shopOf=p=>{try{return getShopName(p.shopId)||''}catch(e){return ''}};
+function ago(d){
+  if(!d)return 'À l’instant';
+  const s=(Date.now()-new Date(d).getTime())/1000;
+  if(!(s>=60))return 'À l’instant';
+  const m=Math.floor(s/60);if(m<60)return 'Il y a '+m+' min';
+  const h=Math.floor(m/60);if(h<24)return 'Il y a '+h+' h';
+  const j=Math.floor(h/24);if(j<30)return 'Il y a '+j+' j';
+  return new Date(d).toLocaleDateString('fr-FR');
+}
+function payText(p){
+  const a=p.attrs||{},pay=a.pay||{},amt=Number(pay.amount||p.price)||0,mode=pay.mode||(amt?'month':'nego');
+  if(mode==='nego'||!amt)return a.kind==='seek'?'Salaire à discuter':'Salaire à négocier';
+  return fc(amt)+' '+(PAYM[mode]||'');
+}
+function payChip(p){
+  const a=p.attrs||{},pay=a.pay||{},amt=Number(pay.amount||p.price)||0,mode=pay.mode||(amt?'month':'nego');
+  if(mode==='nego'||!amt)return a.kind==='seek'?'À discuter':'À négocier';
+  return amt.toLocaleString('fr-FR')+' F'+({month:'/mois',day:'/jour',hour:'/heure'}[mode]||'');
+}
+const tel=ph=>'tel:'+String(ph||'').replace(/[^\d+]/g,'');
+function waLink(p){
+  const a=p.attrs||{},d=String((a.contact||{}).phone||'').replace(/[^\d]/g,'').replace(/^00/,'');
+  const msg=a.kind==='seek'?'Bonjour, j’ai vu votre annonce « '+p.name+' » sur Allo. Je souhaite en discuter.'
+    :'Bonjour, je suis intéressé(e) par votre offre « '+p.name+' » publiée sur Allo.';
+  return 'https://wa.me/'+d+'?text='+encodeURIComponent(msg);
+}
+
+/* ---------- Carte pleine largeur : le bandeau dit tout de suite offre / recherche ---------- */
+const OPEN=new Set();
+const WAICO='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path fill="currentColor" stroke="none" d="M15.6 14.3c-.2-.1-1.2-.6-1.4-.7-.2-.1-.3-.1-.5.1l-.6.7c-.1.2-.3.2-.5.1-.6-.3-1.5-.7-2.3-1.8-.2-.3.2-.3.5-.8.1-.2 0-.3 0-.4l-.6-1.5c-.2-.4-.3-.3-.5-.3h-.4c-.2 0-.4.1-.6.3-.7.7-.7 1.7.1 2.8 1.6 2.2 3 2.7 4.3 3.2.6.2 1.1.2 1.5.1.5-.1 1.2-.5 1.3-1 .1-.5.1-.9.1-1 0-.1-.2-.2-.4-.3Z"/></svg>';
+function jobCard(p,o){
+  o=o||{};
+  const a=p.attrs||{},k=a.kind==='seek'?'seek':'offer',u=U(),pre=!!o.preview,offer=k==='offer',exp=!!o.exp;
+  const mine=!!(u&&p.ownerId&&String(p.ownerId)===String(u.id));
+  const open=exp||(!pre&&OPEN.has(String(p.id)));
+  const nl=pre?0:likeN(p.id),liked=!pre&&isLiked(p.id),nc=pre?0:cmts(p.id).length;
+  const c=a.contact||{},phone=String(c.phone||'').trim();
+  const poster=String(a.poster||shopOf(p)||'Annonceur').trim();
+  const pid=esc(p.id),off=pre?' disabled':'';
+  const ava=a.photo?'<img src="'+esc(a.photo)+'" alt="" loading="lazy" referrerpolicy="no-referrer">':esc((poster[0]||'A').toUpperCase());
+  const desc=String(p.description||'').trim();
+  const sub=[poster,a.zone,ago(p.createdAt)].filter(Boolean).map(esc).join(' · ');
+  const chips=(a.contract?'<span class="jcard-stamp">'+esc(a.contract)+'</span>':'')
+    +'<span class="jcard-chip pay">'+ic('wallet',14)+esc(payChip(p))+'</span>'
+    +(a.exp?'<span class="jcard-chip">'+ic('clock',14)+esc(a.exp)+'</span>':'')
+    +(a.urgent?'<span class="jcard-chip urg">⚡ '+(offer?'Urgent':'Disponible')+'</span>':'');
+  return '<div class="product-card jcard jcard-'+k+(open?' open':'')+(pre?' jc-pv':'')+(exp?' jcard-exp':'')+'"'+(pre||exp?'':' data-product-id="'+pid+'"')+'>'
+   +'<div class="jcard-top"><span class="jcard-tag">'+(offer?'OFFRE D’EMPLOI':'RECHERCHE D’EMPLOI')+'</span>'
+     +'<div class="jcard-tools">'
+       +'<button type="button" class="jcard-ic jcard-like'+(liked?' on':'')+'" aria-label="J’aime" aria-pressed="'+liked+'" onclick="alloJobs.like(\''+pid+'\')"'+off+'>'+ic('heart',17)+'<span class="jcard-ln">'+nl+'</span></button>'
+       +'<button type="button" class="jcard-ic" aria-label="Commentaires" onclick="alloJobs.comments(\''+pid+'\')"'+off+'>'+ic('chat',17)+'<span class="jcard-cn">'+nc+'</span></button>'
+       +'<button type="button" class="jcard-ic jcard-hide" aria-label="Télécharger la carte" onclick="alloJobs.download(\''+pid+'\')"'+off+'>'+ic('down',18)+'</button>'
+     +'</div></div>'
+   +'<div class="jcard-main"><div class="jcard-ava"><i>'+ava+'</i><em>'+(offer?'📢':'🙋')+'</em></div>'
+     +'<div class="jcard-tt"><h3 class="jcard-title">'+esc(p.name)+'</h3><div class="jcard-sub">'+sub+'</div></div></div>'
+   +'<div class="jcard-chips">'+chips+'</div>'
+   +'<div class="jcard-desc"><div><p'+(desc?'':' class="none"')+'>'+(desc?esc(desc):'Aucune description pour le moment.')+'</p>'
+     +(mine&&!pre&&!exp?'<button type="button" class="jcard-del" onclick="alloJobs.remove(\''+pid+'\')">'+ic('trash',14)+'Supprimer l’annonce</button>':'')+'</div></div>'
+   +'<div class="jcard-foot">'
+     +'<button type="button" class="jcard-call" onclick="alloJobs.call(\''+pid+'\')"'+(phone&&!pre?'':' disabled')+'>'+ic('phone',16)+(phone?esc(phone):'Contact non renseigné')+'</button>'
+     +(phone&&c.wa?'<button type="button" class="jcard-sq wa jcard-hide" aria-label="Écrire sur WhatsApp" onclick="alloJobs.wa(\''+pid+'\')"'+off+'>'+WAICO+'</button>':'')
+     +'<button type="button" class="jcard-sq jcard-descbtn jcard-hide" aria-label="Voir la description" aria-expanded="'+open+'" onclick="alloJobs.desc(\''+pid+'\',this)"'+off+'>'+ic('chev',22)+'</button>'
+   +'</div></div>';
+}
+const _pc=window.productCardHTML;
+if(typeof _pc==='function')window.productCardHTML=function(p){
+  if(isJob(p))return jobCard(p);
+  return _pc.apply(this,arguments);
+};
+
+/* ---------- Interactions carte ---------- */
+function desc(pid,btn){
+  const card=btn.closest('.jcard'),on=card.classList.toggle('open');
+  on?OPEN.add(String(pid)):OPEN.delete(String(pid));
+  btn.setAttribute('aria-expanded',on);
+  if(on){try{ensureProductView(pid)}catch(e){}}
+}
+function call(pid){
+  const p=P(pid);if(!p)return;
+  try{ensureProductView(pid)}catch(e){}
+  location.href=tel(((p.attrs||{}).contact||{}).phone);
+}
+function wa(pid){
+  const p=P(pid);if(!p)return;
+  try{ensureProductView(pid)}catch(e){}
+  window.open(waLink(p),'_blank','noopener');
+}
+function syncCounts(pid){
+  const id=String(pid);
+  document.querySelectorAll('.jcard[data-product-id="'+id+'"]').forEach(c=>{
+    const l=c.querySelector('.jcard-like'),n=c.querySelector('.jcard-cn');
+    if(l){const on=isLiked(id);l.classList.toggle('on',on);l.setAttribute('aria-pressed',on);l.querySelector('.jcard-ln').textContent=likeN(id)}
+    if(n)n.textContent=cmts(id).length;
+  });
+}
+function like(pid){
+  if(!U()){try{requireAuth('Connectez-vous pour aimer cette annonce.')}catch(e){alert('Connectez-vous pour continuer.')}return}
+  try{if(!canMarketplaceInteract(U()))return}catch(e){}
+  try{toggleWishlist(pid)}catch(e){return}
+  syncCounts(pid);setTimeout(()=>syncCounts(pid),1500);
+}
+async function remove(pid){
+  if(!confirm('Supprimer cette annonce ?'))return;
+  try{
+    const s=SB();
+    if(s){const {error}=await s.from('products').delete().eq('id',pid);if(error)throw error;await sbLoadAllIntoData()}
+    else D().products=(D().products||[]).filter(p=>String(p.id)!==String(pid));
+    try{renderAll()}catch(e){}
+    if($('#jb-list'))renderList();
+    toast('Annonce supprimée');
+  }catch(e){console.warn('[Allo jobs]',e);alert('Suppression impossible : '+(e&&e.message||e))}
+}
+
+/* ---------- Feuille ---------- */
+function sheet(html,mode){
+  let el=$('#jcSheet');
+  if(!el){
+    el=document.createElement('div');el.id='jcSheet';document.body.appendChild(el);
+    el.addEventListener('click',e=>{if(e.target===el)closeSheet()});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&el.classList.contains('show'))closeSheet()});
+  }
+  SHEET_MODE=mode||'';
+  el.innerHTML='<div class="js-box" role="dialog" aria-modal="true">'+html+'</div>';
+  el.classList.add('show');
+}
+function closeSheet(){const el=$('#jcSheet');if(el)el.classList.remove('show');SHEET_MODE='';CUR=null}
+
+/* ---------- Commentaires ---------- */
+function comments(pid){
+  const p=P(pid);if(!p)return;
+  try{ensureProductView(pid)}catch(e){}
+  CUR=String(pid);
+  const u=U();let canWrite=false;try{canWrite=!!u&&canMarketplaceInteract(u)}catch(e){}
+  sheet('<div class="js-h"><b>Commentaires</b><span class="js-sub">'+esc(p.name)+'</span><button type="button" class="js-x" aria-label="Fermer" onclick="alloJobs.closeSheet()">×</button></div>'
+    +'<div class="js-list" id="jc-list"></div>'
+    +(!u?'<div class="js-login"><button type="button" class="js-send" onclick="alloJobs.closeSheet();try{requireAuth(\'Connectez-vous pour commenter.\')}catch(e){}">Se connecter pour commenter</button></div>'
+      :canWrite?'<div class="js-form"><textarea id="jc-ct" rows="1" maxlength="600" placeholder="Votre question ou commentaire…"></textarea><button type="button" class="js-send" id="jc-send" onclick="alloJobs.send(\''+esc(pid)+'\')">Envoyer</button></div>':''),'comments');
+  renderComments(true);
+}
+let _lastCount=-1;
+function renderComments(force){
+  const el=$('#jc-list');if(!el||!CUR)return;
+  const p=P(CUR),rows=cmts(CUR).slice().sort((a,b)=>new Date(a.date||0)-new Date(b.date||0));
+  if(!force&&rows.length===_lastCount)return;
+  _lastCount=rows.length;
+  el.innerHTML=rows.length?rows.map(r=>{
+    const who=String(r.userName||'Utilisateur');
+    return '<div class="js-c"><div class="js-ca">'+esc((who[0]||'U').toUpperCase())+'</div><div class="js-cb"><div class="js-cn">'+esc(who)
+      +(p&&String(r.userId)===String(p.ownerId)?'<i>Annonceur</i>':'')+'<span>'+esc(ago(r.date))+'</span></div><div class="js-ct">'+esc(r.text||'')+'</div></div></div>';
+  }).join(''):'<div class="js-empty">Aucun commentaire pour l’instant.<br>Posez votre question à l’annonceur.</div>';
+  el.scrollTop=el.scrollHeight;
+}
+async function send(pid){
+  const u=U(),s=SB(),ta=$('#jc-ct'),btn=$('#jc-send');
+  if(!u||!ta)return;
+  const txt=ta.value.trim();if(!txt)return;
+  if(!s){toast('Connexion requise pour commenter.');return}
+  btn.disabled=true;
+  try{
+    const base={user_id:u.id,product_id:pid,comment:txt,text:txt,user_name:u.name||u.identifier||'Utilisateur',created_at:new Date().toISOString()};
+    let r=await s.from('reviews').insert(Object.assign({rating:null,stars:null},base)).select().single();
+    if(r.error)r=await s.from('reviews').insert(Object.assign({rating:5,stars:5},base)).select().single();
+    if(r.error)r=await s.from('reviews').insert({user_id:u.id,product_id:pid,rating:5,comment:txt,created_at:base.created_at}).select().single();
+    if(r.error)throw r.error;
+    const d=D();if(!d.reviews)d.reviews=[];
+    if(!d.reviews.some(x=>String(x.id)===String(r.data.id)))
+      d.reviews.push({id:r.data.id,productId:pid,orderId:null,userId:u.id,userName:base.user_name,stars:0,text:txt,date:r.data.created_at||base.created_at});
+    ta.value='';renderComments(true);syncCounts(pid);
+    const p=P(pid);
+    try{if(p&&p.ownerId&&String(p.ownerId)!==String(u.id)&&typeof pushUserNotif==='function')pushUserNotif(p.ownerId,'Nouveau commentaire',p.name+' — '+txt.slice(0,80))}catch(e){}
+  }catch(e){console.warn('[Allo jobs] comment',e);toast('Commentaire non envoyé. Réessayez.')}
+  btn.disabled=false;
+}
+
+/* ---------- Téléchargement en image ---------- */
+function loadScript(src,test){
+  return new Promise((res,rej)=>{
+    if(test())return res();
+    const s=document.createElement('script');s.src=src;
+    s.onload=()=>test()?res():rej(new Error('lib'));s.onerror=()=>rej(new Error('load'));
+    document.head.appendChild(s);
+  });
+}
+const toDataURL=url=>fetch(url,{mode:'cors',credentials:'omit'}).then(r=>{if(!r.ok)throw 0;return r.blob()})
+  .then(b=>new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(f.result);f.onerror=rej;f.readAsDataURL(b)}));
+function inlineImgs(root){
+  return Promise.all([...root.querySelectorAll('img')].map(im=>{
+    const s=im.getAttribute('src')||'';im.removeAttribute('loading');
+    if(!s||/^data:/.test(s))return 0;
+    return toDataURL(im.src).then(d=>{im.src=d}).catch(()=>{im.style.visibility='hidden'});
+  }));
+}
+const waitImgs=root=>Promise.all([...root.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r})));
+async function renderCard(p){
+  const W=360,padX=28,padY=28;
+  const host=document.createElement('div');
+  host.style.cssText='position:fixed;left:-10000px;top:0;pointer-events:none;width:'+(W+2*padX)+'px';
+  host.innerHTML='<div class="jx-frame" style="box-sizing:border-box;display:flex;justify-content:center;align-items:center;padding:'+padY+'px '+padX+'px;width:'+(W+2*padX)+'px;background:radial-gradient(120% 90% at 50% 40%,#252a4a 0%,#14172b 55%,#0a0c18 100%)">'+jobCard(p,{exp:true})+'</div>';
+  document.body.appendChild(host);
+  const frame=host.firstElementChild,node=frame.firstElementChild;
+  node.style.cssText+=';animation:none!important;transition:none!important;transform:none!important;opacity:1!important;margin:0!important;width:'+W+'px';
+  try{
+    await inlineImgs(host);await waitImgs(host);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const w=W+2*padX,h=Math.ceil(frame.getBoundingClientRect().height);
+    try{
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js',()=>!!window.htmlToImage);
+      const opt={pixelRatio:3,width:w,height:h,cacheBust:false,style:{margin:'0',transform:'none'}};
+      return await window.htmlToImage.toBlob(frame,opt).catch(()=>window.htmlToImage.toBlob(frame,Object.assign(opt,{skipFonts:true,fontEmbedCSS:''})));
+    }catch(e){
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',()=>!!window.html2canvas);
+      const cv=await window.html2canvas(frame,{scale:3,backgroundColor:null,useCORS:true,logging:false});
+      return await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('blob')),'image/png'));
+    }
+  }finally{host.remove()}
+}
+async function download(pid){
+  const p=P(pid);if(!p)return;
+  sheet('<div class="js-h"><b>Télécharger la carte</b><button type="button" class="js-x" aria-label="Fermer" onclick="alloJobs.closeSheet()">×</button></div>'
+    +'<div class="js-prev" id="jd-prev"><span class="js-spin">Création de l’image…</span></div>'
+    +'<div class="js-row"><button type="button" class="js-b" onclick="alloJobs.closeSheet()">Fermer</button>'
+    +'<button type="button" class="js-b" id="jd-share" style="display:none">Partager</button>'
+    +'<button type="button" class="js-b main" id="jd-dl" disabled>Télécharger</button></div>','download');
+  try{
+    const blob=await renderCard(p);
+    if(SHEET_MODE!=='download')return;
+    const url=URL.createObjectURL(blob),name='carte-'+(String(p.name||'carte').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'carte')+'.png';
+    $('#jd-prev').innerHTML='<img alt="Aperçu de la carte" src="'+url+'">';
+    const dl=$('#jd-dl');dl.disabled=false;dl.textContent='Télécharger l’image';
+    dl.onclick=()=>{const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()};
+    const file=new File([blob],name,{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      const sh=$('#jd-share');sh.style.display='';
+      sh.onclick=()=>navigator.share({files:[file],title:p.name}).catch(()=>{});
+    }
+  }catch(e){
+    console.warn('[Allo jobs] export',e);
+    const pv=$('#jd-prev');if(pv)pv.innerHTML='<span class="js-spin">Impossible de créer l’image. Vérifiez votre connexion puis réessayez.</span>';
+  }
+}
+
+/* ---------- Panneau (réutilise #svcPanel) ---------- */
+function jpanel(title,html){
+  let el=$('#svcPanel');
+  if(!el){el=document.createElement('div');el.id='svcPanel';document.body.appendChild(el)}
+  el.innerHTML='<div class="svc-h"><b>'+title+'</b><button onclick="alloSvc.close()" aria-label="Fermer">×</button></div><div class="svc-b">'+html+'</div>';
+  el.style.display='flex';
+}
+const need=()=>{if(!U()){alert('Connectez-vous pour continuer.');return false}return true};
+
+/* ---------- Parcourir ---------- */
+let BF={kind:'all'};
+function allJobs(){
+  return (D().products||[]).filter(p=>isJob(p)&&p.available!==false&&!p.hidden&&!p.private)
+    .sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+}
+function browse(kind){
+  if(!need())return;
+  BF.kind=kind||'all';
+  jpanel('💼 Emplois',
+    '<div class="jb-seg" id="jb-seg">'+[['all','Tout'],['offer','Offres d’emploi'],['seek','Recherches d’emploi']].map(x=>'<button type="button" data-k="'+x[0]+'" class="'+(BF.kind===x[0]?'on':'')+'" onclick="alloJobs.kind(\''+x[0]+'\')">'+x[1]+'</button>').join('')+'</div>'
+    +'<div class="jb-row"><input id="jb-q" type="search" placeholder="Poste, métier, ville…" oninput="alloJobs.filter()" aria-label="Rechercher une annonce">'
+    +'<select id="jb-c" onchange="alloJobs.filter()" aria-label="Domaine"><option value="all">Tous les domaines</option>'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select></div>'
+    +'<div id="jb-res"></div>');
+  renderList();
+}
+function kind(k){
+  BF.kind=k;
+  document.querySelectorAll('#jb-seg button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+  renderList();
+}
+function renderList(){
+  const el=$('#jb-res');if(!el)return;
+  const q=(($('#jb-q')||{}).value||'').toLowerCase().trim(),cat=($('#jb-c')||{}).value||'all';
+  const list=allJobs().filter(p=>{
+    const a=p.attrs||{};
+    if(BF.kind!=='all'&&a.kind!==BF.kind)return false;
+    if(cat!=='all'&&p.cat!==cat)return false;
+    if(!q)return true;
+    return [p.name,p.description,p.cat,a.zone,a.contract,a.poster].join(' ').toLowerCase().includes(q);
+  });
+  el.innerHTML=list.length
+    ?'<div class="jb-count">'+list.length+' annonce'+(list.length>1?'s':'')+'</div><div class="products-grid jb-list" id="jb-list">'+list.map(p=>jobCard(p)).join('')+'</div>'
+    :'<div class="jb-empty" id="jb-list"><b>Aucune annonce pour le moment</b><p>'+(isSeller()?'Soyez le premier à publier une offre ou à présenter votre profil.':'Revenez bientôt ou modifiez vos filtres.')+'</p>'
+      +(isSeller()?'<button type="button" class="btn btn-accent" onclick="alloJobs.hub()">Publier une annonce</button>':'')+'</div>';
+}
+
+/* ---------- Publier : choix du type ---------- */
+function hub(){
+  if(!need())return;
+  if(!isSeller())return alert('Un compte boutique ou entreprise est nécessaire pour publier un service.');
+  jpanel('Publier un service',
+    '<p class="svc-meta">Que voulez-vous publier ? C’est gratuit.</p>'
+    +'<button type="button" class="jh-tile" style="--t:#19d0ff" onclick="alloSvc.publish()"><span class="ico">🛠</span><div><b>Un service</b><span>Maçonnerie, plomberie, cours, coiffure… les clients vous envoient une demande.</span></div></button>'
+    +'<button type="button" class="jh-tile" style="--t:#ffb627" onclick="alloJobs.form(\'offer\')"><span class="ico">📢</span><div><b>Une offre d’emploi</b><span>Vous recrutez : présentez le poste, le contrat et comment vous joindre.</span></div></button>'
+    +'<button type="button" class="jh-tile" style="--t:#4fe0c1" onclick="alloJobs.form(\'seek\')"><span class="ico">🙋</span><div><b>Une recherche d’emploi</b><span>Vous cherchez du travail : montrez votre profil et vos disponibilités.</span></div></button>');
+}
+
+/* ---------- Publier : formulaire ---------- */
+function form(kind){
+  if(!need())return;
+  if(!isSeller())return alert('Un compte boutique ou entreprise est nécessaire pour publier un service.');
+  const u=U(),offer=kind==='offer';
+  F={kind,contract:offer?'CDI':'',photoMode:'none',photoData:''};
+  const ph=String(u.phone||'').replace(/[^\d+ ]/g,'').trim();
+  const chips=(offer?CONTRACTS:CONTRACTS.concat(['Peu importe'])).map((c,i)=>{
+    const on=offer?c==='CDI':c==='Peu importe';
+    return '<button type="button" class="jf-chip'+(on?' on':'')+'" data-v="'+esc(c)+'" onclick="alloJobs.pick(this)">'+esc(c)+'</button>';
+  }).join('');
+  jpanel(offer?'📢 Offre d’emploi':'🙋 Recherche d’emploi',
+    '<div class="jf" data-k="'+kind+'">'
+    +'<label for="jf-t">'+(offer?'Poste à pourvoir':'Poste recherché')+'</label>'
+    +'<input id="jf-t" maxlength="80" placeholder="'+(offer?'Ex : Maçon qualifié, vendeuse, livreur':'Ex : Électricien, comptable, chauffeur')+'" oninput="alloJobs.pv()">'
+    +'<label for="jf-c">Domaine</label><select id="jf-c" onchange="alloJobs.pv()">'+CATS.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select>'
+    +'<label>Type de contrat</label><div class="jf-chips">'+chips+'</div>'
+    +'<label for="jf-pm">'+(offer?'Rémunération':'Prétention salariale')+'</label>'
+    +'<div class="jf-two"><select id="jf-pm" onchange="alloJobs.pm()"><option value="month">Par mois</option><option value="day">Par jour</option><option value="hour">Par heure</option><option value="nego">À négocier</option></select>'
+    +'<input id="jf-pa" type="number" inputmode="numeric" min="0" placeholder="Montant en FCFA" oninput="alloJobs.pv()"></div>'
+    +'<label for="jf-z">'+(offer?'Lieu de travail':'Où pouvez-vous travailler ?')+'</label><input id="jf-z" maxlength="60" placeholder="Ville, quartier" oninput="alloJobs.pv()">'
+    +'<label for="jf-x">'+(offer?'Expérience demandée':'Votre expérience')+'</label>'
+    +'<select id="jf-x" onchange="alloJobs.pv()"><option value="">Non précisée</option>'+EXP.map(x=>'<option>'+x+'</option>').join('')+'</select>'
+    +'<label for="jf-ph">Votre contact</label><input id="jf-ph" type="tel" inputmode="tel" maxlength="22" value="'+esc(ph)+'" placeholder="Ex : 237 6XX XX XX XX" oninput="alloJobs.pv()">'
+    +'<p class="jf-hint">Ce numéro sera visible sur l’annonce. Le format international (avec l’indicatif) fait fonctionner WhatsApp.</p>'
+    +'<label class="jf-check"><input id="jf-wa" type="checkbox" checked onchange="alloJobs.pv()">Joignable sur WhatsApp</label>'
+    +'<label>Photo de profil <small>(facultatif)</small></label>'
+    +'<div class="jf-seg" id="jf-phs"><button type="button" class="on" data-m="none" onclick="alloJobs.photo(\'none\')">Sans photo</button>'
+    +'<button type="button" data-m="profile" onclick="alloJobs.photo(\'profile\')">Ma photo de profil</button>'
+    +'<button type="button" data-m="upload" onclick="alloJobs.photo(\'upload\')">Importer</button></div>'
+    +'<input id="jf-file" type="file" accept="image/*" hidden onchange="alloJobs.pickPhoto(this)">'
+    +'<label class="jf-check"><input id="jf-u" type="checkbox" onchange="alloJobs.pv()">'+(offer?'Recrutement urgent':'Disponible tout de suite')+'</label>'
+    +'<label for="jf-d">Description</label><textarea id="jf-d" rows="5" maxlength="1200" placeholder="'+(offer?'Missions, horaires, qualités attendues, avantages…':'Votre parcours, vos compétences, vos disponibilités…')+'" oninput="alloJobs.pv();alloJobs.cnt()"></textarea>'
+    +'<div class="jf-count" id="jf-cnt">0 / 1200</div>'
+    +'<div class="jf-prev"><h4>Aperçu de votre annonce</h4><div id="jf-prev"></div></div>'
+    +'<button type="button" class="btn btn-accent btn-block jf-go" id="jf-go" onclick="alloJobs.save()">Publier l’annonce (gratuit)</button>'
+    +'</div>');
+  pv();
+}
+function pick(btn){
+  btn.parentNode.querySelectorAll('.jf-chip').forEach(b=>b.classList.toggle('on',b===btn));
+  F.contract=btn.dataset.v==='Peu importe'?'':btn.dataset.v;pv();
+}
+function pm(){const n=$('#jf-pm').value==='nego',a=$('#jf-pa');a.style.display=n?'none':'';pv()}
+function cnt(){const d=$('#jf-d'),c=$('#jf-cnt');if(d&&c)c.textContent=d.value.length+' / 1200'}
+function photo(m){
+  const u=U();
+  if(m==='profile'&&!(u&&u.avatar_url)){toast('Aucune photo de profil enregistrée sur votre compte.');return}
+  if(m==='upload'){$('#jf-file').click();return}
+  F.photoMode=m;F.photoData='';
+  document.querySelectorAll('#jf-phs button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));pv();
+}
+async function pickPhoto(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  try{
+    F.photoData=await compressImageFile(f,256,0.82);F.photoMode='upload';
+    document.querySelectorAll('#jf-phs button').forEach(b=>b.classList.toggle('on',b.dataset.m==='upload'));pv();
+  }catch(e){toast('Image illisible. Essayez une autre photo.')}
+  input.value='';
+}
+function draft(){
+  const u=U()||{},g=id=>{const e=$('#'+id);return e?String(e.value||'').trim():''};
+  const amt=parseInt(g('jf-pa'),10)||0,mode=g('jf-pm')||'month';
+  const photoUrl=F.photoMode==='profile'?(u.avatar_url||''):(F.photoMode==='upload'?F.photoData:'');
+  let poster=u.name||'';
+  if(!poster){try{poster=getShopName(u.shopId)||''}catch(e){}}
+  return {id:'preview',name:g('jf-t')||(F.kind==='offer'?'Intitulé du poste':'Poste recherché'),description:g('jf-d'),price:amt,cat:g('jf-c'),
+    ownerId:u.id,createdAt:new Date().toISOString(),
+    attrs:{type:'service',kind:F.kind,contract:F.contract,pay:{mode:(mode==='nego'||!amt)?'nego':mode,amount:amt},zone:g('jf-z'),exp:g('jf-x'),
+      contact:{phone:g('jf-ph'),wa:!!($('#jf-wa')&&$('#jf-wa').checked)},photo:photoUrl,poster:poster||u.identifier||'',urgent:!!($('#jf-u')&&$('#jf-u').checked)}};
+}
+function pv(){const el=$('#jf-prev');if(el)el.innerHTML=jobCard(draft(),{preview:true})}
+async function save(){
+  const btn=$('#jf-go');
+  try{
+    const u=U(),d=draft(),a=d.attrs;
+    if(($('#jf-t').value||'').trim().length<3)return alert('Indiquez l’intitulé du poste.');
+    const digits=String(a.contact.phone||'').replace(/\D/g,'');
+    if(digits.length<8||digits.length>15)return alert('Indiquez un numéro de contact valide.');
+    btn.disabled=true;btn.textContent='Publication…';
+    let shopId=u.shopId;
+    if(u.role==='entreprise'){const s=await ensureCompanyCatalogForCurrentUser();shopId=s&&s.id}
+    if(!shopId&&typeof getSellerShopIds==='function')shopId=(getSellerShopIds()||[])[0];
+    if(a.photo&&String(a.photo).startsWith('data:')){
+      try{a.photo=await sbEnsureDataUrlUploaded('product-images',u.id,a.photo,'job')||a.photo}catch(e){console.warn('[Allo jobs] photo',e)}
+    }
+    const p={name:d.name,description:d.description,price:d.price,stock:999,icon:a.kind==='offer'?'📢':'🙋',cat:d.cat,shopId,ownerId:u.id,
+      companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:[],variants:[],attrs:a};
+    await sbUpsertProduct(p);await sbLoadAllIntoData();
+    try{renderAll()}catch(e){}
+    toast(a.kind==='offer'?'Offre d’emploi publiée ✔':'Recherche d’emploi publiée ✔');
+    browse(a.kind);
+  }catch(e){
+    console.warn('[Allo jobs]',e);alert('Publication impossible : '+(e&&e.message||e));
+    if(btn){btn.disabled=false;btn.textContent='Publier l’annonce (gratuit)'}
+  }
+}
+
+/* Rafraîchit la liste des commentaires ouverte si un nouvel avis arrive */
+setInterval(()=>{if(SHEET_MODE==='comments')renderComments(false)},4000);
+
+window.alloJobs={hub,form,browse,kind,filter:renderList,pick,pm,cnt,photo,pickPhoto,pv,save,like,desc,call,wa,comments,send,download,remove,closeSheet};
+})();
+</script>
+
 </body>
 </html>
