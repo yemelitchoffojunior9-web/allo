@@ -10400,8 +10400,34 @@ function buildNav() {
 }
 
 function openCenterNavAction() {
-  // Le bouton + est exclusivement dédié à la création d'un produit.
-  // Il ne doit plus ouvrir la recherche, même pour les anciens comptes utilisateur.
+  // Le bouton + sert à créer un produit OU un service.
+  // Il ne doit jamais ouvrir la recherche.
+  if (!currentUser) {
+    requireAuth(lang === 'en' ? 'Sign in to create a product or a service.' : 'Connectez-vous pour créer un produit ou un service.', 'account');
+    return;
+  }
+  const en = lang === 'en';
+  let el = document.getElementById('svcPanel');
+  if (!el) { el = document.createElement('div'); el.id = 'svcPanel'; document.body.appendChild(el); }
+  el.innerHTML = '<div class="svc-h"><b>' + (en ? 'Create' : 'Créer') + '</b>'
+    + '<button type="button" onclick="document.getElementById(\'svcPanel\').style.display=\'none\'" aria-label="' + (en ? 'Close' : 'Fermer') + '">×</button></div>'
+    + '<div class="svc-b">'
+    + '<p class="svc-meta">' + (en ? 'What do you want to create?' : 'Que voulez-vous créer ?') + '</p>'
+    + '<button type="button" class="jh-tile" style="--t:#a8f535" onclick="centerNavPick(\'product\')"><span class="ico">🛍️</span><div><b>' + (en ? 'A product' : 'Un produit') + '</b><span>' + (en ? 'Add an item to your shop catalogue.' : 'Ajoutez un article au catalogue de votre boutique.') + '</span></div></button>'
+    + '<button type="button" class="jh-tile" style="--t:#19d0ff" onclick="centerNavPick(\'service\')"><span class="ico">🛠</span><div><b>' + (en ? 'A service' : 'Un service') + '</b><span>' + (en ? 'Service, job offer or job search: you pick the type next.' : 'Service, offre d’emploi ou recherche d’emploi : vous choisissez le type ensuite.') + '</span></div></button>'
+    + '</div>';
+  el.style.display = 'flex';
+}
+
+function centerNavPick(kind) {
+  const el = document.getElementById('svcPanel');
+  if (kind === 'service') {
+    // Ouvre le choix des types de service (service / offre d'emploi / recherche d'emploi)
+    if (window.alloSvc && typeof alloSvc.open === 'function') { alloSvc.open('publish'); return; }
+    if (el) el.style.display = 'none';
+    return;
+  }
+  if (el) el.style.display = 'none';
   openProductCreationWizard();
 }
 
