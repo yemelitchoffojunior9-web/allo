@@ -15878,7 +15878,7 @@ function renderClientSpace() {
       </div>
       <div class="card" style="margin-bottom:12px">
         <input class="catalog-search" type="search" placeholder="${lang==='en'?'Search in this company catalog…':'Rechercher dans ce catalogue…'}" value="${escapeCompanyText(window._catalogQ || '')}" oninput="window._catalogQ=this.value||'';renderClientSpace()">
-        ${cats.length ? `<div style="display:flex;gap:7px;overflow:auto;margin-top:9px;padding-bottom:2px"><button class="btn btn-sm ${cat==='all'?'btn-accent':'btn-ghost'}" onclick="window._catalogCat='all';renderClientSpace()">Tous</button>${cats.map(c => `<button class="btn btn-sm ${String(cat)===String(c)?'btn-accent':'btn-ghost'}" onclick="window._catalogCat=${JSON.stringify(String(c))};renderClientSpace()">${escapeCompanyText(c)}</button>`).join('')}</div>` : ''}
+        ${cats.length ? `<div style="display:flex;gap:7px;overflow:auto;margin-top:9px;padding-bottom:2px"><button class="btn btn-sm ${cat==='all'?'btn-accent':'btn-ghost'}" onclick="window._catalogCat='all';renderClientSpace()">Tous</button>${cats.map(c => `<button class="btn btn-sm ${String(cat)===String(c)?'btn-accent':'btn-ghost'}" onclick="window._catalogCat=${escapeCompanyText(JSON.stringify(String(c)))};renderClientSpace()">${escapeCompanyText(c)}</button>`).join('')}</div>` : ''}
       </div>
       <div style="font-size:12px;color:var(--text-muted);margin:4px 0 10px">${products.length} ${lang==='en'?'product(s)':'produit(s)'}</div>
       <div class="products-grid">${products.length ? products.map(p => productCardHTML(p, true)).join('') : `<div class="empty">${lang==='en'?'No product available in this company catalog.':'Aucun produit disponible dans le catalogue de cette entreprise.'}</div>`}</div>`;
