@@ -4709,6 +4709,7 @@ function mapShopRow(r) {
     coverImage: r.cover_image_url,
     deliveryZones: r.delivery_zones || [],
     deliveryHours: (r.delivery_hours != null && r.delivery_hours !== '') ? Number(r.delivery_hours) : 48,
+    minOrderQty: Number(r.min_order_qty) > 0 ? Math.floor(Number(r.min_order_qty)) : 0,
     private: !!r.private,
     isCompanyCatalog: !!r.is_company_catalog,
     certified: !!r.certified,
@@ -4877,6 +4878,11 @@ function buildOrderRow(o) {
     shop_status: o.shopStatus && typeof o.shopStatus === 'object' ? o.shopStatus : {},
     timeline: Array.isArray(o.timeline) ? o.timeline : [],
     commission_total: Math.round(Number(o.commissionTotal || 0)),
+    // Quantité totale de colis : contrôlée par le serveur (minimum exigé par le vendeur)
+    // (mêmes filtres que l'insertion des order_items, pour que les deux chiffres concordent)
+    total_qty: (Array.isArray(o.items) ? o.items : [])
+      .filter(it => it && alloUuid(it.productId) && Number(it.qty) > 0 && Math.round(Number(it.price) || 0) > 0)
+      .reduce((n, it) => n + Math.max(1, Math.min(500, Math.round(Number(it.qty) || 1))), 0),
     buyer_name: o.buyerName || currentUser?.name || null,
     buyer_avatar_url: o.buyerAvatarUrl || currentUser?.avatar_url || null,
     buyer_country: o.buyerCountry || currentUser?.country || null,
@@ -4935,6 +4941,7 @@ async function sbUpsertOrder(o) {
         delete orderRow.buyer_neighborhood;
         delete orderRow.buyer_phone;
         delete orderRow.created_at;
+        delete orderRow.total_qty;
       }
       // Forcer les champs critiques explicitement
       orderRow.status = ({'preparation':'confirmé','livraison':'expédié','livré':'livré','livre':'livré','delivered':'livré'}[String(o.status || '').toLowerCase()] || o.status || 'en cours');
@@ -5831,7 +5838,8 @@ async function sbLoadAllIntoData() {
     }));
     data.notifications = (notifications.data || []).map(n => ({
       id: n.id, title: n.title, body: n.body, target: n.target,
-      readBy: n.read_by || [], date: n.created_at
+      readBy: n.read_by || [], date: n.created_at,
+      productId: n.product_id || null, kind: n.kind || null
     }));
     data.reviews = (reviews.data || []).map(r => ({
       id: r.id, productId: r.product_id, orderId: r.order_id || null,
@@ -5851,6 +5859,8 @@ async function sbLoadAllIntoData() {
         notificationId: n.notification_id,
         title: n.title || linked.title || (lang === 'en' ? 'Notification' : 'Notification'),
         body: n.body || linked.body || '',
+        productId: linked.product_id || null,
+        kind: linked.kind || null,
         read: !!n.read_at,
         readAt: n.read_at || null,
         date: n.created_at || linked.created_at || new Date().toISOString()
@@ -6183,12 +6193,19 @@ async function sbSaveShop(s) {
     private: !!s.private,
     is_company_catalog: !!s.isCompanyCatalog,
     certified: !!s.certified,
-    cod_enabled: !!s.codEnabled
+    cod_enabled: !!s.codEnabled,
+    min_order_qty: Number(s.minOrderQty) > 0 ? Math.floor(Number(s.minOrderQty)) : 0
   };
   const isUuid = /^[0-9a-f]{8}-/i.test(String(s.id || ''));
   let res;
   if (isUuid) res = await sb.from('shops').update(row).eq('id', s.id).select().single();
   else res = await sb.from('shops').insert(row).select().single();
+  // Colonne min_order_qty optionnelle (si la migration SQL n'est pas encore passée)
+  if (res.error && /min_order_qty/i.test(String(res.error.message || res.error.details || ''))) {
+    delete row.min_order_qty;
+    if (isUuid) res = await sb.from('shops').update(row).eq('id', s.id).select().single();
+    else res = await sb.from('shops').insert(row).select().single();
+  }
   // Colonne cod_enabled optionnelle
   if (res.error && /cod_enabled/i.test(String(res.error.message || res.error.details || ''))) {
     const row2 = Object.assign({}, row);
@@ -7426,6 +7443,7 @@ function init() {
         if (isLoggedIn()) {
           try { startOrderRealtime(); } catch (e) { console.warn('[Allo] order realtime init', e); }
           try { startStockRealtime(); } catch (e) { console.warn('[Allo] stock realtime init', e); }
+          try { startNotifRealtime(); } catch (e) { console.warn('[Allo] notif realtime init', e); }
           try { startReviewsRealtime(); } catch (e) { console.warn('[Allo] reviews realtime init', e); }
           try { startViewsRealtime(); } catch (e) { console.warn('[Allo] views realtime init', e); }
           try { loadProductViewCounts(); } catch (e) { console.warn('[Allo] load views', e); }
@@ -9877,6 +9895,7 @@ async function doLogout() {
   try { if (typeof USE_SUPABASE !== 'undefined' && USE_SUPABASE && sb) { sb.auth.signOut(); } } catch (e) { window.__alloErr && window.__alloErr(e); }
   try { stopOrderRealtime(); } catch (e) { window.__alloErr && window.__alloErr(e); }
   try { stopStockRealtime(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  try { stopNotifRealtime(); } catch (e) { window.__alloErr && window.__alloErr(e); }
 
   try { stopAutoSave(true); } catch (e) { window.__alloErr && window.__alloErr(e); }
   try { saveAppData(); } catch (e) { window.__alloErr && window.__alloErr(e); }
@@ -10063,6 +10082,7 @@ function enterApp() {
   try { ensureProfileCompletion(false); } catch (e) { window.__alloErr && window.__alloErr(e); }
   try { startOrderRealtime(); } catch (e) { window.__alloErr && window.__alloErr(e); }
   try { startStockRealtime(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  try { startNotifRealtime(); } catch (e) { window.__alloErr && window.__alloErr(e); }
 }
 
 function updateWalletChip() {
@@ -12463,6 +12483,32 @@ function clearCart() {
   renderHome();
 }
 
+/** Minimum de colis exigé par un vendeur pour une commande (0 = aucun). */
+function getShopMinOrderQty(shopId) {
+  const shop = (data.shops || []).find(s => String(s.id) === String(shopId));
+  const m = shop ? Math.floor(Number(shop.minOrderQty)) : 0;
+  return (Number.isFinite(m) && m > 0) ? m : 0;
+}
+function getGroupTotalQty(g) {
+  return (g.items || []).reduce((s, x) => s + (Number(x.item && x.item.qty) || 0), 0);
+}
+/** Boutiques du panier dont le minimum de colis n'est pas atteint. */
+function getMinOrderViolations(groups) {
+  return (groups || []).map(g => {
+    const min = getShopMinOrderQty(g.shopId);
+    const qty = getGroupTotalQty(g);
+    return { g, min, qty, missing: min - qty };
+  }).filter(v => v.min > 0 && v.qty < v.min);
+}
+function minOrderMessage(violations) {
+  return violations.map(v => {
+    const name = (typeof getShopName === 'function' ? getShopName(v.g.shopId) : '') || (lang === 'en' ? 'this seller' : 'ce vendeur');
+    return lang === 'en'
+      ? `${name} requires at least ${v.min} parcels per order (you have ${v.qty}). Add ${v.missing} more.`
+      : `${name} exige au minimum ${v.min} colis par commande (vous en avez ${v.qty}). Ajoutez-en ${v.missing} de plus.`;
+  }).join('\n');
+}
+
 function groupCartByShop() {
   const groups = {};
   (cart || []).forEach(item => {
@@ -12559,6 +12605,8 @@ function renderCart() {
         <div>
           <div class="shop-name">🏪 ${shopName}</div>
           <div class="shop-meta">${t('invoiceShop')} #${idx + 1} · ${g.items.length} ${g.items.length > 1 ? t('products_s') : t('product_s')}</div>
+          ${(function(){ const mn = getShopMinOrderQty(g.shopId); if (!mn) return ''; const q = getGroupTotalQty(g); const ok = q >= mn;
+            return `<div style="font-size:12px;font-weight:700;margin-top:4px;color:${ok ? 'var(--green)' : 'var(--red)'}">${ok ? '✅' : '⚠️'} ${lang==='en' ? `Minimum ${mn} parcels per order` : `Minimum ${mn} colis par commande`} · ${q}/${mn}${ok ? '' : (lang==='en' ? ` — add ${mn - q} more` : ` — ajoutez-en ${mn - q}`)}</div>`; })()}
         </div>
         <button class="btn btn-sm btn-ghost" onclick="removeShopFromCart('${g.shopId}')" title="${t('removeShopCart')}">🗑</button>
       </div>`;
@@ -12611,7 +12659,9 @@ function renderCart() {
   if (currentUser) {
     html += `<p style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:8px">${t('escrowHold')}</p>`;
   }
-  html += `<button class="btn btn-accent btn-block" onclick="validateCart()">${groups.length > 1 ? t('payAllInvoices') : t('validateOrder')}</button>`;
+  const _minViol = getMinOrderViolations(groups);
+  html += `<button class="btn btn-accent btn-block" ${_minViol.length ? 'disabled style="opacity:.5"' : ''} onclick="validateCart()">${groups.length > 1 ? t('payAllInvoices') : t('validateOrder')}</button>`;
+  if (_minViol.length) html += `<p style="font-size:12px;color:var(--red);text-align:center;margin-top:6px">${lang==='en' ? 'Minimum quantity not reached for some sellers.' : 'Minimum de colis non atteint pour certains vendeurs.'}</p>`;
   html += `<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="clearCart()">${lang==='en'?'Clear cart':'Vider le panier'}</button>`;
   el.innerHTML = html;
 }
@@ -12646,6 +12696,10 @@ async function validateCart() {
       ? 'Only a shop or company account can place orders.'
       : 'Seuls un compte boutique ou entreprise peuvent passer des commandes.');
     return;
+  }
+  {
+    const _mv = getMinOrderViolations(groupCartByShop());
+    if (_mv.length) { alert(minOrderMessage(_mv)); return; }
   }
   let total = 0;
   for (const item of cart) {
@@ -13109,6 +13163,12 @@ async function confirmCheckout() {
   }
   const groups = groupCartByShop();
   if (!groups.length) return;
+
+  // Minimum de colis exigé par chaque vendeur : bloque AVANT tout débit / création de commande.
+  {
+    const _mv = getMinOrderViolations(groups);
+    if (_mv.length) { alert(minOrderMessage(_mv)); return; }
+  }
 
   // RÈGLE ABSOLUE : un vendeur ne peut jamais acheter chez lui-même.
   // Le contrôle est fait AVANT tout débit de solde et AVANT la création des commandes.
@@ -13878,8 +13938,14 @@ async function saveShopDeliveryHours() {
       return;
     }
 
+    // Minimum de colis par commande (0 = aucun)
+    const minInp = document.getElementById('mMinOrderQty');
+    let minQty = minInp ? Math.floor(Number(minInp.value)) : NaN;
+    if (!Number.isFinite(minQty) || minQty < 0) minQty = 0;
+    minQty = Math.min(100000, minQty);
+
     // 1) Mise à jour mémoire (tous appareils du même compte après reload)
-    shops.forEach(sh => { sh.deliveryHours = hours; });
+    shops.forEach(sh => { sh.deliveryHours = hours; sh.minOrderQty = minQty; });
     try {
       if (typeof saveAppData === 'function') saveAppData();
     } catch (e) { console.warn('[Allo] local save deliveryHours', e); }
@@ -13958,6 +14024,17 @@ async function saveShopDeliveryHours() {
           }
         }
       } catch (e) { console.warn('[Allo] delivery_hours verify', e); }
+    }
+
+    // Minimum de colis : update ciblé (ignoré proprement si la colonne n'existe pas encore)
+    if (canRemote) {
+      for (const shop of shops) {
+        if (typeof alloUuid === 'function' && !alloUuid(shop.id)) continue;
+        try {
+          const r2 = await sb.from('shops').update({ min_order_qty: minQty }).eq('id', shop.id);
+          if (r2.error) console.warn('[Allo] min_order_qty update (migration SQL manquante ?)', r2.error);
+        } catch (e) { console.warn('[Allo] min_order_qty update', e); }
+      }
     }
 
     try { closeModal(); } catch (_) {
@@ -16749,6 +16826,11 @@ function openModal(type, extra) {
       <button class="btn btn-accent btn-block" onclick="addProduct('${extra}')">${t('createProduct')}</button>`;
   }
 
+  if (type === 'quickStock') {
+    html = buildQuickStockHTML(extra);
+    if (!html) return;
+  }
+
   if (type === 'editProduct') {
     const p = data.products.find(x => x.id === extra);
     if (!p) { alert(t('productNotFound')); return; }
@@ -17268,6 +17350,10 @@ function openModal(type, extra) {
         <input type="number" id="mDeliveryHours" min="1" max="720" value="${cur}">
       </div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${lang==='en'?'Shown on all product cards. Orders auto-cancel after this delay.':'Affiché sur toutes les cartes produit. Annulation auto si dépassé.'}</p>
+      <div class="field"><label>${lang==='en'?'Minimum parcels per order':'Minimum de colis par commande'}</label>
+        <input type="number" id="mMinOrderQty" min="0" max="100000" step="1" value="${shop && Number(shop.minOrderQty) > 0 ? Number(shop.minOrderQty) : 0}" placeholder="0">
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${lang==='en'?'Buyers cannot send an order below this total quantity, so you never lose quota on small orders. 0 = no minimum.':'Les acheteurs ne pourront pas envoyer une commande en dessous de cette quantité totale : vous ne perdez plus de quota pour rien. 0 = aucun minimum.'}</p>
       <button class="btn btn-accent btn-block" onclick="saveShopDeliveryHours()">${t('save')}</button>`;
   }
   if (type === 'replyMessage') {
@@ -22732,18 +22818,176 @@ function renderRecommendationSectionsHTML(canAdd) {
   return html;
 }
 
+// ===== STOCK BAS : notification -> ouverture directe du produit -> modification du stock =====
+function _escHtml(x) { return String(x == null ? '' : x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/** Produit appartenant bien au vendeur connecté (sinon null : « si disponible »). */
+function getMySellerProduct(productId) {
+  if (!currentUser || productId == null) return null;
+  const p = (data.products || []).find(x => String(x.id) === String(productId));
+  if (!p) return null;
+  const mine = (typeof getSellerShopIds === 'function' ? getSellerShopIds() : []).map(String).includes(String(p.shopId));
+  return mine ? p : null;
+}
+
+function notifProductActionHTML(n) {
+  if (!n || !n.productId) return '';
+  const fr = lang !== 'en';
+  const p = getMySellerProduct(n.productId);
+  if (!p) {
+    return `<div style="font-size:12px;color:var(--text-muted);margin-top:8px">${fr ? 'Ce produit n’est plus disponible.' : 'This product is no longer available.'}</div>`;
+  }
+  return `<button type="button" class="btn btn-sm btn-accent" style="margin-top:8px" onclick="openStockFromNotif('${_escHtml(p.id)}','${_escHtml(n.id)}')">📦 ${fr ? 'Ouvrir le produit · modifier le stock' : 'Open product · edit stock'}</button>`;
+}
+
+async function openStockFromNotif(productId, notifLinkId) {
+  try { openModal('quickStock', productId); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  // La notification est marquée comme lue (meilleur effort)
+  try {
+    if (alloIsSupabaseMode() && sb && currentUser && alloUuid(notifLinkId)) {
+      const now = new Date().toISOString();
+      const r = await sb.from('user_notifications').update({ read_at: now }).eq('id', notifLinkId).eq('user_id', currentUser.id);
+      if (!r.error) {
+        const l = (data.userNotifs || []).find(x => String(x.id) === String(notifLinkId));
+        if (l) { l.read = true; l.readAt = now; }
+        updateNotifBadge();
+        try { updateAllBadges(); } catch (_) { window.__alloErr && window.__alloErr(_); }
+      }
+    }
+  } catch (e) { window.__alloErr && window.__alloErr(e); }
+}
+
+function buildQuickStockHTML(productId) {
+  const fr = lang !== 'en';
+  const p = getMySellerProduct(productId);
+  if (!p) { alert(fr ? 'Ce produit n’est plus disponible.' : 'This product is no longer available.'); return ''; }
+  const imgs = (typeof getProductImages === 'function') ? getProductImages(p) : (p.image ? [p.image] : []);
+  const thumb = (imgs[0] || p.image) ? `<img src="${_escHtml(imgs[0] || p.image)}" alt="" style="width:100%;height:100%;object-fit:cover">` : (p.icon || '📦');
+  const cur = Math.max(0, Number(p.stock) || 0);
+  const color = cur <= 0 ? 'var(--red)' : (cur <= 5 ? '#FBBF24' : 'var(--green)');
+  const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
+  const id = _escHtml(p.id);
+  const head = `<button class="modal-close" onclick="closeModal()">×</button>
+      <h3>📦 ${fr ? 'Modifier le stock' : 'Edit stock'}</h3>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">
+        <div style="width:56px;height:56px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-3);font-size:26px;flex:none">${thumb}</div>
+        <div style="min-width:0"><b>${_escHtml(displayProductName(p.name))}</b>
+          <div style="font-size:12.5px;color:var(--text-muted);margin-top:2px">${fr ? 'Stock actuel' : 'Current stock'} : <b style="color:${color}">${cur <= 0 ? (fr ? 'Rupture' : 'Out of stock') : cur}</b></div>
+        </div>
+      </div>`;
+  if (hasVariants) {
+    return head + `<p style="font-size:12.5px;color:var(--text-muted);margin-bottom:12px">${fr ? 'Ce produit a des variantes : le stock se règle variante par variante dans la fiche complète.' : 'This product has variants: stock is set per variant in the full product form.'}</p>
+      <button class="btn btn-accent btn-block" onclick="openModal('editProduct','${id}')">${fr ? 'Ouvrir la fiche complète' : 'Open full product form'}</button>`;
+  }
+  return head + `<div class="field"><label>${fr ? 'Nouveau stock' : 'New stock'}</label>
+        <input id="mQuickStock" type="number" min="0" step="1" inputmode="numeric" value="${cur}">
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button type="button" class="btn btn-sm btn-ghost" onclick="quickStockAdd(10)">+10</button>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="quickStockAdd(50)">+50</button>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="quickStockAdd(100)">+100</button>
+      </div>
+      <button class="btn btn-accent btn-block" onclick="saveQuickStock('${id}')">${fr ? 'Enregistrer le stock' : 'Save stock'}</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="openModal('editProduct','${id}')">${fr ? 'Modifier la fiche complète' : 'Edit full product'}</button>`;
+}
+
+function quickStockAdd(n) {
+  const el = document.getElementById('mQuickStock');
+  if (!el) return;
+  el.value = Math.min(1000000, (parseInt(el.value, 10) || 0) + n);
+}
+
+async function saveQuickStock(productId) {
+  if (_modalActionBusy) return;
+  const fr = lang !== 'en';
+  const p = getMySellerProduct(productId);
+  if (!p) { alert(fr ? 'Ce produit n’est plus disponible.' : 'This product is no longer available.'); return; }
+  const el = document.getElementById('mQuickStock');
+  let v = parseInt(el && el.value, 10);
+  if (!Number.isFinite(v) || v < 0) { alert(fr ? 'Indiquez un stock valide (0 ou plus).' : 'Enter a valid stock (0 or more).'); return; }
+  v = Math.min(1000000, v);
+  if (!setModalActionBusy(true, actionBusyLabel('save'))) return;
+  const prev = p.stock;
+  try {
+    if (alloIsSupabaseMode() && sb) {
+      const res = await sb.from('products').update({ stock: v, updated_at: new Date().toISOString() })
+        .eq('id', p.id).select('id,stock').maybeSingle();
+      if (res.error || !res.data) {
+        alert(fr ? 'Impossible d’enregistrer le stock. Réessayez.' : 'Could not save the stock. Try again.');
+        return;
+      }
+      p.stock = Number(res.data.stock);
+    } else {
+      p.stock = v;
+      try { saveAppData(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+    }
+    try { repaintStockUI(true); } catch (e) { window.__alloErr && window.__alloErr(e); }
+    closeModal();
+    try { renderAll(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+    try { window.alloToast && window.alloToast(fr ? 'Stock mis à jour ✔' : 'Stock updated ✔'); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  } catch (e) {
+    p.stock = prev;
+    console.error('[Allo] saveQuickStock', e);
+    alert(fr ? 'Impossible d’enregistrer le stock. Réessayez.' : 'Could not save the stock. Try again.');
+  } finally {
+    setModalActionBusy(false);
+  }
+}
+
+// Réception en direct des nouvelles notifications (stock bas, commandes…)
+let _notifRealtimeChannel = null;
+function stopNotifRealtime() {
+  try { if (_notifRealtimeChannel && sb) sb.removeChannel(_notifRealtimeChannel); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  _notifRealtimeChannel = null;
+}
+function startNotifRealtime() {
+  if (!alloIsSupabaseMode() || !sb || !currentUser || !alloUuid(currentUser.id)) return;
+  stopNotifRealtime();
+  const me = String(currentUser.id);
+  _notifRealtimeChannel = sb.channel('allo-notifs-' + me + '-' + Date.now())
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_notifications', filter: 'user_id=eq.' + me }, function (payload) {
+      onNewUserNotification(payload && payload.new).catch(function (e) { console.warn('[Allo] notif realtime', e); });
+    })
+    .subscribe();
+}
+async function onNewUserNotification(row) {
+  if (!row || !row.id || !currentUser) return;
+  const nr = await sb.from('notifications').select('*').eq('id', row.notification_id).maybeSingle();
+  const n = (nr && nr.data) || {};
+  if (n.id && !(data.notifications || []).some(x => String(x.id) === String(n.id))) {
+    (data.notifications = data.notifications || []).push({ id: n.id, title: n.title, body: n.body, target: n.target,
+      readBy: [], date: n.created_at, productId: n.product_id || null, kind: n.kind || null });
+  }
+  if (!(data.userNotifs || []).some(x => String(x.id) === String(row.id))) {
+    (data.userNotifs = data.userNotifs || []).push({ id: row.id, userId: row.user_id, notificationId: row.notification_id,
+      title: n.title || 'Notification', body: n.body || '', productId: n.product_id || null, kind: n.kind || null,
+      read: !!row.read_at, readAt: row.read_at || null, date: row.created_at || n.created_at || new Date().toISOString() });
+  }
+  updateNotifBadge();
+  try { updateAllBadges(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  const v = document.getElementById('view-notifs');
+  if (v && v.classList.contains('active')) renderNotifs();
+  try { if (window.alloToast && n.title) window.alloToast(n.title + ' — ' + (n.body || '')); } catch (e) { window.__alloErr && window.__alloErr(e); }
+}
+
 function stockAlertsHTML() {
   if (!currentUser || (currentUser.role !== 'boutique' && currentUser.role !== 'entreprise')) return '';
   const shopIds = getSellerShopIds();
   const low = data.products.filter(p => shopIds.includes(p.shopId) && p.stock > 0 && p.stock <= 5);
   const out = data.products.filter(p => shopIds.includes(p.shopId) && p.stock <= 0);
   if (!low.length && !out.length) return '';
+  const rows = out.concat(low).slice(0, 6).map(p => `
+      <div onclick="openModal('quickStock','${p.id}')" style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--border);cursor:pointer">
+        <span style="font-size:13px">${displayProductName(p.name)}</span>
+        <span style="font-size:12px;font-weight:700;color:${p.stock <= 0 ? 'var(--red)' : '#FBBF24'}">${p.stock <= 0 ? (lang==='en'?'Out':'Rupture') : ('×' + p.stock)} ✏️</span>
+      </div>`).join('');
   return `<div class="card" style="border-color:rgba(251,191,36,.4);margin-bottom:10px">
     <b>⚠️ ${t('stockAlert')}</b>
     <div style="font-size:12.5px;margin-top:6px;color:var(--text-muted)">
       ${out.length ? (out.length + (lang==='en'?' out of stock':' en rupture') + ' · ') : ''}
       ${low.length ? (low.length + (lang==='en'?' low stock':' stock bas')) : ''}
     </div>
+    <div style="margin-top:6px">${rows}</div>
   </div>`;
 }
 
@@ -22826,6 +23070,7 @@ function renderNotifs() {
         ${n.read?'': '<span class="status-pill status-ok">NEW</span>'}
       </div>
       <p style="font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.4">${n.body}</p>
+      ${notifProductActionHTML(n)}
       <div style="font-size:11px;color:var(--text-muted);margin-top:6px">${new Date(n.date).toLocaleString(lang==='en'?'en-US':'fr-FR')}</div>
     </div>`).join('');
 }
@@ -22873,7 +23118,8 @@ async function markAllNotifsRead(silent) {
       const linked = byId.get(String(n.notification_id)) || {};
       return {id:n.id,userId:n.user_id,notificationId:n.notification_id,
         title:linked.title || n.title || (lang==='en'?'Notification':'Notification'),
-        body:linked.body || n.body || '',read:!!n.read_at,readAt:n.read_at || null,
+        body:linked.body || n.body || '',productId:linked.product_id || null,kind:linked.kind || null,
+        read:!!n.read_at,readAt:n.read_at || null,
         date:n.created_at || linked.created_at || now};
     });
   } catch(e) {
@@ -26375,6 +26621,11 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
         var has=(data.products||[]).some(function(x){return String(x.id)===String(p.id);});
         if(!has&&n<40){ setTimeout(function(){runPending(n+1);},500); return; }
         pending=null; if(has) openProductDetail(p.id);
+      } else if(p.open==='stock'&&p.id){
+        var hasS=(data.products||[]).some(function(x){return String(x.id)===String(p.id);});
+        if(!hasS&&n<40){ setTimeout(function(){runPending(n+1);},500); return; }
+        pending=null;
+        if(hasS) openModal('quickStock',p.id); else toast(L2('Ce produit n’est plus disponible.','This product is no longer available.'));
       } else if(p.open==='orders'){ pending=null; switchView('orders'); }
       else { pending=null; switchView('notifs'); }
     }catch(e){ pending=null; }
