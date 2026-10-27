@@ -3908,6 +3908,15 @@ html body input:focus::placeholder, html body textarea:focus::placeholder { opac
 
 
 
+<style id="allo-skeleton">
+.allo-sk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:4px 0}
+.allo-sk-card{border-radius:16px;padding:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
+.allo-sk-img,.allo-sk-line{border-radius:10px;background:linear-gradient(90deg,rgba(255,255,255,.07) 25%,rgba(255,255,255,.16) 50%,rgba(255,255,255,.07) 75%);background-size:200% 100%;animation:alloSk 1.2s linear infinite}
+.allo-sk-img{aspect-ratio:1/1;margin-bottom:10px}
+.allo-sk-line{height:12px;margin-top:8px}.allo-sk-line.s{width:55%}
+@keyframes alloSk{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.allo-sk-img,.allo-sk-line{animation:none}}
+</style>
 </head>
 <body>
 <div class="app-shell" id="app">
@@ -5783,6 +5792,12 @@ async function sbLoadAllIntoData() {
       productId: r.product_id, price: Number(r.price || 0),
       createdAt: r.created_at, updatedAt: r.updated_at
     }));
+    // Produits + boutiques prêts : on affiche tout de suite, le reste (commandes, profils, quotas) continue en arrière-plan
+    window._alloDataLoaded = true;
+    if (!window._alloEarlyRendered) {
+      window._alloEarlyRendered = true;
+      try { if (typeof renderAll === 'function') renderAll(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+    }
     const orderItems = await sb.from('order_items').select('*');
     const itemsByO = {};
     (orderItems.data || []).forEach(it => {
@@ -6063,6 +6078,7 @@ async function sbLoadAllIntoData() {
     return true;
   } catch (e) {
     console.error('sbLoadAllIntoData', e);
+    window._alloDataLoaded = true;
     return false;
   }
 }
@@ -7378,6 +7394,9 @@ function init() {
     authReady = false;
     currentUser = makeGuestUser();
     try { enterApp(); } catch (e) { console.warn('[Allo] guest enterApp', e); }
+    setTimeout(function () {
+      if (!window._alloDataLoaded) { window._alloDataLoaded = true; try { renderAll(); } catch (e) { window.__alloErr && window.__alloErr(e); } }
+    }, 12000);
 
     // Restaurer ensuite la session persistante de l'appareil/navigateur.
     try {
@@ -7451,6 +7470,7 @@ function init() {
         }
       }).catch(function(e){
         console.warn('[Allo] session', e);
+        window._alloDataLoaded = true;
         authReady = true;
         try {
           if (!currentUser) currentUser = makeGuestUser();
@@ -10665,6 +10685,12 @@ function getVisibleProducts() {
 }
 
 // ===== RENDER =====
+function alloProductsSkeleton() {
+  let c = '';
+  for (let i = 0; i < 6; i++) c += '<div class="allo-sk-card"><div class="allo-sk-img"></div><div class="allo-sk-line"></div><div class="allo-sk-line s"></div></div>';
+  return '<div class="allo-sk-grid" aria-busy="true" aria-label="' + (lang === 'en' ? 'Loading products' : 'Chargement des produits') + '">' + c + '</div>';
+}
+
 function renderAll() {
   renderHome();
   renderOrders();
@@ -11079,7 +11105,9 @@ function renderHomeProductsOnly() {
     });
     window._catalogPage = res.page;
     let html = '';
-    if (!res.total) {
+    if (!res.total && !window._alloDataLoaded) {
+      html = alloProductsSkeleton();
+    } else if (!res.total) {
       const catLabel = (activeCat && activeCat !== 'all') ? activeCat : '';
       html = `<div class="empty">${catLabel
         ? (lang==='en'
@@ -11119,7 +11147,9 @@ function renderHomeProductsOnly() {
   }
 
   let html = '';
-  if (!products.length) {
+  if (!products.length && !window._alloDataLoaded) {
+    html = alloProductsSkeleton();
+  } else if (!products.length) {
     const catLabel = (activeCat && activeCat !== 'all') ? activeCat : '';
     html = `<div class="empty">${catLabel
       ? (lang==='en'
@@ -17007,6 +17037,31 @@ function openModal(type, extra) {
       <div class="field"><label>Description</label><textarea id="mPlanDesc" rows="2" placeholder="Courte description">${edit ? (edit.description||'') : ''}</textarea></div>
       <button class="btn btn-accent btn-block" onclick="saveActivationPlanFromModal()">${t('save')}</button>`;
   }
+  if (type === 'grantQuota') {
+    const fr = lang !== 'en';
+    if (!currentUser || currentUser.role !== 'admin') { alert(fr ? 'Réservé au Super Admin' : 'Super Admin only'); return; }
+    const parts = String(extra || '').split(':');
+    const gType = parts[0], gId = parts.slice(1).join(':');
+    const ent = (gType === 'entreprise' ? (data.companies || []) : (data.shops || [])).find(x => String(x.id) === String(gId));
+    if (!ent) return;
+    const total = Number(ent.orderQuotaTotal || 0), used = Number(ent.ordersUsed || 0);
+    const quick = [10, 50, 100, 500, 1000].map(n =>
+      `<button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('mGrantQuotaAmount').value=${n}">+${n}</button>`).join('');
+    html = `<button class="modal-close" onclick="closeModal()">×</button>
+      <h3>🎁 ${fr ? 'Offrir des quotas' : 'Grant quota'}</h3>
+      <p class="sub">${gType === 'entreprise' ? '🏢' : '🏪'} ${String(ent.name || '').replace(/</g, '')}</p>
+      <div class="field"><label>${fr ? 'Quota actuel' : 'Current quota'}</label>
+        <input type="text" disabled style="opacity:.7" value="${used} / ${total} ${fr ? 'utilisées' : 'used'} · ${Math.max(0, total - used)} ${fr ? 'restantes' : 'left'}">
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${quick}</div>
+      <div class="field"><label>${fr ? 'Nombre de commandes à ajouter' : 'Orders to add'}</label>
+        <input type="number" id="mGrantQuotaAmount" min="1" step="1" inputmode="numeric" placeholder="Ex: 250">
+      </div>
+      <div class="field"><label>${fr ? 'Note (optionnel)' : 'Note (optional)'}</label>
+        <input type="text" id="mGrantQuotaNote" maxlength="200" placeholder="${fr ? 'Ex: geste commercial' : 'e.g. goodwill gesture'}">
+      </div>
+      <button class="btn btn-accent btn-block" id="mGrantQuotaBtn" onclick="adminGrantQuota('${gType}','${String(gId).replace(/'/g, '')}')">${fr ? 'Ajouter au quota' : 'Add to quota'}</button>`;
+  }
   if (type === 'addZone') {
     html = `<button class="modal-close" onclick="closeModal()">×</button>
       <h3>${lang==='en'?'New delivery zone':'Nouvelle zone de livraison'}</h3>
@@ -20507,6 +20562,59 @@ async function deleteActivationPlan(planId) {
   renderAdminCompanyActivations();
 }
 
+/* ===== Super Admin : offrir n'importe quel nombre de quotas à n'importe quel compte, à tout moment ===== */
+async function sbAdminSyncQuotas() {
+  if (!USE_SUPABASE || !sb || !currentUser || currentUser.role !== 'admin') return false;
+  try {
+    const { data: rows, error } = await sb.rpc('admin_list_quota_accounts');
+    if (error) throw error;
+    (rows || []).forEach(function (r) {
+      const list = r.entity_type === 'entreprise' ? (data.companies || []) : (data.shops || []);
+      const ent = list.find(function (x) { return String(x.id) === String(r.entity_id); });
+      if (!ent) return;
+      const total = Number(r.total_quota || 0), used = Number(r.orders_used || 0);
+      if (!total && !used) return; // pas encore de compteur : on garde l'affichage par défaut
+      ent.ordersUsed = used;
+      ent.orderQuotaTotal = total;
+      ent.activationLocked = used >= total;
+    });
+    try { const ps = await sb.rpc('admin_push_stats'); if (!ps.error) window._adminPushStats = ps.data; } catch (e) { window.__alloErr && window.__alloErr(e); }
+    return true;
+  } catch (e) { console.warn('[Allo] admin quota sync', e); return false; }
+}
+
+async function adminGrantQuota(type, id) {
+  const fr = lang !== 'en';
+  if (!currentUser || currentUser.role !== 'admin') {
+    alert(fr ? 'Réservé au Super Admin' : 'Super Admin only'); return;
+  }
+  if (!USE_SUPABASE || !sb) {
+    alert(fr ? 'Connexion à la base de données requise' : 'Database connection required'); return;
+  }
+  const amount = Math.floor(Number((document.getElementById('mGrantQuotaAmount') || {}).value));
+  const note = (document.getElementById('mGrantQuotaNote') || {}).value || '';
+  if (!(amount >= 1)) {
+    alert(fr ? 'Entrez un nombre de quotas (minimum 1)' : 'Enter a quota amount (minimum 1)'); return;
+  }
+  const btn = document.getElementById('mGrantQuotaBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const { data: r, error } = await sb.rpc('admin_grant_quota', {
+      p_entity_type: type, p_entity_id: id, p_amount: amount, p_note: note
+    });
+    if (error) throw error;
+    await sbAdminSyncQuotas();
+    closeModal();
+    try { renderAdminCompanyActivations(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+    const msg = fr ? ('+' + amount + ' quotas ajoutés ✔ (reste : ' + (r && r.remaining != null ? r.remaining : '—') + ')')
+                   : ('+' + amount + ' quota added ✔ (left: ' + (r && r.remaining != null ? r.remaining : '—') + ')');
+    if (typeof toast === 'function') toast(msg); else alert(msg);
+  } catch (e) {
+    alert((fr ? 'Impossible d’ajouter le quota : ' : 'Could not add quota: ') + ((e && e.message) || e));
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function toggleActivationPlan(planId) {
   if (!currentUser || currentUser.role !== 'admin') return;
   const p = (adminConfig.activationPlans || []).find(x => String(x.id) === String(planId));
@@ -20703,6 +20811,13 @@ function renderAdminCompanyActivations() {
   const fr = lang !== 'en';
   const tab = window._adminActTab || 'plans';
   const plans = (adminConfig.activationPlans || []).slice();
+  if (tab === 'status' && !window._adminQuotaSyncing && Date.now() - (window._adminQuotaSyncAt || 0) > 15000) {
+    window._adminQuotaSyncing = true;
+    sbAdminSyncQuotas().then(function (ok) {
+      window._adminQuotaSyncAt = Date.now(); window._adminQuotaSyncing = false;
+      if (ok) renderAdminCompanyActivations();
+    }).catch(function (e) { window._adminQuotaSyncAt = Date.now(); window._adminQuotaSyncing = false; window.__alloErr && window.__alloErr(e); });
+  }
   const rev = Number(adminConfig.companyActivationRevenue || 0);
 
   // Build unified panel into plansEl (hide separate sections headers visually)
@@ -20807,6 +20922,12 @@ function renderAdminCompanyActivations() {
             <div class="dll-stat"><div class="lbl">${fr?'Quota':'Quota'}</div><div class="val">${c.orderQuotaTotal||0}</div></div>
             <div class="dll-stat"><div class="lbl">${fr?'Statut':'Status'}</div><div class="val ${locked?'bad':'ok'}">${locked?(fr?'Verrouillé':'Locked'):(fr?'Actif':'Active')}</div></div>
           </div>
+          <div class="dll-row-actions">
+            <button class="btn btn-sm btn-accent" onclick="openModal('grantQuota','entreprise:${c.id}')">🎁 ${fr?'Offrir des quotas':'Grant quota'}</button>
+          </div>
+          <div class="dll-row-actions">
+            <button class="btn btn-sm btn-accent" onclick="openModal('grantQuota','boutique:${s.id}')">🎁 ${fr?'Offrir des quotas':'Grant quota'}</button>
+          </div>
         </div>
         <span class="dll-dot ${locked?'off':''}"></span>
       </div>`;
@@ -20832,7 +20953,9 @@ function renderAdminCompanyActivations() {
         <span class="dll-dot ${locked?'off':''}"></span>
       </div>`;
     });
-    body = rows || `<div class="dll-empty">${fr?'Aucun compte vendeur':'No seller accounts'}</div>`;
+    const ps = window._adminPushStats;
+    const pushCard = ps ? `<div class="dll-hint" style="margin-bottom:8px">🔔 ${fr?'Notifications activées':'Notifications on'} : <b style="color:#7CFC9A">${ps.users}</b> / ${ps.accounts} ${fr?'comptes':'accounts'} · ${ps.devices} ${fr?'appareil(s)':'device(s)'}</div>` : '';
+    body = pushCard + (rows || `<div class="dll-empty">${fr?'Aucun compte vendeur':'No seller accounts'}</div>`);
   }
 
   host.innerHTML = `
@@ -20847,7 +20970,7 @@ function renderAdminCompanyActivations() {
       </div>
       <div class="dll-body">${body}</div>
       <div class="dll-footer">
-        <button class="btn btn-ghost" onclick="renderAdminCompanyActivations()">↻ ${fr?'Actualiser':'Refresh'}</button>
+        <button class="btn btn-ghost" onclick="window._adminQuotaSyncAt=0;renderAdminCompanyActivations()">↻ ${fr?'Actualiser':'Refresh'}</button>
         <button class="btn btn-accent" onclick="openModal('createActivationPlan')">＋ ${fr?'Créer formule':'New plan'}</button>
       </div>
     </div>`;
@@ -26477,7 +26600,7 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
 <script id="alloPushJs">
 (function(){
   'use strict';
-  var SW_URL='./push-sw.js', SW_SCOPE='./push-scope/', DIS='allo_push_dismissed_at', OFF='allo_push_user_off';
+  var SW_URL='./push-sw.js', SW_SCOPE='./push-scope/', DIS='allo_push_dismissed_at', OFF='allo_push_user_off', SLATER='allo_push_later_session';
   var key=null, keyTries=0, busy=false, lastUid=null, pending=null;
   function L(){ try{ return lang==='en'?'en':'fr'; }catch(e){ return 'fr'; } }
   var T={fr:{
@@ -26486,13 +26609,15 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
     on:'Activer',later:'Plus tard',enabled:'Notifications activées sur cet appareil',off:'Désactiver',test:'Tester',
     blocked:'Notifications bloquées',blockedS:'Autorisez-les dans les réglages du navigateur pour ce site.',
     ios:'Notifications sur iPhone',iosS:'Ajoutez d’abord Allo à l’écran d’accueil (Partager → Sur l’écran d’accueil), puis rouvrez l’app.',
-    err:'Activation impossible pour le moment.',sent:'Notification de test envoyée.'},
+    err:'Activation impossible pour le moment.',sent:'Notification de test envoyée.',
+    orderS:'Suivez votre commande en direct : confirmation, expédition, livraison — même app fermée.',msgS:'Soyez prévenu dès que le vendeur vous répond, même app fermée.'},
   en:{ask:'Enable notifications?',askS:'Messages, orders and news from your shops, even when the app is closed.',
     shopS:'Get notified of every new product from this shop, even when the app is closed.',
     on:'Enable',later:'Later',enabled:'Notifications enabled on this device',off:'Turn off',test:'Test',
     blocked:'Notifications blocked',blockedS:'Allow them in your browser settings for this site.',
     ios:'Notifications on iPhone',iosS:'First add Allo to your Home Screen (Share → Add to Home Screen), then reopen the app.',
-    err:'Could not enable right now.',sent:'Test notification sent.'}};
+    err:'Could not enable right now.',sent:'Test notification sent.',
+    orderS:'Follow your order live: confirmation, shipping, delivery — even when the app is closed.',msgS:'Get notified as soon as the seller replies, even when the app is closed.'}};
   function tr(k){ return T[L()][k]; }
   function toast(m){ try{ alloToast(m); }catch (e) { window.__alloErr && window.__alloErr(e); } }
   function supported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
@@ -26567,15 +26692,16 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
     el.innerHTML='<div class="apush-card"><span>🔔</span><div class="t"><b>'+tr('ask')+'</b><span class="s">'+tr('askS')+'</span></div><button class="apush-btn" data-a="on">'+tr('on')+'</button></div>';
   }
   document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('#alloPushCard [data-a],#alloPushBanner [data-a]'); if(!b)return;
-    var a=b.getAttribute('data-a'); if(a==='on')enable(); else if(a==='off')disable(); else if(a==='test')test(); else if(a==='no'){ localStorage.setItem(DIS,String(Date.now())); hideBanner(); } });
+    var a=b.getAttribute('data-a'); if(a==='on')enable(); else if(a==='off')disable(); else if(a==='test')test(); else if(a==='no'){ localStorage.setItem(DIS,String(Date.now())); try{ sessionStorage.setItem(SLATER,'1'); }catch(e){} hideBanner(); } });
   function hideBanner(){ var b=document.getElementById('alloPushBanner'); if(b)b.remove(); }
   async function maybeBanner(shop){
-    if(!logged()||!supported()||Notification.permission!=='default'||localStorage.getItem(OFF)||document.getElementById('alloPushBanner')) return;
-    var d=+localStorage.getItem(DIS)||0; if(!shop&&Date.now()-d<7*864e5) return;
-    if(!(await getKey())) return;
+    if(!logged()||!supported()||Notification.permission!=='default'||localStorage.getItem(OFF)||document.getElementById('alloPushBanner')||document.getElementById('alloPushWelcome')) return false;
+    try{ if(!shop&&sessionStorage.getItem(SLATER)) return false; }catch(e){}
+    if(!(await getKey())) return false;
     var b=document.createElement('div'); b.id='alloPushBanner'; b.className='apush-card'; b.style.background='var(--surface-3)';
-    b.innerHTML='<span>🔔</span><div class="t"><b>'+tr('ask')+'</b><span class="s">'+(shop?tr('shopS'):tr('askS'))+'</span></div><button class="apush-btn" data-a="on">'+tr('on')+'</button><button class="apush-btn g" data-a="no">'+tr('later')+'</button>';
+    b.innerHTML='<span>🔔</span><div class="t"><b>'+tr('ask')+'</b><span class="s">'+(shop==='order'?tr('orderS'):shop==='msg'?tr('msgS'):shop?tr('shopS'):tr('askS'))+'</span></div><button class="apush-btn" data-a="on">'+tr('on')+'</button><button class="apush-btn g" data-a="no">'+tr('later')+'</button>';
     document.body.appendChild(b);
+    return true;
   }
   // Fenêtre d'activation : proposée dès la création du compte, puis une fois par appareil et par compte
   function L2(fr,en){ return L()==='en'?en:fr; }
@@ -26644,6 +26770,21 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
     var r=await dr.apply(this,arguments);
     try{ if(logged()) setTimeout(function(){ welcome(true); },900); }catch(e){ window.__alloErr&&window.__alloErr(e); }
     return r; };
+  // Moments où l'on accepte le plus : juste après une première commande ou un premier message
+  function nudge(kind){
+    try{
+      if(!logged()||!supported()||Notification.permission!=='default'||localStorage.getItem(OFF)) return;
+      var k='allo_push_nudge_'+kind+'_'+String(currentUser.id); if(localStorage.getItem(k)) return;
+      setTimeout(async function(){ try{ if(await maybeBanner(kind)) localStorage.setItem(k,'1'); }catch(e){ window.__alloErr&&window.__alloErr(e); } },1200);
+    }catch(e){ window.__alloErr&&window.__alloErr(e); }
+  }
+  var cc=window.confirmCheckout; if(typeof cc==='function') window.confirmCheckout=async function(){
+    var n0=0; try{ n0=(cart||[]).length; }catch(_){}
+    var r=await cc.apply(this,arguments);
+    try{ if(n0>0&&(cart||[]).length===0) nudge('order'); }catch(_){}
+    return r; };
+  var ci=window.chInsert; if(typeof ci==='function') window.chInsert=async function(){
+    var r=await ci.apply(this,arguments); nudge('msg'); return r; };
   var rn=window.renderNotifs; if(typeof rn==='function') window.renderNotifs=function(){ var r=rn.apply(this,arguments); try{render();}catch (e) { window.__alloErr && window.__alloErr(e); } return r; };
   var ts=window.toggleSubscribe; if(typeof ts==='function') window.toggleSubscribe=function(shopId){
     var r=ts.apply(this,arguments);
