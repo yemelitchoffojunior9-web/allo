@@ -21,6 +21,12 @@ window.alloErrors=function(){try{console.table(L)}catch (_) { window.__alloErr &
 <meta name="apple-mobile-web-app-title" content="Allo">
 <meta name="format-detection" content="telephone=no">
 <meta name="description" content="Allo — single-account multi-space commerce platform">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Allo">
+<meta property="og:title" content="Allo — Tout devient possible">
+<meta property="og:description" content="Achetez, vendez et trouvez des services partout au Cameroun, en quelques clics.">
+<meta property="og:image" content="https://allodirect.vercel.app/apple-touch-icon.png">
+<meta name="twitter:card" content="summary">
 <!-- PWA: manifest + icons inlined (single-file) -->
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="manifest" id="alloManifestLink" href="./manifest.webmanifest">
@@ -3918,35 +3924,8 @@ html body input:focus::placeholder, html body textarea:focus::placeholder { opac
 @media (prefers-reduced-motion:reduce){.allo-sk-img,.allo-sk-line{animation:none}}
 </style>
 <style id="alloAdsCss">
-/* ===== Publicité & auras ===== */
-@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
-.has-aura{position:relative;--aura:#ffb020;animation:auBreath 2.2s ease-in-out infinite}
-@keyframes auBreath{0%,100%{filter:drop-shadow(0 0 3px var(--aura)) drop-shadow(0 0 9px var(--aura))}50%{filter:drop-shadow(0 0 8px var(--aura)) drop-shadow(0 0 20px var(--aura))}}
-.aura-fx{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:7;overflow:hidden}
-.aura-fx::before,.aura-fx::after{content:"";position:absolute;inset:0;border-radius:inherit}
-.aura-fx::after{padding:2.5px;background:linear-gradient(135deg,var(--aura),rgba(255,255,255,.85),var(--aura));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
-/* Flamme */
-.aura-flame{animation:auFlicker 1s steps(1,end) infinite}
-@keyframes auFlicker{0%{filter:drop-shadow(0 0 4px var(--aura)) drop-shadow(0 -4px 12px var(--aura))}18%{filter:drop-shadow(0 0 8px var(--aura)) drop-shadow(0 -8px 22px var(--aura))}37%{filter:drop-shadow(0 0 5px var(--aura)) drop-shadow(0 -5px 14px var(--aura))}60%{filter:drop-shadow(0 0 9px var(--aura)) drop-shadow(0 -10px 26px var(--aura))}82%{filter:drop-shadow(0 0 4px var(--aura)) drop-shadow(0 -6px 16px var(--aura))}}
-.aura-flame .aura-fx::before{background:radial-gradient(60% 45% at 18% 108%,var(--aura),transparent 70%),radial-gradient(55% 55% at 52% 110%,var(--aura),transparent 70%),radial-gradient(50% 42% at 86% 108%,var(--aura),transparent 70%);mix-blend-mode:screen;transform-origin:50% 100%;animation:auFlame 1s ease-in-out infinite alternate}
-@keyframes auFlame{0%{transform:scaleY(.8) translateY(5px);opacity:.35}100%{transform:scaleY(1.2) translateY(-4px);opacity:.75}}
-/* Foudre */
-.aura-lightning{animation:auZap 1.5s steps(1,end) infinite}
-@keyframes auZap{0%,100%{filter:drop-shadow(0 0 4px var(--aura)) drop-shadow(0 0 10px var(--aura))}6%{filter:drop-shadow(0 0 12px #fff) drop-shadow(0 0 28px var(--aura))}9%{filter:drop-shadow(0 0 4px var(--aura)) drop-shadow(0 0 10px var(--aura))}41%{filter:drop-shadow(0 0 14px #fff) drop-shadow(0 0 30px var(--aura))}44%{filter:drop-shadow(0 0 5px var(--aura)) drop-shadow(0 0 12px var(--aura))}}
-.aura-lightning .aura-fx::after{background:conic-gradient(from var(--ang),var(--aura),#fff,var(--aura) 18%,transparent 28%,var(--aura) 52%,#fff 62%,var(--aura) 78%,transparent 90%,var(--aura));animation:auSpin 1.4s linear infinite}
-@keyframes auSpin{to{--ang:360deg}}
-.aura-lightning .aura-fx::before{background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.6) 50%,transparent 60%);transform:translateX(-130%);animation:auSweep 2.4s ease-in-out infinite}
-@keyframes auSweep{0%,55%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
-/* Énergie (Ki) */
-.aura-ki{animation:auBreath 1.1s ease-in-out infinite,auKi .14s steps(2,end) infinite}
-@keyframes auKi{0%{transform:translate(0,0)}50%{transform:translate(1px,-1px)}100%{transform:translate(-1px,1px)}}
-.aura-ki .aura-fx::before{background:repeating-linear-gradient(90deg,transparent 0 9px,var(--aura) 9px 11px,transparent 11px 20px);-webkit-mask:linear-gradient(to top,#000,transparent 80%);mask:linear-gradient(to top,#000,transparent 80%);mix-blend-mode:screen;opacity:.5;background-size:100% 70px;animation:auRise .7s linear infinite}
-@keyframes auRise{to{background-position:0 -70px}}
-/* Étoiles */
-.aura-stars .aura-fx::before{background:radial-gradient(circle,#fff 0 1.5px,transparent 2.6px) 12% 18%/46px 46px,radial-gradient(circle,var(--aura) 0 1.8px,transparent 3.2px) 62% 72%/58px 58px,radial-gradient(circle,#fff 0 1px,transparent 2px) 85% 35%/38px 38px;animation:auTw 1.6s ease-in-out infinite alternate}
-@keyframes auTw{0%{opacity:.25;background-position:12% 18%,62% 72%,85% 35%}100%{opacity:1;background-position:18% 24%,56% 66%,80% 42%}}
-@media (prefers-reduced-motion:reduce){.has-aura,.aura-fx::before,.aura-fx::after{animation:none!important}}
-.ad-badge{position:absolute;top:6px;left:6px;z-index:9;font:800 10px/1 system-ui,sans-serif;letter-spacing:.3px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.68);color:#fff;border:1px solid var(--aura,#ffb020);pointer-events:none}
+/* ===== Publicité ===== */
+.ad-badge{position:absolute;top:6px;left:6px;z-index:9;font:800 10px/1 system-ui,sans-serif;letter-spacing:.3px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.68);color:#fff;border:1px solid #ffb020;pointer-events:none}
 /* Fenêtre d'achat / hub / admin */
 .ad-tiers{display:grid;gap:8px;margin:10px 0}
 .ad-tier{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border-radius:14px;border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.18);color:inherit;font:inherit;cursor:pointer}
@@ -3956,15 +3935,6 @@ html body input:focus::placeholder, html body textarea:focus::placeholder { opac
 .ad-sum{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.22);margin:8px 0;font-size:13px}
 .ad-sum b{font-size:17px;color:#a8f535}
 .ad-bal{font-size:12px;margin:4px 0 10px;opacity:.9}.ad-bal.low{color:#ff8a8a;opacity:1}
-.aura-pick label{display:block;font-size:12px;margin:8px 0 4px;opacity:.85}
-.aura-prev-wrap{display:flex;justify-content:center;padding:10px 0}
-.aura-prev{width:96px;height:64px;border-radius:14px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:24px}
-.aura-styles,.aura-colors{display:flex;gap:6px;flex-wrap:wrap}
-.aura-styles button{padding:6px 9px;border-radius:999px;border:2px solid rgba(255,255,255,.2);background:rgba(0,0,0,.18);color:inherit;font:inherit;font-size:12px;cursor:pointer}
-.aura-styles button.on{border-color:#a8f535;background:rgba(168,245,53,.16)}
-.aura-colors button{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.35);cursor:pointer;padding:0}
-.aura-colors button.on{outline:3px solid #fff}
-.aura-colors input[type=color]{width:34px;height:28px;padding:0;border:0;background:none;cursor:pointer}
 .ad-hub-intro{display:grid;gap:8px;margin:8px 0 14px}
 .ad-hub-intro div{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);font-size:13px}
 .ad-hub-intro b{display:block;font-size:14px;margin-bottom:2px}
@@ -3975,6 +3945,80 @@ html body input:focus::placeholder, html body textarea:focus::placeholder { opac
 .ad-admin-card{padding:12px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);margin-bottom:12px}
 .ad-admin-card h4{margin:0 0 8px}.ad-admin-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;flex-wrap:wrap}
 .ad-admin-row input[type=number]{width:110px}
+/* ===== Centre publicitaire (Super Admin) ===== */
+.adx{display:grid;gap:12px;padding-bottom:24px;animation:adxIn .35s ease both}
+@keyframes adxIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.adx small{font-size:11px;letter-spacing:.4px;opacity:.8}
+.adx-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:16px;border-radius:20px;background:radial-gradient(120% 140% at 0% 0%,rgba(108,192,255,.35),transparent 55%),linear-gradient(160deg,#134a9e,#0a2a66);border:1px solid rgba(190,215,235,.35);box-shadow:0 10px 30px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.18)}
+.adx-hero small{color:#9bd6ff;font-weight:800;letter-spacing:1.4px}
+.adx-hero h2{margin:4px 0 6px;font-size:21px;line-height:1.15}
+.adx-hero p{margin:0;font-size:12.5px;line-height:1.45;opacity:.85}
+.adx-chip{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(126,226,26,.16);border:1px solid rgba(126,226,26,.5);font-size:12px;font-weight:800;white-space:nowrap}
+.adx-chip i{width:8px;height:8px;border-radius:50%;background:#7ee21a;box-shadow:0 0 0 0 rgba(126,226,26,.7);animation:adxPing 1.6s infinite}
+@keyframes adxPing{70%{box-shadow:0 0 0 8px rgba(126,226,26,0)}100%{box-shadow:0 0 0 0 rgba(126,226,26,0)}}
+.adx-rev,.adx-block,.adx-kpi{border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(190,215,235,.28);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.adx-rev{padding:14px 14px 10px}
+.adx-revtop{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.adx-revtop b{display:block;font-size:30px;line-height:1.05;font-weight:900;letter-spacing:-.5px;background:linear-gradient(180deg,#fff,#a9deff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.adx-revtop b span{font-size:13px;opacity:.8;-webkit-text-fill-color:#cfe2f4}
+.adx-30{text-align:right}.adx-30 b{font-size:16px;background:none;-webkit-text-fill-color:#7ee21a;color:#7ee21a}
+.adx-spark{display:block;width:100%;height:58px;margin-top:8px}
+.adx-axis{display:flex;justify-content:space-between;font-size:10px;opacity:.6;margin-top:2px}
+.adx-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.adx-kpi{padding:11px 10px;text-align:center}
+.adx-kpi b{display:block;font-size:20px;margin-top:3px;font-weight:900}.adx-kpi b span{font-size:11px;opacity:.7}
+.adx-block{padding:14px}
+.adx-lbl{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9bd6ff;margin:12px 0 6px}
+.adx-share{display:flex;height:12px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.12);gap:2px}
+.adx-share i{display:block;height:100%}
+.adx-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px}
+.adx-legend span{display:inline-flex;align-items:center;gap:6px}.adx-legend span>i{width:10px;height:10px;border-radius:3px}
+.adx-h{font-size:13px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;margin:8px 2px 0;opacity:.95}
+.adx-bar{position:sticky;top:8px;z-index:30;display:none;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:16px;background:rgba(8,28,70,.96);border:1px solid #ffcf3d;box-shadow:0 8px 24px rgba(0,0,0,.45);font-size:13px;font-weight:700}
+.adx-bar.show{display:flex}
+.adx-bar button,.adx-save{border:0;cursor:pointer;color:#0b2a00;font:inherit;font-weight:900;letter-spacing:.3px;padding:10px 16px;border-radius:12px;background:linear-gradient(180deg,#a8f535,#5fc20f);box-shadow:0 4px 0 #3b8a06,0 8px 14px rgba(0,0,0,.3);transition:transform .08s}
+.adx-bar button:active,.adx-save:active{transform:translateY(3px);box-shadow:0 1px 0 #3b8a06}
+.adx-save:disabled{cursor:default;color:rgba(255,255,255,.55);background:rgba(255,255,255,.14);box-shadow:none}
+.adx-card{position:relative;overflow:hidden;padding:14px;border-radius:20px;background:linear-gradient(165deg,rgba(255,255,255,.13),rgba(255,255,255,.04));border:1px solid rgba(190,215,235,.3);box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 26px rgba(var(--rgb),.12);transition:border-color .2s,opacity .2s}
+.adx-card::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--c1),var(--c2))}
+.adx-card.dirty{border-color:var(--c1);box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 1px var(--c1),0 0 30px rgba(var(--rgb),.28)}
+.adx-card.off{opacity:.62}
+.adx-th{display:flex;align-items:center;gap:12px}
+.adx-ico{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;font-size:24px;background:linear-gradient(145deg,var(--c1),var(--c2));box-shadow:0 6px 16px rgba(var(--rgb),.4),inset 0 1px 0 rgba(255,255,255,.5)}
+.adx-tt{flex:1;min-width:0}.adx-tt b{display:block;font-size:18px;line-height:1.1}.adx-tt small{display:block;margin-top:2px}
+.adx-sw{position:relative;display:inline-block;width:52px;height:30px;flex:none;cursor:pointer}
+.adx-sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:2}
+.adx-sw i{position:absolute;inset:0;border-radius:99px;background:rgba(255,255,255,.2);transition:.2s;box-shadow:inset 0 2px 4px rgba(0,0,0,.35)}
+.adx-sw i::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.4);transition:.2s}
+.adx-sw input:checked+i{background:linear-gradient(90deg,var(--c1),var(--c2))}
+.adx-sw input:checked+i::after{transform:translateX(22px)}
+.adx-freq{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px;font-size:13px}
+.adx-step{display:inline-flex;align-items:center;border-radius:14px;background:rgba(3,20,58,.7);border:1px solid rgba(190,215,235,.35);overflow:hidden}
+.adx-step button{width:38px;height:40px;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:20px;font-weight:700;cursor:pointer}
+.adx-step button:active{background:rgba(255,255,255,.22)}
+.adx-step input{width:86px;height:40px;border:0;background:transparent;color:#fff;text-align:center;font:inherit;font-size:16px;font-weight:800;outline:none;-moz-appearance:textfield}
+.adx-step input::-webkit-outer-spin-button,.adx-step input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.adx-step input:focus{background:rgba(var(--rgb),.18)}
+.adx-br{display:flex;align-items:center;gap:10px;margin:8px 0}
+.adx-brl{min-width:74px}.adx-brl b{display:block;font-size:15px}.adx-brl small{display:block}
+.adx-u{font-size:12px;opacity:.75;white-space:nowrap}
+.adx-sim{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.adx-sim div{padding:8px 2px;text-align:center;border-radius:12px;background:rgba(3,20,58,.55);border:1px solid rgba(var(--rgb),.35)}
+.adx-sim small{display:block;font-size:10px}.adx-sim b{display:block;font-size:12px;margin-top:2px;color:var(--c1)}
+.adx-ft{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px dashed rgba(190,215,235,.3)}
+.adx-stat{display:inline-flex;align-items:center;gap:7px;font-size:12px;opacity:.9}
+.adx-dot{width:8px;height:8px;border-radius:50%;background:var(--c1);box-shadow:0 0 8px var(--c1)}
+.adx-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(190,215,235,.22)}
+.adx-live{flex:none;width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.3)}
+.adx-live.on{background:#7ee21a;box-shadow:0 0 10px #7ee21a}
+.adx-rm{flex:1;min-width:0}.adx-rm>b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.adx-meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;opacity:.9;margin-top:3px}
+.adx-meta em{font-style:normal;font-weight:800;color:var(--c1)}
+.adx-prog{height:5px;border-radius:99px;background:rgba(255,255,255,.14);margin-top:7px;overflow:hidden}
+.adx-prog i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--c1),var(--c2))}
+.adx-pr{flex:none;font-size:15px;color:#fff}.adx-pr small{font-size:10px;opacity:.7}
+.adx-empty{padding:22px;text-align:center;border-radius:16px;background:rgba(255,255,255,.06);border:1px dashed rgba(190,215,235,.3);font-size:13px;opacity:.85}
+@media (prefers-reduced-motion:reduce){.adx,.adx-chip i{animation:none}}
 </style>
 </head>
 <body>
@@ -11184,7 +11228,8 @@ function renderHomeProductsOnly() {
           : (res.total + ' produit' + (res.total !== 1 ? 's' : '') + (activeCat && activeCat !== 'all' ? (' · ' + activeCat) : ''))
       }</div>`;
       html += '<div class="products-grid">';
-      res.items.forEach(p => { html += productCardHTML(p, canAdd); });
+      try { if (window.alloAds) alloAds.beginStream(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+      html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(res.items, canAdd, ((res.page || 1) - 1) * (window._catalogPageSize || 40)) : res.items.map(p => productCardHTML(p, canAdd)).join('');
       html += '</div>';
       html += searchPagerHTML(res.page, res.totalPages, res.total, 'setCatalogResultsPage');
     }
@@ -11222,7 +11267,8 @@ function renderHomeProductsOnly() {
   } else {
     // Grille filtrée strictement par catégorie si active
     html = '<div class="products-grid">';
-    products.forEach(p => { html += productCardHTML(p, canAdd); });
+    try { if (window.alloAds) alloAds.beginStream(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+    html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(products, canAdd, 0) : products.map(p => productCardHTML(p, canAdd)).join('');
     html += '</div>';
   }
   el.innerHTML = html;
@@ -11913,6 +11959,7 @@ function onProductCardClick(ev, productId) {
 function openProductDetail(productId) {
   try { ensureProductView(productId); } catch (_) { window.__alloErr && window.__alloErr(_); }
   openModal('productDetail', productId);
+  try { setTimeout(function(){ window.alloPrewarmProductCard && window.alloPrewarmProductCard(productId); }, 350); } catch (_) {}
 }
 
 function buildProductDetailModalHTML(productId) {
@@ -12448,7 +12495,7 @@ function shareProductText(productId) {
   if (!p) return;
   const title = displayProductName(p.name);
   const textShare = title + ' — ' + (typeof formatMoney === 'function' ? formatMoney(p.price) : p.price) + ' · Allo';
-  const url = (typeof location !== 'undefined' ? location.href.split('#')[0] : '') + '#product=' + encodeURIComponent(productId);
+  const url = window.alloProductLink ? alloProductLink(productId) : ((typeof location !== 'undefined' ? location.href.split('#')[0] : '') + '#product=' + encodeURIComponent(productId));
   if (navigator.share) navigator.share({ title, text: textShare, url }).catch(function(_e){ window.__alloErr && window.__alloErr(_e); });
   else if (navigator.clipboard && navigator.clipboard.writeText)
     navigator.clipboard.writeText(textShare + '\n' + url).then(() => alert(lang === 'en' ? 'Link copied!' : 'Lien copié !')).catch(() => prompt(lang === 'en' ? 'Copy:' : 'Copiez :', url));
@@ -25086,8 +25133,9 @@ html body .order-role-badge{color:#ffb3c7!important}
     h2iPromise = new Promise(function(res, rej){
       var s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js';
-      s.onload = function(){ window.htmlToImage ? res(window.htmlToImage) : rej(new Error('h2i')); };
-      s.onerror = function(){ h2iPromise = null; rej(new Error('h2i load')); };
+      var to = setTimeout(function(){ h2iPromise = null; rej(new Error('h2i timeout')); }, 4000);
+      s.onload = function(){ clearTimeout(to); window.htmlToImage ? res(window.htmlToImage) : rej(new Error('h2i')); };
+      s.onerror = function(){ clearTimeout(to); h2iPromise = null; rej(new Error('h2i load')); };
       document.head.appendChild(s);
     });
     return h2iPromise;
@@ -25099,8 +25147,9 @@ html body .order-role-badge{color:#ffb3c7!important}
     h2cPromise = new Promise(function(res, rej){
       var s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-      s.onload = function(){ window.html2canvas ? res(window.html2canvas) : rej(new Error('h2c')); };
-      s.onerror = function(){ h2cPromise = null; rej(new Error('h2c load')); };
+      var to = setTimeout(function(){ h2cPromise = null; rej(new Error('h2c timeout')); }, 4000);
+      s.onload = function(){ clearTimeout(to); window.html2canvas ? res(window.html2canvas) : rej(new Error('h2c')); };
+      s.onerror = function(){ clearTimeout(to); h2cPromise = null; rej(new Error('h2c load')); };
       document.head.appendChild(s);
     });
     return h2cPromise;
@@ -25221,17 +25270,78 @@ html body .order-role-badge{color:#ffb3c7!important}
 
   /* ---------- rendu ---------- */
   function toDataURL(url){
-    return fetch(url, { mode: 'cors', credentials: 'omit' }).then(function(r){ if (!r.ok) throw 0; return r.blob(); }).then(function(b){
+    var net = fetch(url, { mode: 'cors', credentials: 'omit' }).then(function(r){ if (!r.ok) throw 0; return r.blob(); }).then(function(b){
       return new Promise(function(res, rej){ var f = new FileReader(); f.onload = function(){ res(f.result); }; f.onerror = rej; f.readAsDataURL(b); });
     });
+    return net;
   }
+  /* rendu natif (SVG foreignObject) : aucune bibliothèque ni réseau requis */
+  function nativeRender(frame, w, h, px){
+    return new Promise(function(res, rej){
+      try {
+        var srcEls = [frame].concat(Array.prototype.slice.call(frame.querySelectorAll('*')));
+        var clone = frame.cloneNode(true);
+        var cloneEls = [clone].concat(Array.prototype.slice.call(clone.querySelectorAll('*')));
+        srcEls.forEach(function(el, i){
+          var c = cloneEls[i]; if (!c) return;
+          var cs = getComputedStyle(el), t = '';
+          for (var k = 0; k < cs.length; k++) { var pn = cs[k]; t += pn + ':' + cs.getPropertyValue(pn) + ';'; }
+          c.setAttribute('style', t);
+          ['::before', '::after'].forEach(function(ps){
+            try {
+              var pc = getComputedStyle(el, ps), ct = pc.content;
+              if (!ct || ct === 'none' || ct === 'normal' || pc.display === 'none') return;
+              var sp = document.createElement('span'), pt = '';
+              for (var q = 0; q < pc.length; q++) { pt += pc[q] + ':' + pc.getPropertyValue(pc[q]) + ';'; }
+              sp.setAttribute('style', pt);
+              sp.textContent = /^["']/.test(ct) ? ct.slice(1, -1) : '';
+              if (ps === '::before') c.insertBefore(sp, c.firstChild); else c.appendChild(sp);
+            } catch (_) {}
+          });
+          if (c.tagName === 'SCRIPT') c.parentNode && c.parentNode.removeChild(c);
+        });
+        clone.style.margin = '0'; clone.style.transform = 'none';
+        var xml = new XMLSerializer().serializeToString(clone);
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><foreignObject x="0" y="0" width="100%" height="100%">' + xml + '</foreignObject></svg>';
+        var img = new Image();
+        var to = setTimeout(function(){ rej(new Error('native timeout')); }, 5000);
+        img.onload = function(){
+          clearTimeout(to);
+          try {
+            var cv = document.createElement('canvas');
+            cv.width = Math.round(w * px); cv.height = Math.round(h * px);
+            var ctx = cv.getContext('2d'); ctx.scale(px, px); ctx.drawImage(img, 0, 0, w, h);
+            cv.toBlob(function(b){ b ? res(b) : rej(new Error('blob')); }, 'image/png');
+          } catch (e) { rej(e); }
+        };
+        img.onerror = function(){ clearTimeout(to); rej(new Error('native img')); };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      } catch (e) { rej(e); }
+    });
+  }
+  /* pixels déjà chargés → data URL, sans réseau */
+  function imgToData(im){
+    try {
+      if (!im.complete || !im.naturalWidth) return null;
+      var m = Math.min(1, 900 / Math.max(im.naturalWidth, im.naturalHeight));
+      var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * m)); c.height = Math.max(1, Math.round(im.naturalHeight * m));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      return c.toDataURL('image/png');
+    } catch (e) { return null; }
+  }
+  function liveData(list){ for (var i = 0; list && i < list.length; i++) { var d = imgToData(list[i]); if (d) return d; } return null; }
   function inlineImages(root){
     var jobs = [];
-    root.querySelectorAll('img').forEach(function(im){
+    var origs = (state.src && state.src.el) ? state.src.el.querySelectorAll('img') : [];
+    var live = {};
+    Array.prototype.forEach.call(document.images, function(x){ var k = x.getAttribute('src'); if (k && x.complete && x.naturalWidth) (live[k] = live[k] || []).push(x); });
+    root.querySelectorAll('img').forEach(function(im, i){
       var s = im.getAttribute('src') || '';
       im.removeAttribute('loading'); im.removeAttribute('onclick');
       if (!s || /^data:/.test(s)) return;
-      jobs.push(toDataURL(im.src).then(function(d){ im.src = d; }).catch(function(){ im.style.visibility = 'hidden'; }));
+      var d0 = imgToData(im) || (origs[i] && origs[i].getAttribute('src') === s ? imgToData(origs[i]) : null) || liveData(live[s]);
+      if (d0) { im.src = d0; return; }
+      jobs.push(toDataURL(im.src).then(function(d){ im.src = d; }).catch(function(){ im.style.visibility = 'hidden'; try { im.removeAttribute('src'); } catch (_) {} }));
     });
     return Promise.all(jobs);
   }
@@ -25289,22 +25399,41 @@ html body .order-role-badge{color:#ffb3c7!important}
       return new Promise(function(res){ requestAnimationFrame(function(){ requestAnimationFrame(res); }); });
     }).then(function(){
       h = Math.ceil(frame.getBoundingClientRect().height);
-      return loadH2I().then(viaH2I).then(function(b){ if (!b) throw new Error('empty'); return b; }).catch(function(e){ console.warn('h2i failed, fallback h2c', e); return viaH2C(); });
+      return nativeRender(frame, width, h, px).catch(function(e){ console.warn('native failed, fallback h2i', e); return loadH2I().then(viaH2I).then(function(b){ if (!b) throw new Error('empty'); return b; }); }).catch(function(e){ console.warn('h2i failed, fallback h2c', e); return viaH2C(); });
     }).then(function(b){ done(); return b; }, function(e){ done(); throw e; });
   }
   /* Rendu de la carte produit en image, pour le partage (boutons d'action masqués) */
-  window.alloProductCardBlob = function(pid){
+  function buildProductCardBlob(pid){
     var prod = null;
     try { prod = (data.products || []).find(function(x){ return String(x.id) === String(pid); }); } catch (_) { window.__alloErr && window.__alloErr(_); }
     if (!prod) return Promise.reject(new Error('no product'));
     var el = null;
     try { el = document.querySelector('.product-card[data-product-id="' + String(pid).replace(/[^\w-]/g, '') + '"]'); } catch (_) { window.__alloErr && window.__alloErr(_); }
-    if (el && el.getBoundingClientRect().width < 60) el = null;
+    el = null; /* toujours la carte complète (comme l'aperçu), jamais la version compacte de la liste */
     var prev = state.src;
-    state.src = { el: el, pid: pid, prod: prod, showAdd: true, compact: !!(el && el.classList.contains('pc-compact')) };
-    state.shareMode = true;
+    state.src = { el: null, pid: pid, prod: prod, showAdd: true, compact: false };
+    state.shareMode = false; /* on garde tous les boutons */
     var restore = function(){ state.src = prev; state.shareMode = false; };
-    return render(el ? 'asis' : 'peek').then(function(b){ restore(); return b; }, function(e){ restore(); throw e; });
+    return render('peek').then(function(b){ restore(); return b; }, function(e){ restore(); throw e; });
+  }
+  /* Cartes prêtes à l'avance : cache par produit + file d'attente (un rendu à la fois) */
+  var cardCache = {}, cardQueue = Promise.resolve();
+  function cardSig(pid){
+    try { var p = (data.products || []).find(function(x){ return String(x.id) === String(pid); }); return p ? [p.name, p.price, p.image || p.img || (p.images && p.images[0]) || '', p.stock].join('|') : ''; } catch (_) { return ''; }
+  }
+  window.alloProductCardBlob = function(pid){
+    var key = String(pid), sig = cardSig(pid), c = cardCache[key];
+    if (c && c.sig === sig) return c.p;
+    var run = cardQueue.then(function(){ return buildProductCardBlob(pid); });
+    cardQueue = run.catch(function(){});
+    var ent = { sig: sig, p: run };
+    cardCache[key] = ent;
+    run.catch(function(){ if (cardCache[key] === ent) delete cardCache[key]; });
+    return run;
+  };
+  window.alloPrewarmProductCard = function(pid){
+    var go = function(){ try { window.alloProductCardBlob(pid).catch(function(){}); } catch (_) {} };
+    if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 300);
   };
 })();
 </script>
@@ -26631,7 +26760,7 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
   function box(inner){return '<div class="fx-back" onclick="alloShare.close()"></div><div class="fx-card" role="dialog" aria-modal="true"><div class="fx-h"><b>📤 '+T('Partager ce produit','Share this product')+'</b><button type="button" aria-label="'+T('Fermer','Close')+'" onclick="alloShare.close()">×</button></div><div class="fx-b">'+inner+'</div></div>';}
   function nameOf(p){try{return typeof displayProductName==='function'?displayProductName(p.name):p.name;}catch(_){return p.name;}}
   function priceOf(p){try{return typeof formatMoney==='function'?formatMoney(p.price):String(p.price);}catch(_){return String(p.price);}}
-  function linkOf(pid){return location.href.split('#')[0]+'#product='+encodeURIComponent(pid);}
+  function linkOf(pid){return window.alloProductLink?alloProductLink(pid):location.href.split('#')[0]+'#product='+encodeURIComponent(pid);}
   function textOf(p){return nameOf(p)+' — '+priceOf(p)+' · Allo';}
   function track(){try{window.alloFx&&alloFx.track&&alloFx.track('share_product',{});}catch(_){}}
   window.alloShareProductCard=function(pid){
@@ -26644,7 +26773,7 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
       var slug=String(nameOf(p)).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'produit';
       cur.blob=blob;cur.url=URL.createObjectURL(blob);cur.name='allo-'+slug+'.png';
       try{cur.file=new File([blob],cur.name,{type:'image/png'});}catch(_){cur.file=null;}
-      modal.innerHTML=box('<img class="sh-prev" alt="" src="'+cur.url+'"><p class="fx-muted" style="text-align:center">'+esc(textOf(p))+'</p><div class="sh-btns"><button type="button" class="btn btn-accent" onclick="alloShare.go()">📤 '+T('Partager la carte et le lien','Share the card and link')+'</button><div class="sh-two"><button type="button" class="btn btn-ghost" onclick="alloShare.save()">⬇ '+T('Enregistrer l’image','Save image')+'</button><button type="button" class="btn btn-ghost" onclick="alloShare.copy()">🔗 '+T('Copier le lien','Copy link')+'</button></div></div>');
+      modal.innerHTML=box('<img class="sh-prev" alt="" src="'+cur.url+'"><p class="fx-muted" style="text-align:center">'+esc(textOf(p))+'</p><div class="sh-btns"><button type="button" class="btn btn-accent" onclick="alloShare.go()">📤 '+T('Partager la carte et le lien','Share the card and link')+'</button><div class="sh-two"><button type="button" class="btn btn-ghost" onclick="alloShare.save()">⬇ '+T('Enregistrer l’image','Save image')+'</button><button type="button" class="btn btn-ghost" onclick="alloShare.copy()">🔗 '+T('Copier le lien','Copy link')+'</button></div><div class="sh-two"><button type="button" class="btn btn-ghost" onclick="alloShare.wa()">🟢 WhatsApp</button><button type="button" class="btn btn-ghost" onclick="alloShare.fb()">🔵 Facebook</button></div></div>');
     }).catch(function(e){
       err(e);if(cur.t!==token)return;
       close();toast(T('Carte indisponible : partage du lien seul.','Card unavailable: sharing the link only.'));
@@ -26673,7 +26802,10 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
     var p=cur.p;if(!p)return;var t=textOf(p)+'\n'+linkOf(cur.pid);
     (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast(T('Lien copié ✔','Link copied ✔'));}).catch(function(){prompt(T('Copiez :','Copy:'),t);});
   }
-  window.alloShare={close:close,go:go,save:save,copy:copy};
+  function openExt(u){try{var a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener noreferrer';document.body.appendChild(a);a.click();a.remove();}catch(e){err(e);try{location.href=u;}catch(_){}}}
+  function wa(){var p=cur.p;if(!p)return;track();openExt('https://wa.me/?text='+encodeURIComponent(textOf(p)+'\n'+linkOf(cur.pid)));}
+  function fb(){var p=cur.p;if(!p)return;track();openExt('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(linkOf(cur.pid))+'&quote='+encodeURIComponent(textOf(p)));}
+  window.alloShare={close:close,go:go,save:save,copy:copy,wa:wa,fb:fb};
 })();
 </script>
 <style id="alloPushCss">
@@ -28185,8 +28317,6 @@ window.alloJobs={hub,form,browse,kind,filter:renderList,pick,pm,cnt,photo,pickPh
 /* ===== Publicité (3 types) + auras ===== */
 (function(){
 if(window.alloAds)return;
-var STYLES={glow:['Lueur','Glow','✨'],flame:['Flamme','Flame','🔥'],lightning:['Foudre','Lightning','⚡'],ki:['Énergie (Ki)','Ki energy','💥'],stars:['Étoiles','Stars','🌟']};
-var COLORS=['#ffb020','#ff3b3b','#ff4fd8','#a855f7','#3b82f6','#19d0ff','#22e08a','#a8f535','#ffffff','#ff7a1a'];
 var DEF={style:'glow',color:'#ffb020'};
 var TIERS=['premium','secondary','basic'];
 var S={tiers:[],brackets:[],ads:[],loaded:false,at:0,adminAds:null,adminAt:0,adminBusy:false};
@@ -28234,52 +28364,11 @@ async function load(){
 function adValid(a){var n=Date.now();return a&&new Date(a.starts_at).getTime()<=n&&new Date(a.ends_at).getTime()>n;}
 function activeAd(pid){return S.ads.filter(function(a){return String(a.product_id)===String(pid)&&adValid(a);})[0]||null;}
 
-/* ---------- Aura ---------- */
-function cleanAura(a){return a&&STYLES[a.style]&&validColor(a.color)?{style:a.style,color:a.color}:null;}
-function auraFor(p){
-  if(!p)return null;
-  var ad=activeAd(p.id);
-  if(ad)return cleanAura({style:ad.aura_style,color:ad.aura_color})||DEF;
-  var promo=false;try{promo=isProductPromoActive(p);}catch(e){}
-  if(promo)return cleanAura(p.attrs&&p.attrs.aura)||DEF;
-  return null;
-}
-function decorate(h,aura,extra){
-  var i=h.indexOf('>');if(i<0||h.charAt(0)!=='<')return h;
-  var tag=h.slice(0,i),rest=h.slice(i+1),cls='has-aura aura-'+aura.style,st='--aura:'+aura.color+';';
-  tag=/\sclass="/.test(tag)?tag.replace(/\sclass="/,' class="'+cls+' '):tag+' class="'+cls+'"';
-  tag=/\sstyle="/.test(tag)?tag.replace(/\sstyle="/,' style="'+st):tag+' style="'+st+'"';
-  return tag+'>'+(extra||'')+'<i class="aura-fx" aria-hidden="true"></i>'+rest;
-}
-function auraPicker(px,sel){
-  sel=cleanAura(sel)||DEF;
-  var st=Object.keys(STYLES).map(function(k){return '<button type="button" data-s="'+k+'" class="'+(k===sel.style?'on':'')+'" onclick="alloAds.pickStyle(\''+px+'\',\''+k+'\')">'+STYLES[k][2]+' '+esc(en()?STYLES[k][1]:STYLES[k][0])+'</button>';}).join('');
-  var co=COLORS.map(function(c){return '<button type="button" data-c="'+c+'" class="'+(c.toLowerCase()===sel.color.toLowerCase()?'on':'')+'" style="background:'+c+'" aria-label="'+c+'" onclick="alloAds.pickColor(\''+px+'\',\''+c+'\')"></button>';}).join('');
-  return '<div class="aura-pick" id="'+px+'Pick">'
-    +'<div class="aura-prev-wrap"><div class="aura-prev has-aura aura-'+sel.style+'" id="'+px+'Prev" style="--aura:'+sel.color+'"><i class="aura-fx"></i><span>'+esc(T('Aperçu','Preview'))+'</span></div></div>'
-    +'<label>'+esc(T('Style d’aura','Aura style'))+'</label><div class="aura-styles" id="'+px+'Styles">'+st+'</div>'
-    +'<label>'+esc(T('Couleur','Color'))+'</label><div class="aura-colors" id="'+px+'Colors">'+co+'<input type="color" value="'+sel.color+'" aria-label="Custom" oninput="alloAds.pickColor(\''+px+'\',this.value)"></div>'
-    +'<input type="hidden" id="'+px+'Style" value="'+sel.style+'"><input type="hidden" id="'+px+'Color" value="'+sel.color+'"></div>';
-}
-function pickStyle(px,s){
-  if(!STYLES[s])return;
-  var h=document.getElementById(px+'Style');if(h)h.value=s;
-  var pv=document.getElementById(px+'Prev');if(pv)pv.className='aura-prev has-aura aura-'+s;
-  var w=document.getElementById(px+'Styles');if(w)Array.prototype.forEach.call(w.children,function(b){b.classList.toggle('on',b.getAttribute('data-s')===s);});
-}
-function pickColor(px,c){
-  if(!validColor(c))return;
-  var h=document.getElementById(px+'Color');if(h)h.value=c;
-  var pv=document.getElementById(px+'Prev');if(pv)pv.style.setProperty('--aura',c);
-  var w=document.getElementById(px+'Colors');if(w)Array.prototype.forEach.call(w.querySelectorAll('button'),function(b){b.classList.toggle('on',String(b.getAttribute('data-c')).toLowerCase()===c.toLowerCase());});
-}
-function readAura(px){var s=(document.getElementById(px+'Style')||{}).value,c=(document.getElementById(px+'Color')||{}).value;return cleanAura({style:s,color:c});}
-
 /* ---------- Pubs dans le fil (chaque N produits vus, par utilisateur) ---------- */
 function KEY(){var u=U();return 'allo_ad_seen_'+(u&&u.id?u.id:'guest');}
 function ensureBase(){if(ST.ready)return;ST.ready=true;try{ST.base=parseInt(localStorage.getItem(KEY()),10)||0;}catch(e){ST.base=0;}}
 function persist(){clearTimeout(ST.timer);ST.timer=setTimeout(function(){try{localStorage.setItem(KEY(),String(ST.base+ST.max));}catch(e){}},1200);}
-function beginStream(){ST.shown={};ST.organic={};}
+function beginStream(){ST.shown={};}
 function eligible(a){
   if(!adValid(a))return false;var p=prod(a.product_id);
   if(!p||p.available===false||p.hidden||p.private)return false;
@@ -28291,8 +28380,8 @@ function pickAd(tier,c,n){
   var key=n+':'+tier,cur=ST.slots[key];
   if(cur){var ad=S.ads.filter(function(x){return x.id===cur;})[0];if(ad&&eligible(ad))return ad;}
   var all=S.ads.filter(function(a){return a.tier===tier&&eligible(a);});
-  var list=all.filter(function(a){return !ST.shown[a.product_id]&&!ST.organic[a.product_id];});
-  if(!list.length)list=all.filter(function(a){return !ST.organic[a.product_id];});
+  var list=all.filter(function(a){return !ST.shown[a.product_id];});
+  if(!list.length)list=all;
   if(!list.length)return null;
   var pick=list[(c+ST.seed)%list.length];ST.slots[key]=pick.id;ST.shown[pick.product_id]=1;return pick;
 }
@@ -28319,7 +28408,6 @@ function cardsHTML(list,canAdd,start){
   var out='';
   list.forEach(function(p,i){
     var pos=start+i+1;
-    ST.organic[p.id]=1;
     out+=productCardHTML(p,canAdd);
     if(pos>ST.max)ST.max=pos;
     out+=adsAt(ST.base+pos,canAdd);
@@ -28348,7 +28436,6 @@ function open(pid){
   var tiers=S.tiers.filter(function(t){return t.active;});
   if(!tiers.length){toastM(T('Publicité indisponible pour le moment.','Ads unavailable right now.'));return;}
   A={pid:pid,tier:tiers[0].tier,days:7,req:uuid(),busy:false};
-  var a=cleanAura(p.attrs&&p.attrs.aura)||DEF;
   var th=tiers.map(function(t){
     var r=range(t.tier);
     return '<button type="button" class="ad-tier" data-t="'+t.tier+'" onclick="alloAds.setTier(\''+t.tier+'\')"><b>'+esc(en()?t.label_en:t.label_fr)+'</b>'
@@ -28363,7 +28450,6 @@ function open(pid){
     +'<div class="ad-quick">'+quick+'</div>'
     +'<div class="ad-sum"><span id="adRate"></span><span>'+esc(T('Total','Total'))+' <b id="adTotal">—</b></span></div>'
     +'<div class="ad-bal" id="adBal"></div>'
-    +'<div class="field"><label>✨ '+esc(T('Aura de votre publicité','Your ad aura'))+'</label>'+auraPicker('ad',a)+'</div>'
     +'<button class="btn btn-accent btn-block" id="adBuyBtn" onclick="alloAds.buy()">'+esc(T('Payer avec mon solde et activer','Pay with my balance and activate'))+'</button>');
   refreshQuote();
 }
@@ -28384,7 +28470,7 @@ function refreshQuote(){
 }
 async function buy(){
   if(!A||A.busy)return;
-  var aura=readAura('ad')||DEF,q=quote(A.tier,A.days);
+  var aura=DEF,q=quote(A.tier,A.days);
   if(q==null){toastM(T('Tarif indisponible.','Price unavailable.'));return;}
   A.busy=true;var b=document.getElementById('adBuyBtn');if(b)b.disabled=true;
   try{
@@ -28411,7 +28497,7 @@ function renderHub(){
   if(!isSeller()){el.innerHTML='<div class="empty">'+esc(T('Réservé aux boutiques et entreprises.','Shops and companies only.'))+'</div>';return;}
   var intro=S.loaded?S.tiers.filter(function(t){return t.active;}).map(function(t){var r=range(t.tier);return '<div><b>'+esc(en()?t.label_en:t.label_fr)+'</b>'+esc(T('Après chaque '+t.every_n+' produits vus par chaque utilisateur','After every '+t.every_n+' products each user views'))+(r?' · <span style="color:#ffe08a">'+esc(fmt(r[0])+(r[0]!==r[1]?' – '+fmt(r[1]):'')+T(' / jour',' / day'))+'</span>':'')+'</div>';}).join(''):'<div>'+esc(T('Chargement…','Loading…'))+'</div>';
   var rows=myItems().map(function(p){
-    var ad=activeAd(p.id),aura=auraFor(p);
+    var ad=activeAd(p.id);
     var st=ad?'<small class="ad-on">📢 '+esc(tierLabel(ad.tier))+' · '+esc(T('jusqu’au ','until '))+new Date(ad.ends_at).toLocaleDateString(en()?'en-GB':'fr-FR')+'</small>':'<small>'+esc(kindLabel(p))+'</small>';
     return '<div class="ad-row"><span class="ad-ico">'+esc(p.icon||'📦')+'</span><div class="ad-mid"><b>'+esc(p.name)+'</b>'+st+'</div>'
       +(ad?'<button class="btn btn-sm btn-ghost" disabled>✔</button>':'<button class="btn btn-sm btn-accent" onclick="alloAds.open(\''+sid(p.id)+'\')">📢 '+esc(T('Booster','Boost'))+'</button>')+'</div>';
@@ -28421,46 +28507,131 @@ function renderHub(){
     +'<div class="ad-hub-intro">'+intro+'</div>'+rows;
 }
 
-/* ---------- Écran Super Admin : tarifs ---------- */
+/* ---------- Écran Super Admin : centre publicitaire ---------- */
+var TCFG={
+  premium:{ico:'👑',c1:'#ffcf3d',c2:'#ff7a1a',rgb:'255,176,32',fr:'Visibilité maximale',en:'Maximum visibility'},
+  secondary:{ico:'⚡',c1:'#19d0ff',c2:'#1e8fff',rgb:'25,208,255',fr:'Forte visibilité',en:'Strong visibility'},
+  basic:{ico:'🌱',c1:'#b6f24a',c2:'#4fd13a',rgb:'126,226,26',fr:'Présence régulière',en:'Steady presence'}
+};
+S.dirty={};
+function nf(n){return Number(n||0).toLocaleString('fr-FR');}
 async function loadAdminAds(){
   if(S.adminBusy||typeof sb==='undefined'||!sb)return;S.adminBusy=true;
-  try{var r=await sb.from('product_ads').select('*').order('created_at',{ascending:false}).limit(300);if(!r.error){S.adminAds=r.data||[];S.adminAt=Date.now();}}catch(e){window.__alloErr&&window.__alloErr(e);}
+  try{var r=await sb.from('product_ads').select('*').order('created_at',{ascending:false}).limit(500);if(!r.error){S.adminAds=r.data||[];S.adminAt=Date.now();}}catch(e){window.__alloErr&&window.__alloErr(e);}
   S.adminBusy=false;renderAdmin();
 }
-function renderAdmin(){
+function dayKey(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function sparkSVG(ads){
+  var now=new Date(),days=[],map={},i;
+  for(i=13;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i),x={k:dayKey(d),v:0};days.push(x);map[x.k]=x;}
+  ads.forEach(function(a){var x=map[dayKey(new Date(a.created_at))];if(x)x.v+=Number(a.price||0);});
+  var max=Math.max.apply(null,days.map(function(x){return x.v;}).concat([1]));
+  var pts=days.map(function(x,i){return (i*(100/13)).toFixed(2)+','+(32-(x.v/max)*28).toFixed(2);}).join(' ');
+  return '<svg class="adx-spark" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="adxG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fcbff" stop-opacity=".6"/><stop offset="1" stop-color="#7fcbff" stop-opacity="0"/></linearGradient></defs>'
+    +'<polygon points="0,36 '+pts+' 100,36" fill="url(#adxG)"/><polyline points="'+pts+'" fill="none" stroke="#a9deff" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+}
+function stepper(id,val,min,max,step){
+  return '<div class="adx-step"><button type="button" aria-label="−" onclick="alloAds.step(\''+id+'\','+(-step)+','+min+','+max+')">−</button>'
+    +'<input type="number" inputmode="numeric" id="'+id+'" value="'+val+'" min="'+min+'" max="'+max+'" step="'+step+'" oninput="alloAds.touch(\''+id.split('_')[1]+'\')">'
+    +'<button type="button" aria-label="+" onclick="alloAds.step(\''+id+'\','+step+','+min+','+max+')">+</button></div>';
+}
+function curRate(t,d){
+  var br=S.brackets.filter(function(x){return x.tier===t&&d>=x.min_days&&d<=x.max_days;})[0];if(!br)return null;
+  var el=document.getElementById('adP_'+t+'_'+br.min_days),v=el?parseInt(el.value,10):NaN;
+  return isNaN(v)?Number(br.price_per_day):v;
+}
+function simHTML(t){
+  return [1,3,7,15,30].map(function(d){var r=curRate(t,d);return '<div><small>'+d+T(' j',' d')+'</small><b>'+(r==null?'—':nf(r*d))+'</b></div>';}).join('');
+}
+function tierCard(t,ads,now){
+  var tr=tierRow(t);if(!tr)return '';var cf=TCFG[t];
+  var br=S.brackets.filter(function(b){return b.tier===t;}).sort(function(a,b){return a.min_days-b.min_days;});
+  var sold=ads.filter(function(a){return a.tier===t;}),live=sold.filter(function(a){return new Date(a.ends_at).getTime()>now;});
+  var rows=br.map(function(b){
+    return '<div class="adx-br"><div class="adx-brl"><b>'+b.min_days+' → '+b.max_days+'</b><small>'+esc(T('jours','days'))+'</small></div>'+stepper('adP_'+t+'_'+b.min_days,Number(b.price_per_day),0,10000000,50)+'<span class="adx-u">FCFA/'+esc(T('j','d'))+'</span></div>';
+  }).join('');
+  return '<section class="adx-card'+(tr.active?'':' off')+'" id="adCard_'+t+'" style="--c1:'+cf.c1+';--c2:'+cf.c2+';--rgb:'+cf.rgb+'">'
+    +'<div class="adx-th"><span class="adx-ico">'+cf.ico+'</span><div class="adx-tt"><b>'+esc(en()?tr.label_en:tr.label_fr)+'</b><small>'+esc(en()?cf.en:cf.fr)+'</small></div>'
+    +'<label class="adx-sw" title="'+esc(T('Activer / désactiver ce type','Enable / disable this type'))+'"><input type="checkbox" id="adA_'+t+'" '+(tr.active?'checked':'')+' onchange="alloAds.touch(\''+t+'\')"><i></i></label></div>'
+    +'<div class="adx-freq"><span>'+esc(T('Apparaît après chaque','Shown after every'))+'</span>'+stepper('adE_'+t,Number(tr.every_n),1,10000,1)+'<span>'+esc(T('produits vus','products viewed'))+'</span></div>'
+    +'<div class="adx-lbl">'+esc(T('Tarif par jour selon la durée','Daily rate by duration'))+'</div>'+rows
+    +'<div class="adx-lbl">'+esc(T('Simulateur · prix payé par le vendeur (FCFA)','Simulator · price paid by the seller (FCFA)'))+'</div><div class="adx-sim" id="adSim_'+t+'">'+simHTML(t)+'</div>'
+    +'<div class="adx-ft"><span class="adx-stat"><i class="adx-dot"></i>'+live.length+' '+esc(T('en cours','live'))+' · '+sold.length+' '+esc(T('vendues','sold'))+'</span>'
+    +'<button type="button" class="adx-save" id="adSave_'+t+'" onclick="alloAds.adminSave(\''+t+'\')" disabled>💾 '+esc(T('Enregistrer','Save'))+'</button></div></section>';
+}
+function updateBar(){
+  var n=Object.keys(S.dirty).length,bar=document.getElementById('adxBar');if(!bar)return;
+  bar.classList.toggle('show',n>0);
+  var tx=document.getElementById('adxBarTx');if(tx)tx.textContent=n+' '+(n>1?T('modifications non enregistrées','unsaved changes'):T('modification non enregistrée','unsaved change'));
+}
+function touch(t){
+  S.dirty[t]=1;
+  var sm=document.getElementById('adSim_'+t);if(sm)sm.innerHTML=simHTML(t);
+  var c=document.getElementById('adCard_'+t);if(c){c.classList.add('dirty');var a=document.getElementById('adA_'+t);c.classList.toggle('off',!(a&&a.checked));}
+  var b=document.getElementById('adSave_'+t);if(b)b.disabled=false;
+  updateBar();
+}
+function step(id,delta,min,max){
+  var el=document.getElementById(id);if(!el)return;
+  var v=parseInt(el.value,10);if(isNaN(v))v=0;
+  el.value=Math.max(min,Math.min(max,v+delta));touch(id.split('_')[1]);
+}
+function renderAdmin(force){
   var el=document.getElementById('view-admin-ads');if(!el)return;
   var u=U();if(!u||u.role!=='admin'){el.innerHTML='';return;}
   if(!S.loaded){el.innerHTML='<div class="empty">'+esc(T('Chargement…','Loading…'))+'</div>';return;}
-  var ads=S.adminAds||[],now=Date.now();
-  var active=ads.filter(function(a){return new Date(a.ends_at).getTime()>now;}).length;
+  if(!force&&Object.keys(S.dirty).length){updateBar();return;} /* ne jamais écraser une saisie en cours */
+  var ads=S.adminAds||[],now=Date.now(),D30=30*864e5;
+  var live=ads.filter(function(a){return new Date(a.ends_at).getTime()>now;});
   var rev=ads.reduce(function(s,a){return s+Number(a.price||0);},0);
-  var stats='<div class="ad-admin-card"><b>📊 '+esc(T('Résumé','Summary'))+'</b><div class="ad-admin-row">'+esc(T('Publicités en cours : ','Active ads: '))+'<b>'+active+'</b> · '+esc(T('Vendues : ','Sold: '))+'<b>'+ads.length+'</b> · '+esc(T('Revenu : ','Revenue: '))+'<b>'+esc(fmt(rev))+'</b></div></div>';
-  var cards=TIERS.map(function(t){
-    var tr=tierRow(t);if(!tr)return '';
-    var br=S.brackets.filter(function(b){return b.tier===t;}).sort(function(a,b){return a.min_days-b.min_days;});
-    var brs=br.map(function(b){return '<div class="ad-admin-row"><span style="min-width:96px">'+esc(T('Jours ','Days '))+b.min_days+' → '+b.max_days+'</span><input type="number" min="0" step="10" id="adP_'+t+'_'+b.min_days+'" value="'+Number(b.price_per_day)+'"> FCFA / '+esc(T('jour','day'))+'</div>';}).join('');
-    return '<div class="ad-admin-card"><h4>'+esc(en()?tr.label_en:tr.label_fr)+'</h4>'
-      +'<div class="ad-admin-row">'+esc(T('Apparaît après chaque','Shown after every'))+' <input type="number" min="1" max="10000" id="adE_'+t+'" value="'+Number(tr.every_n)+'" style="width:80px"> '+esc(T('produits vus','products viewed'))+'</div>'
-      +'<div class="ad-admin-row"><label><input type="checkbox" id="adA_'+t+'" '+(tr.active?'checked':'')+'> '+esc(T('Type de publicité actif','Ad type enabled'))+'</label></div>'
-      +brs+'<button class="btn btn-sm btn-accent" onclick="alloAds.adminSave(\''+t+'\')">💾 '+esc(T('Enregistrer','Save'))+'</button></div>';
+  var rev30=ads.filter(function(a){return now-new Date(a.created_at).getTime()<=D30;}).reduce(function(s,a){return s+Number(a.price||0);},0);
+  var avg=ads.length?Math.round(rev/ads.length):0;
+  var tierRev={};TIERS.forEach(function(t){tierRev[t]=ads.filter(function(a){return a.tier===t;}).reduce(function(s,a){return s+Number(a.price||0);},0);});
+  var share=TIERS.map(function(t){var cf=TCFG[t],pc=rev?Math.round(tierRev[t]*100/rev):0;
+    return {t:t,cf:cf,pc:pc,w:rev?(tierRev[t]*100/rev):0};});
+  var bar=rev?share.map(function(x){return x.w>0?'<i style="width:'+x.w+'%;background:linear-gradient(90deg,'+x.cf.c1+','+x.cf.c2+')"></i>':'';}).join(''):'';
+  var legend=share.map(function(x){return '<span><i style="background:linear-gradient(90deg,'+x.cf.c1+','+x.cf.c2+')"></i>'+x.cf.ico+' '+esc(tierLabel(x.t))+' <b>'+x.pc+'%</b></span>';}).join('');
+  var recent=ads.slice(0,12).map(function(a){
+    var p=prod(a.product_id),cf=TCFG[a.tier]||TCFG.basic,st=new Date(a.starts_at).getTime(),en_=new Date(a.ends_at).getTime(),isLive=en_>now;
+    var pc=Math.max(0,Math.min(100,Math.round((now-st)*100/Math.max(1,en_-st)))),left=Math.max(0,Math.ceil((en_-now)/864e5));
+    return '<div class="adx-row" style="--c1:'+cf.c1+';--c2:'+cf.c2+'"><span class="adx-live '+(isLive?'on':'')+'"></span>'
+      +'<div class="adx-rm"><b>'+esc(p?p.name:T('Produit supprimé','Deleted item'))+'</b><div class="adx-meta"><em>'+cf.ico+' '+esc(tierLabel(a.tier))+'</em><span>'+a.days+esc(T(' j',' d'))+'</span><span>'+(isLive?esc(T('reste ','left '))+left+esc(T(' j',' d')):esc(T('terminée','ended')))+'</span></div>'
+      +'<div class="adx-prog"><i style="width:'+(isLive?pc:100)+'%"></i></div></div><strong class="adx-pr">'+nf(a.price)+'<small> F</small></strong></div>';
   }).join('');
-  var list=ads.slice(0,20).map(function(a){var p=prod(a.product_id),live=new Date(a.ends_at).getTime()>now;return '<div class="ad-row"><span class="ad-ico">'+(live?'🟢':'⚪')+'</span><div class="ad-mid"><b>'+esc(p?p.name:a.product_id)+'</b><small>'+esc(tierLabel(a.tier))+' · '+a.days+T(' j',' d')+' · '+esc(fmt(a.price))+' · '+new Date(a.ends_at).toLocaleDateString(en()?'en-GB':'fr-FR')+'</small></div></div>';}).join('');
-  el.innerHTML='<div class="section-title">📢 '+esc(T('Publicités — tarifs','Advertising — pricing'))+'</div>'+stats+cards
-    +'<div class="section-title" style="margin-top:14px">'+esc(T('Dernières publicités','Latest ads'))+'</div>'+(list||'<div class="empty">'+esc(T('Aucune publicité vendue.','No ads sold yet.'))+'</div>');
+  el.innerHTML='<div class="adx">'
+    +'<div class="adx-hero"><div><small>'+esc(T('CENTRE PUBLICITAIRE','ADVERTISING HUB'))+'</small><h2>'+esc(T('Tarifs & performance','Pricing & performance'))+'</h2><p>'+esc(T('Réglez les prix, la fréquence et la disponibilité de chaque type de publicité. Les changements s’appliquent immédiatement.','Set prices, frequency and availability of each ad type. Changes apply instantly.'))+'</p></div>'
+    +'<span class="adx-chip"><i></i>'+live.length+' '+esc(T('en cours','live'))+'</span></div>'
+    +'<div class="adx-rev"><div class="adx-revtop"><div><small>'+esc(T('Revenu total','Total revenue'))+'</small><b>'+nf(rev)+' <span>FCFA</span></b></div><div class="adx-30"><small>'+esc(T('30 derniers jours','Last 30 days'))+'</small><b>+'+nf(rev30)+'</b></div></div>'+sparkSVG(ads)+'<div class="adx-axis"><span>'+esc(T('il y a 14 j','14 d ago'))+'</span><span>'+esc(T('aujourd’hui','today'))+'</span></div></div>'
+    +'<div class="adx-kpis"><div class="adx-kpi"><small>'+esc(T('En cours','Live'))+'</small><b>'+live.length+'</b></div><div class="adx-kpi"><small>'+esc(T('Vendues','Sold'))+'</small><b>'+ads.length+'</b></div><div class="adx-kpi"><small>'+esc(T('Panier moyen','Avg. order'))+'</small><b>'+nf(avg)+'<span> F</span></b></div></div>'
+    +'<div class="adx-block"><div class="adx-lbl" style="margin-top:0">'+esc(T('Répartition du revenu par type','Revenue split by type'))+'</div><div class="adx-share">'+(bar||'')+'</div><div class="adx-legend">'+legend+'</div></div>'
+    +'<div class="adx-bar" id="adxBar"><span id="adxBarTx"></span><button type="button" onclick="alloAds.adminSaveAll()">'+esc(T('Tout enregistrer','Save all'))+'</button></div>'
+    +'<div class="adx-h">'+esc(T('Types de publicité','Ad types'))+'</div>'+TIERS.map(function(t){return tierCard(t,ads,now);}).join('')
+    +'<div class="adx-h">'+esc(T('Dernières publicités','Latest ads'))+'</div>'+(recent||'<div class="adx-empty">'+esc(T('Aucune publicité vendue pour le moment.','No ads sold yet.'))+'</div>')
+    +'</div>';
+  updateBar();
 }
-async function adminSave(t){
-  var u=U();if(!u||u.role!=='admin')return;
+async function saveTier(t){
   var every=parseInt((document.getElementById('adE_'+t)||{}).value,10),act=!!(document.getElementById('adA_'+t)||{}).checked;
-  if(!(every>=1&&every<=10000)){toastM(T('Nombre de produits invalide.','Invalid product count.'));return;}
+  if(!(every>=1&&every<=10000))throw new Error(T('Nombre de produits invalide (1 à 10 000).','Invalid product count (1 to 10,000).'));
   var rows=S.brackets.filter(function(b){return b.tier===t;}).map(function(b){
     var v=parseInt((document.getElementById('adP_'+t+'_'+b.min_days)||{}).value,10);
     return {tier:t,min_days:b.min_days,max_days:b.max_days,price_per_day:isNaN(v)||v<0?Number(b.price_per_day):v,updated_at:new Date().toISOString()};
   });
-  try{
-    var r1=await sb.from('ad_tiers').update({every_n:every,active:act,updated_at:new Date().toISOString()}).eq('tier',t);if(r1.error)throw r1.error;
-    var r2=await sb.from('ad_price_brackets').upsert(rows,{onConflict:'tier,min_days'});if(r2.error)throw r2.error;
-    await load();renderAdmin();toastM(T('Tarifs enregistrés ✔','Pricing saved ✔'));
-  }catch(e){toastM(T('Enregistrement impossible : ','Could not save: ')+String((e&&e.message)||e));}
+  var r1=await sb.from('ad_tiers').update({every_n:every,active:act,updated_at:new Date().toISOString()}).eq('tier',t);if(r1.error)throw r1.error;
+  var r2=await sb.from('ad_price_brackets').upsert(rows,{onConflict:'tier,min_days'});if(r2.error)throw r2.error;
+  delete S.dirty[t];
+}
+async function adminSave(t){
+  var u=U();if(!u||u.role!=='admin')return;
+  var b=document.getElementById('adSave_'+t);if(b)b.disabled=true;
+  try{await saveTier(t);await load();renderAdmin(true);toastM(T('Tarifs enregistrés ✔','Pricing saved ✔'));}
+  catch(e){if(b)b.disabled=false;toastM(T('Enregistrement impossible : ','Could not save: ')+String((e&&e.message)||e));}
+}
+async function adminSaveAll(){
+  var u=U();if(!u||u.role!=='admin')return;
+  var ts=Object.keys(S.dirty);if(!ts.length)return;
+  try{for(var i=0;i<ts.length;i++)await saveTier(ts[i]);await load();renderAdmin(true);toastM(T('Tous les tarifs sont enregistrés ✔','All pricing saved ✔'));}
+  catch(e){toastM(T('Enregistrement impossible : ','Could not save: ')+String((e&&e.message)||e));}
 }
 
 /* ---------- Vues & branchements ---------- */
@@ -28481,36 +28652,10 @@ var _pc=window.productCardHTML;
 if(typeof _pc==='function')window.productCardHTML=function(p,showAdd,manage,full){
   var h=_pc.apply(this,arguments);
   try{
-    var a=auraFor(p);if(a)h=decorate(h,a);
     if(manage&&p)h=h.replace('VAR</button>','VAR</button><button type="button" class="yc-btn" onclick="event.stopPropagation();alloAds.open(\''+sid(p.id)+'\')"><span class="ico">📢</span>PUB</button>');
     else if(p&&h.indexOf('jcard-tools')>=0&&isSeller()&&isMine(p))h=h.replace('<div class="jcard-tools">','<div class="jcard-tools"><button type="button" class="jcard-ic" aria-label="Publicité" onclick="alloAds.open(\''+sid(p.id)+'\')">📢</button>');
   }catch(e){window.__alloErr&&window.__alloErr(e);}
   return h;
-};
-
-/* promo : choix de l'aura */
-var _om=window.openModal;
-if(typeof _om==='function')window.openModal=function(type,extra){
-  var r=_om.apply(this,arguments);
-  try{
-    if(type==='createPromo'){
-      var c=document.getElementById('modalContent'),btn=c&&c.querySelector('button[onclick="saveCreatePromo()"]');
-      if(btn&&!document.getElementById('prPick')){
-        var sel=document.getElementById('mPromoProduct'),p=prod(sel&&sel.value),d=document.createElement('div');d.className='field';
-        d.innerHTML='<label>✨ '+esc(T('Aura de la promotion','Promotion aura'))+'</label>'+auraPicker('pr',(p&&p.attrs&&p.attrs.aura)||DEF);
-        btn.parentNode.insertBefore(d,btn);
-      }
-    }
-  }catch(e){window.__alloErr&&window.__alloErr(e);}
-  return r;
-};
-var _sp=window.saveCreatePromo;
-if(typeof _sp==='function')window.saveCreatePromo=function(){
-  try{
-    var sel=document.getElementById('mPromoProduct'),p=prod(sel&&sel.value),a=readAura('pr');
-    if(p&&a)p.attrs=Object.assign({},(p.attrs&&typeof p.attrs==='object')?p.attrs:{},{aura:a});
-  }catch(e){window.__alloErr&&window.__alloErr(e);}
-  return _sp.apply(this,arguments);
 };
 
 /* rechargement des pubs avec les données */
@@ -28520,7 +28665,38 @@ setTimeout(function(){if(!S.loaded)load();},2500);
 setInterval(function(){if(!document.hidden&&Date.now()-S.at>300000)load();},60000);
 window.addEventListener('pagehide',function(){try{if(ST.ready)localStorage.setItem(KEY(),String(ST.base+ST.max));}catch(e){}});
 
-window.alloAds={open:open,buy:buy,setTier:setTier,setDays:setDays,pickStyle:pickStyle,pickColor:pickColor,cardsHTML:cardsHTML,beginStream:beginStream,adminSave:adminSave,refresh:load,hub:renderHub};
+window.alloAds={open:open,buy:buy,setTier:setTier,setDays:setDays,cardsHTML:cardsHTML,beginStream:beginStream,adminSave:adminSave,adminSaveAll:adminSaveAll,step:step,touch:touch,refresh:load,hub:renderHub};
+})();
+</script>
+<script id="alloShareFix">
+/* Lien de partage d'un produit : ?product=ID — ouvre la fiche produit chez le destinataire. */
+(function(){
+  'use strict';
+  var PUBLIC='https://allodirect.vercel.app/';
+  function err(e){window.__alloErr&&window.__alloErr(e);}
+  function base(){try{if(/^https?:$/.test(location.protocol))return location.origin+location.pathname;}catch(e){}return PUBLIC;}
+  window.alloProductLink=function(pid){return base()+'?product='+encodeURIComponent(pid);};
+  var id=null;
+  try{
+    id=new URLSearchParams(location.search).get('product');
+    if(!id){var m=/(?:^|[#&])product=([^&]+)/.exec(location.hash||'');if(m)id=decodeURIComponent(m[1]);}
+  }catch(e){}
+  if(!id)return;
+  try{
+    var q=new URLSearchParams(location.search);q.delete('product');
+    var rest=q.toString();
+    history.replaceState(null,'',location.pathname+(rest?'?'+rest:''));
+  }catch(e){}
+  var n=0,iv=setInterval(function(){
+    n++;
+    try{
+      if(typeof currentUser!=='undefined'&&currentUser&&typeof data!=='undefined'&&Array.isArray(data.products)){
+        if(data.products.some(function(x){return String(x.id)===String(id);})){clearInterval(iv);openProductDetail(id);return;}
+        if(window._alloDataLoaded&&n>8){clearInterval(iv);try{alloToast(((typeof lang!=='undefined'&&lang==='en')?'This product is no longer available.':'Ce produit n’est plus disponible.'));}catch(_){}return;}
+      }
+    }catch(e){err(e);}
+    if(n>80)clearInterval(iv);
+  },700);
 })();
 </script>
 </body>
