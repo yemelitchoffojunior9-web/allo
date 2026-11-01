@@ -11373,6 +11373,14 @@ function displayShopName(name) {
 
 function displayProductName(name) {
   if (lang === 'en' && PRODUCT_NAME_EN[name]) return PRODUCT_NAME_EN[name];
+  // Nom saisi par le vendeur : traduit automatiquement (cache local) dans la langue de l'interface
+  try {
+    if (window.alloAutoTr && name) {
+      const tr = window.alloAutoTr.get(name, lang === 'en' ? 'en' : 'fr');
+      if (tr) return tr;
+      window.alloAutoTr.want(name, lang === 'en' ? 'en' : 'fr');
+    }
+  } catch (e) { window.__alloErr && window.__alloErr(e); }
   return name;
 }
 
@@ -15717,43 +15725,73 @@ function getShopNameCached(cache, shopId) {
 /** Prépare un index léger pour filtrer sans recalculer toLowerCase partout */
 function getSearchableProductList() {
   const products = (typeof getVisibleProducts === 'function') ? getVisibleProducts() : (data.products || []);
-  const key = products.length + ':' + (products[0] && products[0].id) + ':' + (products[products.length - 1] && products[products.length - 1].id);
+  const trVer = (window.alloAutoTr && window.alloAutoTr.ver) || 0;
+  const key = products.length + ':' + (products[0] && products[0].id) + ':' + (products[products.length - 1] && products[products.length - 1].id) + ':' + lang + ':' + trVer;
   if (window._prodSearchCache.list && window._prodSearchCache.key === key) {
     return window._prodSearchCache.list;
   }
+  const N = window.alloNormSearch || (s => String(s == null ? '' : s).toLowerCase());
+  const tr = window.alloAutoTr;
   const shopCache = {};
   const list = products.map(p => {
     const rawName = p.name || '';
     let disp = rawName;
     try { disp = (typeof displayProductName === 'function' ? displayProductName(rawName) : rawName) || rawName; } catch (e) { window.__alloErr && window.__alloErr(e); }
-    const nameL = String(disp).toLowerCase();
+    const nameL = N(disp);
+    const rawL = N(rawName);
     const cats = (typeof getProductCats === 'function') ? getProductCats(p) : (p.cat ? [p.cat] : []);
-    const catsL = cats.map(c => String(c).toLowerCase());
-    const shopL = getShopNameCached(shopCache, p.shopId).toLowerCase();
-    const tagsL = (Array.isArray(p.hashtags) ? p.hashtags : []).map(h => String(h || '').replace(/^#+/, '').toLowerCase()).filter(Boolean);
-    // haystack : nom + catégories (comme hashtags) + hashtags libres + boutique
-    const hay = nameL + '\n' + catsL.join(' ') + '\n' + tagsL.join(' ') + '\n' + shopL + '\n' + String(p.cat || '').toLowerCase() + '\n' + String(p.description || '').toLowerCase();
-    return { p, nameL, catsL, shopL, tagsL, hay, price: Number(p.price) || 0, stock: Number(p.stock) || 0 };
+    const catLabels = [];
+    cats.concat(p.cat ? [p.cat] : []).forEach(c => {
+      (window.alloCatLabels ? window.alloCatLabels(c) : [c]).forEach(x => catLabels.push(N(x)));
+    });
+    const catsL = Array.from(new Set(catLabels));
+    const shopL = N(getShopNameCached(shopCache, p.shopId));
+    const tagsL = (Array.isArray(p.hashtags) ? p.hashtags : []).map(h => N(String(h || '').replace(/^#+/, ''))).filter(Boolean);
+    // Traductions déjà connues (nom + description) dans les deux langues
+    let extra = '';
+    if (tr) {
+      const desc = String(p.description || '').trim().slice(0, 400);
+      ['en', 'fr'].forEach(tg => {
+        const a = tr.get(rawName, tg); if (a) extra += ' ' + N(a);
+        if (desc) { const d = tr.get(desc, tg); if (d) extra += ' ' + N(d); }
+      });
+    }
+    const hay = nameL + '\n' + rawL + '\n' + catsL.join(' ') + '\n' + tagsL.join(' ') + '\n' + shopL + '\n' + N(p.description) + '\n' + extra;
+    return { p, nameL, rawL, catsL, shopL, tagsL, hay, price: Number(p.price) || 0, stock: Number(p.stock) || 0 };
   });
   window._prodSearchCache = { key, list };
+  // Prépare (en arrière-plan) la traduction des descriptions pour la langue courante
+  try {
+    if (tr) products.slice(0, 300).forEach(p => { const d = String(p.description || '').trim().slice(0, 400); if (d.length > 2) tr.want(d, lang === 'en' ? 'en' : 'fr'); });
+  } catch (e) { window.__alloErr && window.__alloErr(e); }
   return list;
 }
 
 function scoreProductMatch(item, tokens, fullQ) {
   if (!fullQ) return 1;
-  const { nameL, hay } = item;
+  const { nameL, rawL, hay } = item;
+  const alts = window.alloSearchAlts || (t => [t]);
+  const has = window.alloHas || ((h, a) => h.indexOf(a) > -1);
   // match exact / préfixe nom = meilleur score
-  if (nameL === fullQ) return 1000;
-  if (nameL.startsWith(fullQ)) return 800;
-  if (nameL.includes(fullQ)) return 500;
+  if (nameL === fullQ || rawL === fullQ) return 1000;
+  if (nameL.startsWith(fullQ) || rawL.startsWith(fullQ)) return 800;
+  if (nameL.includes(fullQ) || rawL.includes(fullQ)) return 500;
   let score = 0;
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (!t) continue;
-    if (nameL.startsWith(t)) score += 120;
-    else if (nameL.includes(t)) score += 60;
-    else if (hay.includes(t)) score += 25;
-    else return 0; // tous les mots doivent matcher
+    // chaque mot peut être trouvé tel quel ou via sa traduction FR<->EN (robe = dress)
+    const list = alts(t);
+    let best = 0;
+    for (let j = 0; j < list.length && best < 120; j++) {
+      const a = list[j];
+      const exact = j > 0; // les variantes (stem / traductions) : mot court = mot entier
+      if (nameL.startsWith(a) || rawL.startsWith(a)) best = Math.max(best, 120);
+      else if (has(nameL, a, exact) || has(rawL, a, exact)) best = Math.max(best, 60);
+      else if (has(hay, a, exact)) best = Math.max(best, 25);
+    }
+    if (!best) return 0; // tous les mots doivent matcher
+    score += best;
   }
   return score || 0;
 }
@@ -15765,7 +15803,7 @@ function scoreProductMatch(item, tokens, fullQ) {
  */
 function searchProductsOptimized(opts) {
   opts = opts || {};
-  const q = String(opts.q || '').trim().toLowerCase();
+  const q = (window.alloNormSearch ? window.alloNormSearch(String(opts.q || '').trim()) : String(opts.q || '').trim().toLowerCase());
   const cat = opts.cat || '';
   const maxPrice = Number(opts.maxPrice) || 0;
   const sort = opts.sort || (q ? 'relevance' : 'name');
@@ -15881,8 +15919,9 @@ function doSearch() {
     });
     shops = allShops.filter(s =>
       !q ||
-      String(s.name || '').toLowerCase().includes(q) ||
-      String(s.description || '').toLowerCase().includes(q)
+      (window.alloTextMatches
+        ? window.alloTextMatches(String(s.name || '') + ' ' + String(s.description || ''), q)
+        : (String(s.name || '').toLowerCase().includes(q) || String(s.description || '').toLowerCase().includes(q)))
     );
     if (window._catalogRegion && typeof shopInRegion === 'function') shops = shops.filter(s => shopInRegion(s, window._catalogRegion));
     if (shops.length > 20) shops = shops.slice(0, 20);
@@ -25161,7 +25200,9 @@ html body .order-role-badge{color:#ffb3c7!important}
     if (ring && ring.parentNode) ring.parentNode.removeChild(ring);
     ring = null;
   }
+  var LONGPRESS = false; /* remplacé par le menu ⋮ de chaque carte (Télécharger, Partager, …) */
   document.addEventListener('pointerdown', function(e){
+    if (!LONGPRESS) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (modal && modal.classList.contains('show')) return;
     var c = e.target && e.target.closest ? e.target.closest('.product-card[data-product-id]') : null;
@@ -25224,20 +25265,21 @@ html body .order-role-badge{color:#ffb3c7!important}
     var prod = null;
     try { prod = (data.products || []).find(function(x){ return String(x.id) === String(pid); }); } catch (_) { window.__alloErr && window.__alloErr(_); }
     state.name = ((prod && prod.name) || 'carte').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'carte';
-    state.src = { el: cardEl, pid: pid, prod: prod, showAdd: cardEl.getAttribute('data-show-add') === '1', compact: cardEl.classList.contains('pc-compact') };
-    state.blobs = {}; state.urls = {}; state.mode = 'asis';
+    var hasEl = !!cardEl;
+    state.src = { el: cardEl, pid: pid, prod: prod, showAdd: hasEl ? cardEl.getAttribute('data-show-add') === '1' : true, compact: hasEl ? cardEl.classList.contains('pc-compact') : false };
+    state.blobs = {}; state.urls = {}; state.mode = hasEl ? 'asis' : 'peek';
     modal.querySelector('h3').textContent = T('Télécharger cette carte', 'Download this card');
     modal.querySelector('.cdl-cancel').textContent = T('Annuler', 'Cancel');
     var opts = modal.querySelector('.cdl-opts');
     var canPreview = !!(prod && typeof productCardHTML === 'function');
-    opts.innerHTML = '<button type="button" class="cdl-opt" data-m="asis">' + T('Telle quelle', 'As is') + '<small>' + T('exactement comme affichée', 'exactly as displayed') + '</small></button>' +
-      (canPreview && state.src.compact ? '<button type="button" class="cdl-opt" data-m="peek">' + T('Comme l’aperçu', 'Like the preview') + '<small>' + T('carte complète', 'full card') + '</small></button>' : '');
-    if (!(canPreview && state.src.compact)) opts.style.gridTemplateColumns = '1fr';
+    opts.innerHTML = (hasEl ? '<button type="button" class="cdl-opt" data-m="asis">' + T('Telle quelle', 'As is') + '<small>' + T('exactement comme affichée', 'exactly as displayed') + '</small></button>' : '') +
+      (canPreview && (state.src.compact || !hasEl) ? '<button type="button" class="cdl-opt" data-m="peek">' + T('Comme l’aperçu', 'Like the preview') + '<small>' + T('carte complète', 'full card') + '</small></button>' : '');
+    if (!(canPreview && state.src.compact && hasEl)) opts.style.gridTemplateColumns = '1fr';
     modal.querySelector('.sub').textContent = T('Choisissez le rendu, puis téléchargez l’image (PNG).', 'Choose the look, then download the image (PNG).');
     optBtns = opts.querySelectorAll('.cdl-opt');
     optBtns.forEach(function(b){ b.addEventListener('click', function(){ select(b.getAttribute('data-m')); }); });
     modal.classList.add('show');
-    select('asis');
+    select(state.mode);
   }
   function select(mode){
     state.mode = mode;
@@ -25366,7 +25408,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     }
     /* neutraliser animations / survol / décalages sur la copie */
     node.style.cssText += ';animation:none!important;transition:none!important;transform:none!important;opacity:1!important;margin:0!important;width:' + width + 'px;';
-    node.querySelectorAll('.pcc-hint,.svc-hide,.jcard-hide' + (state.shareMode ? ',.pcc-add,.svc-offer,.yc-btn' : '')).forEach(function(h){ h.style.display = 'none'; });
+    node.querySelectorAll('.pcc-hint,.pcm-btn,.svc-hide,.jcard-hide' + (state.shareMode ? ',.pcc-add,.svc-offer,.yc-btn' : '')).forEach(function(h){ h.style.display = 'none'; });
     /* cadre : la carte est centrée avec de la marge sur un fond uni, pour qu'elle ne remplisse pas toute l'image */
     var cardW = width, padX = Math.round(cardW * 0.34), padY = Math.round(cardW * 0.22);
     var frame = document.createElement('div');
@@ -25381,9 +25423,9 @@ html body .order-role-badge{color:#ffb3c7!important}
     var prevSc = mode === 'peek' ? hh0 : (hh0 * BASE / cardW);
     var sc = Math.max(1, Math.min(1.2, (window.innerWidth * 0.9) / BASE, (window.innerHeight * 0.84) / prevSc));
     var ratio = (BASE * sc) / cardW;
-    var px = Math.max(2, Math.min(4, (window.devicePixelRatio || 1) * 2)) * ratio;
+    var px = Math.max(1.5, Math.min(3, (window.devicePixelRatio || 1) * 1.5)) * ratio;
     var h = Math.ceil(frame.getBoundingClientRect().height);
-    px = Math.min(px, 4000 / Math.max(width, h || 1));
+    px = Math.min(px, 2400 / Math.max(width, h || 1));
     function viaH2I(lib){
       var opt = { pixelRatio: px, width: width, height: h, cacheBust: false, style: { margin: '0', transform: 'none' } };
       return lib.toBlob(frame, opt).catch(function(){ opt.fontEmbedCSS = ''; opt.skipFonts = true; return lib.toBlob(frame, opt); });
@@ -25430,6 +25472,12 @@ html body .order-role-badge{color:#ffb3c7!important}
     cardCache[key] = ent;
     run.catch(function(){ if (cardCache[key] === ent) delete cardCache[key]; });
     return run;
+  };
+  /* Ouvre la fenêtre de téléchargement de la carte (depuis le menu ⋮) */
+  window.alloCardDownloadOpen = function(pid){
+    var el = null;
+    try { el = document.querySelector('.product-card.pc-compact[data-product-id="' + String(pid).replace(/[^\w-]/g, '') + '"]'); } catch (_) { window.__alloErr && window.__alloErr(_); }
+    cardQueue.then(function(){ openModal(el, pid); });
   };
   window.alloPrewarmProductCard = function(pid){
     var go = function(){ try { window.alloProductCardBlob(pid).catch(function(){}); } catch (_) {} };
@@ -28388,6 +28436,7 @@ function pickAd(tier,c,n){
 function higherDue(i,m){var c=0;for(var j=0;j<i;j++){var k=tierEvery(TIERS[j]);if(k>0&&m%k===0)c++;}return c;}
 function adCardHTML(a,canAdd){
   var p=prod(a.product_id);if(!p)return '';
+  if(typeof window.alloAdBanner==='function'){try{return window.alloAdBanner(a,p,canAdd);}catch(e){window.__alloErr&&window.__alloErr(e);}}
   var h=productCardHTML(p,canAdd);
   return h.replace('>','><span class="ad-badge">📢 '+esc(T('Sponsorisé','Sponsored'))+'</span>');
 }
@@ -28699,5 +28748,481 @@ window.alloAds={open:open,buy:buy,setTier:setTier,setDays:setDays,cardsHTML:card
   },700);
 })();
 </script>
+<style id="alloCardMenuCss">
+/* ===== Bouton ⋮ (trois points) sur chaque carte produit ===== */
+.pcm-btn{position:absolute;right:8px;top:8px;z-index:12;width:32px;height:32px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(14,17,30,.74);color:#fff;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.35);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.pcm-btn::after{content:"";position:absolute;inset:-6px}
+.pcm-btn svg{width:18px;height:18px;display:block;pointer-events:none}
+.pcm-btn:active{transform:scale(.92);background:rgba(14,17,30,.92)}
+.ycard>.pcm-btn{top:8px;right:8px}
+.pcc-img .pcm-btn~.pcc-cert{right:46px!important}
+/* ===== Feuille d'actions ===== */
+#pcmSheet{position:fixed;inset:0;z-index:100002;display:none;align-items:flex-end;justify-content:center;background:rgba(3,8,20,.6);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+#pcmSheet.show{display:flex}
+#pcmSheet .pcm-box{width:min(520px,100%);max-height:86vh;max-height:86dvh;display:flex;flex-direction:column;background:#10182f;color:#fff;border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);animation:pcmUp .22s ease-out;box-shadow:0 -10px 40px rgba(0,0,0,.45)}
+@keyframes pcmUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#pcmSheet .pcm-box{animation:none}}
+#pcmSheet .pcm-grip{width:42px;height:4px;border-radius:4px;background:rgba(255,255,255,.25);margin:9px auto 4px;flex:none}
+#pcmSheet .pcm-head{display:flex;align-items:center;gap:12px;padding:8px 16px 12px;border-bottom:1px solid rgba(255,255,255,.09);flex:none}
+#pcmSheet .pcm-th{width:46px;height:46px;border-radius:12px;background:hsl(var(--h,260) 60% 30%) center/cover no-repeat;display:grid;place-items:center;font-size:22px;flex:none;overflow:hidden}
+#pcmSheet .pcm-nm{min-width:0;flex:1}
+#pcmSheet .pcm-nm b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pcmSheet .pcm-nm span{display:block;font-size:12px;opacity:.65;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pcmSheet .pcm-x{background:rgba(255,255,255,.1);border:0;color:#fff;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;flex:none}
+#pcmSheet .pcm-list{overflow:auto;-webkit-overflow-scrolling:touch;padding:6px 8px 12px}
+#pcmSheet .pcm-it{display:flex;align-items:center;gap:14px;width:100%;border:0;background:none;color:inherit;font:inherit;font-size:15px;text-align:left;padding:13px 10px;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#pcmSheet .pcm-it:active{background:rgba(255,255,255,.08)}
+#pcmSheet .pcm-ic{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.09);display:grid;place-items:center;font-size:18px;flex:none}
+#pcmSheet .pcm-it small{display:block;opacity:.6;font-size:11.5px;margin-top:1px}
+#pcmSheet .pcm-it.danger{color:#ff8a8a}
+#pcmSheet .pcm-sep{height:1px;background:rgba(255,255,255,.08);margin:6px 10px}
+/* ===== Bannière publicitaire (couleur unique par produit) ===== */
+.adb{--h:260;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;border-radius:20px;color:#fff;padding:14px 12px 12px;min-height:276px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+  background:radial-gradient(120% 90% at 50% 36%,hsl(var(--h) 70% 36%) 0%,hsl(var(--h) 66% 21%) 55%,hsl(var(--h) 62% 10%) 100%);
+  box-shadow:0 10px 28px hsla(var(--h),70%,8%,.55),inset 0 0 0 1px hsla(var(--h),90%,80%,.2)}
+.adb::before{content:"";position:absolute;inset:0;z-index:-1;background:repeating-linear-gradient(115deg,rgba(255,255,255,.055) 0 7px,transparent 7px 16px)}
+.adb::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 40% at 50% 100%,hsla(var(--h),90%,60%,.28),transparent 70%)}
+.adb-tag{position:absolute;top:10px;left:10px;font:800 10px/1 system-ui,sans-serif;letter-spacing:.4px;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.28)}
+.adb .pcm-btn{top:8px;right:8px;bottom:auto}
+.adb-title{margin:20px 0 0;max-width:100%;padding:0 6px;box-sizing:border-box;font:900 clamp(22px,8.2vw,34px)/1.02 "Arial Black",Impact,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.3px;text-shadow:0 3px 14px rgba(0,0,0,.4);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.adb-sub{margin:7px 0 10px;font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;opacity:.88;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adb-stage{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;flex:1}
+.adb-card{position:relative;flex:none;width:104px;height:136px;border-radius:12px 12px 22px 22px/10px 10px 40px 40px;padding:5px;box-sizing:border-box;background:linear-gradient(160deg,hsl(var(--h) 90% 82%),hsl(var(--h) 80% 56%) 55%,hsl(var(--h) 80% 38%));box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.4)}
+.adb-ph{position:absolute;left:5px;right:5px;top:5px;bottom:36px;border-radius:9px 9px 0 0;overflow:hidden;background:hsl(var(--h) 55% 30%);display:grid;place-items:center;font-size:40px}
+.adb-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.adb-ovr{position:absolute;top:-7px;left:-7px;min-width:34px;height:34px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#16c34a;border:3px solid rgba(255,255,255,.95);display:grid;place-items:center;font:900 14px/1 system-ui,sans-serif;box-shadow:0 3px 8px rgba(0,0,0,.4);z-index:2}
+.adb-foot{position:absolute;left:5px;right:5px;bottom:4px;height:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2a1a05;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.2));border-radius:0 0 18px 18px/0 0 30px 30px;min-width:0}
+.adb-foot b{font:900 11px/1.1 system-ui,sans-serif;max-width:92%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
+.adb-foot span{font:800 10.5px/1.1 system-ui,sans-serif}
+.adb-ticket{position:relative;flex:none;width:156px;display:flex;transform:rotate(-7deg);border-radius:12px;overflow:hidden;background:linear-gradient(135deg,hsl(calc(var(--h) + 150) 72% 50%),hsl(calc(var(--h) + 150) 76% 34%));box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.28)}
+.tk-main{flex:1;min-width:0;padding:10px 6px 9px 10px;text-align:left;display:flex;flex-direction:column;gap:3px}
+.tk-main small{font:800 9.5px/1.1 system-ui,sans-serif;letter-spacing:.7px;text-transform:uppercase;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk-price{font:900 19px/1.05 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 6px rgba(0,0,0,.35);overflow-wrap:anywhere}
+.tk-old{font-size:11px;opacity:.75;text-decoration:line-through}
+.tk-stars{color:#ffb020;font-size:12px;letter-spacing:1px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.tk-cta{margin-top:3px;align-self:flex-start;font:900 10.5px/1 system-ui,sans-serif;letter-spacing:.5px;padding:6px 9px;border-radius:999px;background:#fff;color:hsl(calc(var(--h) + 150) 76% 28%)}
+.tk-side{flex:none;width:26px;display:grid;place-items:center;background:rgba(0,0,0,.22);border-left:2px dashed rgba(255,255,255,.55)}
+.tk-side i{font:900 15px/1 "Arial Black",system-ui,sans-serif;font-style:normal;letter-spacing:2px;writing-mode:vertical-rl;transform:rotate(180deg)}
+.adb-end{margin-top:8px;font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;opacity:.95}
+.adb-cd{display:block;margin-top:2px;font:900 20px/1.1 system-ui,sans-serif;letter-spacing:.6px;font-variant-numeric:tabular-nums}
+@media (max-width:340px){.adb-ticket{width:136px}.adb-card{width:92px;height:122px}}
+</style>
+<script id="alloCardMenu">
+/* Menu ⋮ des cartes produit (actions : télécharger, partager, …) + bannière publicitaire. */
+(function(){
+'use strict';
+function err(e){window.__alloErr&&window.__alloErr(e);}
+function en(){try{return lang==='en';}catch(_){return false;}}
+function T(f,e){return en()?e:f;}
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function sid(x){return String(x==null?'':x).replace(/[^\w-]/g,'');}
+function me(){try{return currentUser||null;}catch(_){return null;}}
+function P(id){try{return(data.products||[]).find(function(p){return String(p.id)===String(id);})||null;}catch(_){return null;}}
+function hueOf(p){var s=String((p&&(p.id||p.name))||''),h=7;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;}
+function imgOf(p){try{var l=(typeof getProductImages==='function')?getProductImages(p):[];return l[0]||p.image||'';}catch(_){return p&&p.image||'';}}
+function nameOf(p){try{return displayProductName(p.name);}catch(_){return p.name;}}
+function shopOf(p){try{return getShopName(p.shopId)||'';}catch(_){return '';}}
+function mine(p){var u=me();if(!u||!p)return false;return String(p.ownerId)===String(u.id);}
+function toast(m){try{window.alloToast?alloToast(m):alert(m);}catch(_){}}
+function money(n){try{return formatMoney(n);}catch(_){return String(n);}}
+
+/* ---------- Bouton ⋮ injecté dans le HTML des cartes ---------- */
+var DOTS='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+function btnHTML(pid){return '<button type="button" class="pcm-btn" data-nodl="1" aria-label="'+esc(T('Plus d’options','More options'))+'" aria-haspopup="dialog" onclick="event.stopPropagation();alloCardMenu.open(\''+sid(pid)+'\',this)">'+DOTS+'</button>';}
+var _pc=window.productCardHTML;
+if(typeof _pc==='function'){
+  window.productCardHTML=function(p){
+    var h=_pc.apply(this,arguments);
+    try{
+      if(typeof h==='string'&&p&&p.id!=null&&h.indexOf('pcm-btn')<0&&h.indexOf('product-card')>-1){
+        if(h.indexOf('<div class="pcc-img">')>-1)h=h.replace('<div class="pcc-img">','<div class="pcc-img">'+btnHTML(p.id));
+        else if(h.indexOf('<div class="ycard">')>-1)h=h.replace('<div class="ycard">','<div class="ycard">'+btnHTML(p.id));
+      }
+    }catch(e){err(e);}
+    return h;
+  };
+}
+
+/* ---------- Feuille d'actions ---------- */
+var sheet=null,cur=null;
+function ensure(){
+  if(sheet)return;
+  sheet=document.createElement('div');sheet.id='pcmSheet';
+  sheet.addEventListener('click',function(e){if(e.target===sheet)close();});
+  document.body.appendChild(sheet);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+}
+function close(){if(sheet){sheet.classList.remove('show');sheet.innerHTML='';}cur=null;}
+function fileName(p,ext){var s=String(p&&p.name||'produit').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'produit';return 'allo-'+s+'.'+ext;}
+function savePhoto(p){
+  var src=imgOf(p);if(!src){toast(T('Aucune photo à télécharger.','No photo to download.'));return;}
+  function save(url,revoke){var a=document.createElement('a');a.href=url;a.download=fileName(p,/png/.test(url)?'png':'jpg');document.body.appendChild(a);a.click();a.remove();if(revoke)setTimeout(function(){try{URL.revokeObjectURL(url);}catch(_){}},4000);}
+  if(/^data:/.test(src)){save(src,false);return;}
+  fetch(src,{mode:'cors',credentials:'omit'}).then(function(r){if(!r.ok)throw 0;return r.blob();}).then(function(b){save(URL.createObjectURL(b),true);}).catch(function(){try{window.open(src,'_blank','noopener');}catch(_){}toast(T('Enregistrez l’image depuis le nouvel onglet.','Save the image from the new tab.'));});
+}
+function downloadCard(p){
+  if(typeof window.alloProductCardBlob!=='function'){if(window.alloCardDownloadOpen)alloCardDownloadOpen(p.id);return;}
+  var done=false,t=setTimeout(function(){if(!done)toast(T('Préparation de la carte…','Preparing the card…'));},250);
+  alloProductCardBlob(p.id).then(function(b){
+    done=true;clearTimeout(t);
+    var url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=fileName(p,'png');
+    document.body.appendChild(a);a.click();a.remove();setTimeout(function(){try{URL.revokeObjectURL(url);}catch(_){}},4000);
+  }).catch(function(e){done=true;clearTimeout(t);err(e);if(window.alloCardDownloadOpen)alloCardDownloadOpen(p.id);});
+}
+function copyLink(p){
+  var url=window.alloProductLink?alloProductLink(p.id):location.href.split('#')[0]+'#product='+encodeURIComponent(p.id);
+  function ok(){toast(T('Lien copié !','Link copied!'));}
+  function fb(){try{var t=document.createElement('textarea');t.value=url;t.style.cssText='position:fixed;left:-999px';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();ok();}catch(e){err(e);try{prompt(T('Copiez le lien :','Copy the link:'),url);}catch(_){}}}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(ok,fb);else fb();
+}
+function share(p){
+  try{if(typeof window.alloShareProductCard==='function'){alloShareProductCard(p.id);return;}}catch(e){err(e);}
+  try{shareProductText(p.id);}catch(e){err(e);}
+}
+function actions(p,ctx){
+  var u=me(),own=mine(p),fav=false,list=[];
+  try{fav=!!(u&&isInWishlist(p.id));}catch(_){}
+  var stock=1;try{stock=getProductAvailableStock(p);}catch(_){}
+  var canBuy=ctx.canBuy!=null?ctx.canBuy:!!(u&&u.role==='client');
+  list.push({ic:'⬇️',t:T('Télécharger la carte','Download the card'),s:T('Au choix : telle quelle ou carte complète','Your choice: as is or full card'),f:function(){if(window.alloCardDownloadOpen)alloCardDownloadOpen(p.id);else downloadCard(p);}});
+  if(imgOf(p))list.push({ic:'🖼️',t:T('Télécharger la photo','Download the photo'),f:function(){savePhoto(p);}});
+  list.push({ic:'📤',t:T('Partager','Share'),f:function(){share(p);}});
+  list.push({ic:'🔗',t:T('Copier le lien','Copy link'),f:function(){copyLink(p);}});
+  list.push({ic:fav?'💔':'❤️',t:fav?T('Retirer des favoris','Remove from favorites'):T('Ajouter aux favoris','Add to favorites'),f:function(){try{toggleWishlist(p.id);}catch(e){err(e);}}});
+  if(canBuy&&!own&&stock>0)list.push({ic:'🛒',t:T('Ajouter au panier','Add to cart'),f:function(){try{addToCart(p.id,null);}catch(e){err(e);}}});
+  list.push({sep:1});
+  if(p.shopId)list.push({ic:'🏪',t:T('Voir la boutique','Visit the shop'),s:shopOf(p),f:function(){try{openShopPage(p.shopId);}catch(e){err(e);}}});
+  if(!own&&p.ownerId&&u)list.push({ic:'💬',t:T('Contacter le vendeur','Message the seller'),f:function(){try{chatWithOwner(p.ownerId);}catch(e){err(e);}}});
+  if(own){
+    list.push({sep:1});
+    list.push({ic:'✏️',t:T('Modifier le produit','Edit product'),f:function(){try{openModal('editProduct',p.id);}catch(e){err(e);}}});
+    if(window.alloAds&&alloAds.open)list.push({ic:'📢',t:T('Booster (publicité)','Boost (advertise)'),f:function(){try{alloAds.open(p.id);}catch(e){err(e);}}});
+  }else if(window.alloFx&&alloFx.report&&p.ownerId){
+    list.push({sep:1});
+    list.push({ic:'🚩',t:T('Signaler','Report'),danger:1,f:function(){try{alloFx.report('product',String(p.id));}catch(e){err(e);}}});
+  }
+  return list;
+}
+function open(pid,btn){
+  var p=P(pid);if(!p)return;
+  ensure();
+  var host=btn&&btn.closest?btn.closest('[data-can-buy]'):null;
+  var ctx={canBuy:host?host.getAttribute('data-can-buy')==='1':null};
+  var list=actions(p,ctx);cur={pid:pid,list:list};
+  try{if(typeof window.alloProductCardBlob==='function')alloProductCardBlob(pid).catch(function(){});}catch(e){err(e);} /* carte préparée pendant que le menu est ouvert */
+  var th=imgOf(p),h=hueOf(p);
+  var rows=list.map(function(a,i){
+    if(a.sep)return '<div class="pcm-sep"></div>';
+    return '<button type="button" class="pcm-it'+(a.danger?' danger':'')+'" data-i="'+i+'"><span class="pcm-ic">'+a.ic+'</span><span>'+esc(a.t)+(a.s?'<small>'+esc(a.s)+'</small>':'')+'</span></button>';
+  }).join('');
+  sheet.innerHTML='<div class="pcm-box" role="dialog" aria-modal="true"><div class="pcm-grip"></div>'
+    +'<div class="pcm-head"><div class="pcm-th" style="--h:'+h+(th&&!/^data:/.test(th)?';background-image:url(&quot;'+esc(th)+'&quot;)':'')+'">'+(th?'':'📦')+'</div>'
+    +'<div class="pcm-nm"><b>'+esc(nameOf(p))+'</b><span>'+esc(money(p.price))+(shopOf(p)?' · '+esc(shopOf(p)):'')+'</span></div>'
+    +'<button type="button" class="pcm-x" aria-label="'+esc(T('Fermer','Close'))+'">×</button></div>'
+    +'<div class="pcm-list">'+rows+'</div></div>';
+  var box=sheet.querySelector('.pcm-box');
+  if(th&&/^data:/.test(th)){var t=sheet.querySelector('.pcm-th');if(t)t.style.backgroundImage='url("'+th+'")';}
+  box.querySelector('.pcm-x').onclick=close;
+  box.querySelectorAll('.pcm-it').forEach(function(b){b.onclick=function(e){
+    e.stopPropagation();var a=list[+b.getAttribute('data-i')];close();
+    if(a&&a.f)setTimeout(function(){try{a.f();}catch(x){err(x);}},60);
+  };});
+  sheet.classList.add('show');
+}
+window.alloCardMenu={open:open,close:close};
+
+/* ---------- Bannière publicitaire ---------- */
+function two(n){return(n<10?'0':'')+n;}
+function remain(end){
+  var ms=new Date(end).getTime()-Date.now();if(!(ms>0))return T('Terminée','Ended');
+  var m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;
+  var D=en()?'D':'J';
+  return(d>0?d+D+' ':'')+two(h)+'H '+two(mi)+'M';
+}
+function stars(p){
+  var n=0;try{var rv=(data.reviews||[]).filter(function(r){return String(r.productId)===String(p.id);});if(rv.length)n=Math.round(rv.reduce(function(s,r){return s+(Number(r.stars)||0);},0)/rv.length);}catch(_){}
+  if(!n)n=5;var s='';for(var i=0;i<5;i++)s+=i<n?'★':'☆';return s;
+}
+window.alloAdBanner=function(ad,p,canAdd){
+  var pid=sid(p.id),h=hueOf(p),im=imgOf(p),promo=false,pct=0,eff=Number(p.price)||0;
+  try{promo=!!isProductPromoActive(p);eff=Number(getEffectivePriceForBuyer(p))||eff;var b=Number(p.price)||0;if(promo&&b>0)pct=Math.round((1-eff/b)*100);}catch(_){}
+  var badge=(promo&&pct>0)?('−'+pct+'%'):(function(){try{var rv=(data.reviews||[]).filter(function(r){return String(r.productId)===String(p.id);});if(rv.length)return String(Math.min(99,Math.round(rv.reduce(function(s,r){return s+(Number(r.stars)||0);},0)/rv.length*20)));}catch(_){}return '★';})();
+  var cat='';try{cat=((typeof getProductCats==='function'?getProductCats(p):[])[0]||p.cat||'');cat=typeof tCat==='function'?tCat(cat):cat;}catch(_){}
+  var shop=shopOf(p),sub=[cat,shop].filter(Boolean).join(' · ');
+  var nm=nameOf(p),icon=p.icon||'📦';
+  return '<div class="adb" style="--h:'+h+'" data-product-id-ad="'+pid+'" data-can-buy="'+(canAdd?1:0)+'" role="button" tabindex="0" onclick="alloAdOpen(event,\''+pid+'\')">'
+    +'<span class="adb-tag">📢 '+esc(T('Sponsorisé','Sponsored'))+'</span>'+btnHTML(p.id)
+    +'<div class="adb-title">'+esc(nm)+'</div>'
+    +'<div class="adb-sub">'+esc(sub||T('Offre à la une','Featured offer'))+'</div>'
+    +'<div class="adb-stage">'
+      +'<div class="adb-card"><div class="adb-ovr">'+esc(badge)+'</div><div class="adb-ph">'+(im?'<img src="'+esc(im)+'" alt="'+esc(nm)+'" loading="lazy" referrerpolicy="no-referrer">':esc(icon))+'</div>'
+        +'<div class="adb-foot"><b>'+esc(nm)+'</b><span>'+esc(money(eff))+'</span></div></div>'
+      +'<div class="adb-ticket"><div class="tk-main"><small>'+esc(shop||'Allo')+'</small>'
+        +'<div class="tk-price">'+esc(money(eff))+'</div>'+(promo&&pct>0?'<div class="tk-old">'+esc(money(p.price))+'</div>':'')
+        +'<div class="tk-stars">'+stars(p)+'</div><span class="tk-cta">'+esc(T('VOIR L’OFFRE','VIEW OFFER'))+' ›</span></div>'
+        +'<div class="tk-side"><i>ALLO</i></div></div>'
+    +'</div>'
+    +'<div class="adb-end">'+esc(T('L’offre se termine dans','The offer ends in'))+'<b class="adb-cd" data-end="'+esc(ad.ends_at)+'">'+esc(remain(ad.ends_at))+'</b></div>'
+  +'</div>';
+};
+window.alloAdOpen=function(ev,pid){
+  try{if(ev&&ev.target&&ev.target.closest&&ev.target.closest('.pcm-btn'))return;}catch(_){}
+  try{ensureProductView(pid);}catch(_){}
+  try{openProductDetail(pid);}catch(e){err(e);}
+};
+setInterval(function(){
+  if(document.hidden)return;
+  document.querySelectorAll('.adb-cd[data-end]').forEach(function(el){el.textContent=remain(el.getAttribute('data-end'));});
+},20000);
+document.addEventListener('keydown',function(e){
+  if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.classList&&e.target.classList.contains('adb')){e.preventDefault();window.alloAdOpen(e,e.target.getAttribute('data-product-id-ad'));}
+});
+})();
+</script>
+
+<script id="alloI18nFix">
+/* Correctif langue FR/EN : recherche bilingue + traduction automatique des textes restés en français/anglais. */
+(function(){
+'use strict';
+function err(e){window.__alloErr&&window.__alloErr(e);}
+function L(){try{return lang==='en'?'en':'fr';}catch(_){return 'fr';}}
+
+/* ---------- 1. Normalisation + lexique FR<->EN (recherche instantanée, hors-ligne) ---------- */
+window.alloNormSearch=function(s){return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();};
+var N=window.alloNormSearch;
+function stem(w){
+  if(w.length<4)return w;
+  if(/ies$/.test(w))return w.slice(0,-3)+'y';
+  if(/(ches|shes|sses|xes)$/.test(w))return w.slice(0,-2);
+  if(/[sx]$/.test(w)&&!/ss$/.test(w))return w.slice(0,-1);
+  return w;
+}
+var LEX=('robe=dress|chaussure=shoe,footwear|basket=sneaker,trainer|sandale=sandal|botte=boot|sac=bag,handbag|sacoche=bag|lunette=glasses,sunglasses,eyewear|montre=watch|bracelet=bracelet|collier=necklace|bague=ring|boucle=earring|chemise=shirt|tshirt=tee,shirt|pantalon=pants,trousers|jean=jeans|jupe=skirt|veste=jacket|manteau=coat|pull=sweater,jumper|sweat=sweatshirt,hoodie|casquette=cap|chapeau=hat|ceinture=belt|cravate=tie|costume=suit|ensemble=set,outfit|vetement=clothes,clothing,garment|pagne=wax,fabric|tissu=fabric,cloth|maillot=jersey|chaussette=sock|gant=glove|echarpe=scarf|mode=fashion|'+
+'telephone=phone,smartphone,mobile|portable=laptop,phone,mobile|ordinateur=computer,laptop|tablette=tablet|ecouteur=earbud,earphone,headphone|casque=headset,headphone,helmet|chargeur=charger|batterie=battery|clavier=keyboard|souris=mouse|ecran=screen,monitor,display|television=tv|enceinte=speaker|imprimante=printer|coque=case,cover|cle=key,drive|'+
+'riz=rice|poulet=chicken|poisson=fish|viande=meat|boeuf=beef|porc=pork|oeuf=egg|lait=milk|fromage=cheese|beurre=butter|huile=oil|sucre=sugar|sel=salt|farine=flour|pain=bread|gateau=cake|biscuit=cookie,biscuit|pate=pasta,noodle|tomate=tomato|oignon=onion|ail=garlic|piment=pepper,chili|banane=banana|mangue=mango|ananas=pineapple|citron=lemon|pomme=apple|arachide=peanut,groundnut|cacahuete=peanut|haricot=bean|mais=corn,maize|manioc=cassava|igname=yam|miel=honey|cafe=coffee|the=tea|cacao=cocoa|legume=vegetable|epice=spice|alimentaire=food|nourriture=food|'+
+'boisson=drink,beverage|eau=water|jus=juice|biere=beer|vin=wine|frais=fresh|surgele=frozen|'+
+'meuble=furniture|chaise=chair|lit=bed|matelas=mattress|canape=sofa,couch|armoire=wardrobe,closet|lampe=lamp|ventilateur=fan|climatiseur=conditioner|frigo=fridge,refrigerator|congelateur=freezer|cuisiniere=cooker,stove|marmite=pot|casserole=pot,saucepan|assiette=plate|verre=glass|tasse=cup,mug|couteau=knife|fer=iron|rideau=curtain|tapis=carpet,rug|drap=sheet|couverture=blanket|oreiller=pillow|seau=bucket|balai=broom|'+
+'parfum=perfume,fragrance|creme=cream|savon=soap|shampoing=shampoo|maquillage=makeup|vernis=polish|perruque=wig|meche=weave,extension|cheveux=hair|brosse=brush|peigne=comb|'+
+'jouet=toy|livre=book|cahier=notebook|stylo=pen|valise=suitcase|voiture=car|moto=motorbike,motorcycle|velo=bike,bicycle|piece=part|pneu=tire,tyre|outil=tool|peinture=paint|ciment=cement|'+
+'reparation=repair|livraison=delivery|location=rental,rent|nettoyage=cleaning|coiffure=hairdressing,hairstyle|couture=tailoring,sewing|mariage=wedding|cours=lesson,class|formation=training|plomberie=plumbing|electricien=electrician|menage=housekeeping,cleaning|traiteur=catering,caterer|'+
+'neuf=new|occasion=used,secondhand|homme=men,man,male|femme=women,woman,female|enfant=kid,child,children|bebe=baby|fille=girl|garcon=boy|noir=black|blanc=white|rouge=red|bleu=blue|vert=green|jaune=yellow|rose=pink|gris=grey,gray|marron=brown|ete=summer|hiver=winter|cuir=leather|coton=cotton|boutique=shop,store|produit=product|prix=price|promo=sale,discount').split('|');
+var LMAP={};
+LEX.forEach(function(e){var a=e.split('=');if(a.length<2)return;var f=stem(N(a[0]));a[1].split(',').forEach(function(x){var en=stem(N(x));(LMAP[f]=LMAP[f]||[]).push(en);(LMAP[en]=LMAP[en]||[]).push(f);});});
+var _altCache={};
+window.alloSearchAlts=function(tok){
+  var t=N(tok);if(!t)return[];
+  if(_altCache[t])return _altCache[t];
+  var s=stem(t),out=[t];
+  function add(x){if(x&&out.indexOf(x)<0)out.push(x);}
+  add(s);(LMAP[s]||[]).forEach(add);(LMAP[t]||[]).forEach(add);
+  return(_altCache[t]=out);
+};
+/* mot court (< 4 lettres) : mot entier seulement, pour éviter « ring » dans « shopping » */
+window.alloHas=function(hay,alt,exact){
+  if(!alt)return false;
+  if(exact||alt.length<4)return(' '+hay+' ').indexOf(' '+alt+' ')>-1;
+  return hay.indexOf(alt)>-1;
+};
+window.alloTextMatches=function(text,q){
+  var h=N(text),qq=N(q);if(!qq)return true;
+  return qq.split(' ').every(function(t){var a=alloSearchAlts(t);for(var i=0;i<a.length;i++){if(i===0?h.indexOf(a[i])>-1:alloHas(h,a[i]))return true;}return false;});
+};
+window.alloCatLabels=function(cat){
+  var out=[String(cat||'')];
+  try{var k=CAT_MAP[cat];if(k){out.push(I18N.fr[k]||'',I18N.en[k]||'');}}catch(_){}
+  return out.filter(Boolean);
+};
+
+/* ---------- 2. Traduction automatique avec cache (noms de produits, textes, toasts) ---------- */
+var KEY='allo_autotr_v1',MAX=2500,store=null,ver=0,queue=[],queued={},running=0,fails=0,pausedUntil=0,dirty=0,flushT=null,saveT=null;
+function load(){if(store)return store;try{store=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){store={};}return store;}
+function save(){clearTimeout(saveT);saveT=setTimeout(function(){try{var s=load(),k=Object.keys(s);if(k.length>MAX)k.slice(0,k.length-MAX).forEach(function(x){delete s[x];});localStorage.setItem(KEY,JSON.stringify(s));}catch(e){err(e);}},800);}
+function clean(s){return String(s==null?'':s).replace(/[<>]/g,'').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&amp;/g,'&');}
+function get(text,target){var v=load()[target+'|'+String(text).trim()];return(v===undefined||v==='')?null:v;}
+function known(text,target){return load()[target+'|'+String(text).trim()]!==undefined;}
+async function rawTranslate(text,target){
+  var chunks=_alloSplitText(text,900),outs=[],from=null;
+  try{
+    for(var i=0;i<chunks.length;i++){
+      var j=await _alloFetchJson('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl='+target+'&dt=t&q='+encodeURIComponent(chunks[i]));
+      if(!Array.isArray(j)||!Array.isArray(j[0]))throw new Error('format');
+      if(!from&&typeof j[2]==='string')from=j[2].toLowerCase().split('-')[0];
+      outs.push(j[0].map(function(x){return(x&&x[0])||'';}).join(''));
+    }
+    return{ok:true,same:from===target,out:outs.join(' ').trim(),from:from};
+  }catch(e1){}
+  try{
+    var g=alloGuessLang(text);if(g===target)return{ok:true,same:true,out:text};
+    var src=g||(target==='fr'?'en':'fr'),o2=[],cs=_alloSplitText(text,450);
+    for(var k=0;k<cs.length;k++){
+      var r=await _alloFetchJson('https://api.mymemory.translated.net/get?q='+encodeURIComponent(cs[k])+'&langpair='+src+'|'+target);
+      var o=r&&r.responseData&&r.responseData.translatedText;
+      if(!o||/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(o))throw new Error('mm');
+      o2.push(o);
+    }
+    return{ok:true,same:false,out:o2.join(' ').trim(),from:src};
+  }catch(e2){return{ok:false};}
+}
+function flush(){
+  clearTimeout(flushT);
+  flushT=setTimeout(function(){
+    if(!dirty)return;dirty=0;ver++;save();
+    try{invalidateProductSearchCache();}catch(e){err(e);}
+    try{translateGlobalDOM();}catch(e){err(e);}
+    try{
+      var v=document.getElementById('view-search'),i=document.getElementById('searchInput');
+      if(v&&v.classList.contains('active')&&i&&i.value.trim()&&document.activeElement!==i)doSearch();
+    }catch(e){err(e);}
+  },500);
+}
+function kick(){
+  if(!queue.length)return;
+  if(Date.now()<pausedUntil){setTimeout(kick,pausedUntil-Date.now()+50);return;}
+  while(running<6&&queue.length){
+    (function(it){
+      running++;
+      rawTranslate(it.text,it.target).then(function(r){
+        var s=load();
+        if(r&&r.ok){
+          fails=0;
+          if(r.same||!r.out)s[it.key]='';
+          else{var o=clean(r.out);s[it.key]=o;var back=(it.target==='en'?'fr':'en')+'|'+o;if(s[back]===undefined)s[back]=it.text;}
+          dirty=1;
+        }else{fails++;if(fails>=5){pausedUntil=Date.now()+60000;fails=0;}}
+      }).catch(err).then(function(){running--;delete queued[it.key];flush();setTimeout(kick,20);});
+    })(queue.shift());
+  }
+}
+function want(text,target){
+  text=String(text==null?'':text).trim();target=target||L();
+  if(!text||text.length>400||!/[A-Za-zÀ-ÿ]{2}/.test(text))return;
+  var key=target+'|'+text;
+  if(load()[key]!==undefined||queued[key]||queue.length>800)return;
+  queued[key]=1;queue.push({text:text,target:target,key:key});
+  clearTimeout(want._t);want._t=setTimeout(kick,60);
+}
+window.alloAutoTr={get:get,want:want,known:known,get ver(){return ver;}};
+
+/* ---------- 3. Détection de langue d'un texte (heuristique) ---------- */
+var FRW=/(^|\s)(le|la|les|des|une|un|du|de|d'|l'|et|ou|est|sont|vous|votre|vos|nous|notre|mon|ma|mes|pour|avec|sans|dans|sur|par|pas|aucun|aucune|aucuns|ajouter|ajouté|ajoutée|télécharger|installer|continuer|retour|suivant|précédent|partager|copier|supprimer|modifier|annuler|valider|enregistrer|enregistré|envoyer|envoyé|ouvrir|fermer|voir|choisir|choisissez|rechercher|recherche|entrez|saisissez|veuillez|merci|bienvenue|erreur|succès|réussi|impossible|disponible|indisponible|obligatoire|invalide|trouvé|trouvée|trouvés|produit|produits|boutique|boutiques|commande|commandes|panier|prix|livraison|compte|solde|mot de passe|ce|cet|cette|ces|au|aux|ici|aussi|encore|déjà|plus|moins|tous|toutes|tout|toute|mes|tes|ses|qui|que|quel|quelle|comment|combien|quand|où)(\s|$|[.,!?;:…])/g;
+var ENW=/(^|\s)(the|and|or|is|are|was|your|you|our|my|for|with|without|in|on|of|to|from|by|not|no|an|this|that|these|those|add|added|remove|delete|edit|cancel|confirm|save|saved|send|sent|open|close|view|choose|select|search|enter|please|thanks|thank|welcome|error|success|failed|unable|available|unavailable|required|invalid|found|product|products|shop|shops|order|orders|cart|price|delivery|account|balance|password|it|its|be|have|has|will|can|how|much|many|when|where|what|which|all|any|more|less)(\s|$|[.,!?;:…])/g;
+function langOf(text){
+  var t=' '+String(text).toLowerCase().replace(/\s+/g,' ')+' ';
+  var acc=(t.match(/[àâçéèêëîïôùûüœ]/g)||[]).length;
+  t=t.replace(/[’‘]/g,"'");
+  var el=(t.match(/(^|\s)(l|d|qu|n|j|s|c|m|t)'[a-zàâçéèêëîïôùûü]/g)||[]).length;
+  var f=(t.match(FRW)||[]).length+(acc?1:0)+(el?1:0)+(/(?:er|ez|ons|tion|ment|eur|age|té)(?:\s|$|[.,!?…])/.test(t)&&acc?1:0),e=(t.match(ENW)||[]).length;
+  if(f===e)return null;
+  if(f>e)return f>=2?'fr':null;
+  return e>=2?'en':null;
+}
+window.alloLangOf=langOf;
+
+/* ---------- 4. Phrases avec nombres (évite 1 requête par valeur) ---------- */
+var UN={produit:['product','products'],article:['item','items'],commande:['order','orders'],boutique:['shop','shops'],client:['customer','customers'],avis:['review','reviews'],résultat:['result','results'],resultat:['result','results'],message:['message','messages'],jour:['day','days'],vente:['sale','sales'],vue:['view','views'],'abonné':['follower','followers'],favori:['favorite','favorites']};
+var UNR={};Object.keys(UN).forEach(function(k){if(/[éè]/.test(k))return;UNR[UN[k][0]]=[k==='avis'?'avis':k,k==='avis'?'avis':k+'s'];UNR[UN[k][1]]=UNR[UN[k][0]];});
+function numPhrase(tr,target){
+  var m=/^(\d[\d\s.,]*)\s+([A-Za-zéèêàç]+)$/.exec(tr);if(!m)return null;
+  var n=parseFloat(m[1].replace(/[\s,]/g,'')),w=m[2].toLowerCase(),pair;
+  if(target==='en'){
+    var base=w==='avis'?'avis':w.replace(/(s|x)$/,'');
+    pair=UN[base]||UN[w];if(!pair)return null;
+    return m[1].trim()+' '+(n===1?pair[0]:pair[1]);
+  }
+  pair=UNR[w];if(!pair)return null;
+  return m[1].trim()+' '+(n===1?pair[0]:pair[1]);
+}
+
+/* ---------- 5. Passe DOM : traduit ce que le dictionnaire n'a pas couvert ---------- */
+var SEEN=new WeakMap(),ATTR=['placeholder','title','aria-label'];
+function skipEl(el){
+  if(!el)return true;
+  if(/^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|CODE|PRE)$/i.test(el.tagName))return true;
+  if(el.closest&&el.closest('.lang-btn,[data-notr],[contenteditable="true"],#view-messages,#alloShareModal'))return true;
+  return false;
+}
+var FZ=null,FZX={'découverte':'Discover','paramètres':'Settings','catégorie':'category','catégories':'categories','numéro':'number','modèle':'model','modèles':'models','aucune demande de recharge':'No top-up requests','aucune demande de retrait':'No withdrawal requests','réservé aux boutiques et entreprises':'Reserved for shops and companies'};
+function fz(){
+  if(FZ)return FZ;FZ={fr:{},en:{}};
+  try{var m=buildGlobalTranslationMaps();
+    Object.keys(m.frToEn).forEach(function(k){FZ.en[k.toLowerCase()]=m.frToEn[k];});
+    Object.keys(m.enToFr).forEach(function(k){FZ.fr[k.toLowerCase()]=m.enToFr[k];});
+  }catch(e){err(e);}
+  Object.keys(FZX).forEach(function(k){FZ.en[k]=FZX[k];});
+  return FZ;
+}
+/* Même texte que le dictionnaire, mais avec une autre casse, un « + » devant ou un « : » derrière */
+function fuzzy(tr,target){
+  var m=/^([+＋•·\s-]*)(.*?)(\s*[:：]?)$/.exec(tr);if(!m||!m[2])return null;
+  var core=m[2],hit=fz()[target][core.toLowerCase()];if(!hit)return null;
+  if(core.length>1&&core===core.toUpperCase())hit=hit.toUpperCase();
+  return m[1]+hit+m[3];
+}
+function conv(text,target){
+  var tr=text.trim();
+  if(tr.length<3||tr.length>400||!/[A-Za-zÀ-ÿ]{2}/.test(tr))return null;
+  var np=numPhrase(tr,target);if(np)return np;
+  var fzr=fuzzy(tr,target);if(fzr&&fzr!==tr)return fzr;
+  var c=get(tr,target);if(c)return c;
+  if(known(tr,target))return null;
+  var lg=langOf(tr);
+  if(lg&&lg!==target)want(tr,target);
+  return null;
+}
+function autoPass(){
+  var target=L(),root=document.body;if(!root)return;
+  var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),n,nodes=[];
+  while((n=w.nextNode())){var p=n.parentElement;if(p&&!skipEl(p))nodes.push(n);}
+  nodes.forEach(function(node){
+    var raw=node.nodeValue||'',sig=raw+'|'+target+'|'+ver;if(SEEN.get(node)===sig)return;
+    var out=conv(raw,target);
+    if(out){var tr=raw.trim();node.nodeValue=raw.replace(tr,function(){return out;});SEEN.set(node,node.nodeValue+'|'+target+'|'+ver);}
+    else SEEN.set(node,sig);
+  });
+  root.querySelectorAll('input,[title],[aria-label]').forEach(function(el){
+    if(skipEl(el))return;
+    ATTR.forEach(function(a){
+      if(!el.hasAttribute(a))return;var v=el.getAttribute(a),o=conv(v,target);
+      if(o&&o!==v)el.setAttribute(a,o);
+    });
+  });
+}
+var _orig=window.translateGlobalDOM;
+window.translateGlobalDOM=function(){try{_orig&&_orig();}catch(e){err(e);}try{autoPass();}catch(e){err(e);}};
+
+/* ---------- 6. Toasts / alert() traduits ---------- */
+var _toast=window.alloToast;
+if(typeof _toast==='function'){
+  window.alloToast=function(msg,opts){
+    var self=this,m=String(msg==null?'':msg),target=L();
+    try{
+      var c=conv(m,target);
+      if(c)return _toast.call(self,c,opts);
+      var lg=langOf(m);
+      if(lg&&lg!==target&&!known(m,target)){
+        var t0=Date.now(),tick=function(){
+          var c2=get(m,target);
+          if(c2||known(m,target)||Date.now()-t0>1200)return _toast.call(self,c2||m,opts);
+          setTimeout(tick,120);
+        };
+        return tick();
+      }
+    }catch(e){err(e);}
+    return _toast.call(self,msg,opts);
+  };
+}
+
+/* ---------- 7. Changement de langue : repartir sur un index propre ---------- */
+var _setLang=window.setLang;
+if(typeof _setLang==='function'){
+  window.setLang=function(l,fromAccount){
+    try{invalidateProductSearchCache();}catch(e){err(e);}
+    return _setLang.call(this,l,fromAccount);
+  };
+}
+try{translateGlobalDOM();}catch(e){err(e);}
+})();
+</script>
+
 </body>
 </html>
