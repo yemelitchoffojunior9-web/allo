@@ -15879,7 +15879,7 @@ function renderSearch() {
   // Initial empty state
   const el = document.getElementById('searchResults');
   if (el && !document.getElementById('searchInput')?.value) {
-    el.innerHTML = `<div class="empty">${t('searchTypeHint')}</div>`;
+    el.innerHTML = window.alloSearchHome ? window.alloSearchHome() : `<div class="empty">${t('searchTypeHint')}</div>`;
   }
 }
 
@@ -15899,7 +15899,7 @@ function doSearch() {
 
   if (!q && !maxPrice && !catFilter && searchFilter === 'all' && !window._catalogRegion) {
     window._searchPage = 1;
-    el.innerHTML = `<div class="empty">${t('searchTypeHint')}</div>`;
+    el.innerHTML = window.alloSearchHome ? window.alloSearchHome() : `<div class="empty">${t('searchTypeHint')}</div>`;
     return;
   }
 
@@ -15950,11 +15950,25 @@ function doSearch() {
     html += `<div class="cat-title">${t('shops_f')} (${shops.length}${shops.length >= 20 ? '+' : ''})</div>`;
     shops.forEach(s => {
       const nProds = (data.products || []).reduce((n, p) => n + (p.shopId === s.id ? 1 : 0), 0);
-      html += `<div class="card" style="cursor:pointer" onclick="${currentUser.role==='client'?`openShopPage('${String(s.id).replace(/'/g, "\\'")}')`:''}">
-        <div style="font-weight:700">🏪 ${s.name}</div>
-        <div style="font-size:12px;color:var(--text-muted)">${displayShopDesc(s.description, s)} · ${nProds} ${nProds>1?t('products_s'):t('product_s')}</div>
+      html += `<div class="card shx-shop" style="cursor:pointer" data-id="${String(s.id).replace(/"/g, '&quot;')}" onclick="alloSearchOpenShop(this.dataset.id)">
+        <div><div style="font-weight:700">🏪 ${s.name}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${displayShopDesc(s.description, s)} · ${nProds} ${nProds>1?t('products_s'):t('product_s')}</div></div>
+        <span class="shx-go">›</span>
       </div>`;
     });
+  }
+  if (q && searchFilter !== 'products' && typeof window.alloSearchCompanies === 'function') {
+    const cos = window.alloSearchCompanies(q);
+    if (cos.length) {
+      html += `<div class="cat-title">🏢 ${lang === 'en' ? 'Companies' : 'Entreprises'} (${cos.length})</div>`;
+      cos.forEach(c => {
+        html += `<div class="card shx-co" style="cursor:pointer" data-id="${String(c.id).replace(/"/g, '&quot;')}" onclick="alloSearchOpenCompany(this.dataset.id)">
+          <div><div style="font-weight:700">🏢 ${typeof escapeCompanyText === 'function' ? escapeCompanyText(c.name) : c.name}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${lang === 'en' ? 'Open the company' : 'Ouvrir l’entreprise'}</div></div>
+          <span class="shx-go">›</span>
+        </div>`;
+      });
+    }
   }
   if (products.length || (searchFilter !== 'shops' && prodMeta.total > 0)) {
     html += `<div class="cat-title">${t('products_f')} (${prodMeta.total})</div><div class="products-grid">`;
@@ -16035,7 +16049,7 @@ function buildSearchFiltersHTML() {
 function renderSearch() {
   ensureSearchFiltersBar();
   const el = document.getElementById('searchResults');
-  if (el) el.innerHTML = `<div class="empty">${t('searchTypeHint')}</div>`;
+  if (el) el.innerHTML = window.alloSearchHome ? window.alloSearchHome() : `<div class="empty">${t('searchTypeHint')}</div>`;
 }
 
 function leaveAccountSpace() {
@@ -21653,7 +21667,7 @@ CH.showOrig = new Set();
 let _chTrT = null; const _chTrBusy = {};
 function chTrTarget(){ return lang === 'en' ? 'en' : 'fr'; }
 function chTrInfo(m){
-  if (!m || m.kind === 'audio' || !m.body) return null;
+  if (!m || m.kind === 'audio' || m.kind === 'image' || !m.body) return null;
   const c = alloTranslateCached(m.body, chTrTarget());
   return (c && c.ok && !c.same) ? c : null;
 }
@@ -21667,7 +21681,7 @@ function chTrRefresh(){
 function chTrKick(list){
   const target = chTrTarget();
   (list || []).forEach(m => {
-    if (!m || m.kind === 'audio' || !m.body) return;
+    if (!m || m.kind === 'audio' || m.kind === 'image' || !m.body) return;
     if (alloTranslateCached(m.body, target)) return;
     const k = target + '::' + m.body;
     if (_chTrBusy[k]) return;
@@ -26146,7 +26160,7 @@ function suggestList(){
   return out;
 }
 function ensureSuggest(inp){
-  if(!inp||(inp.id!=='searchInput'&&inp.id!=='catalogSearchInput'))return;
+  if(!inp||inp.id!=='catalogSearchInput')return;
   var dl=document.getElementById('alloSuggest');if(!dl){dl=document.createElement('datalist');dl.id='alloSuggest';document.body.appendChild(dl);}
   dl.innerHTML=suggestList().map(function(s){return '<option value="'+esc(s)+'"></option>';}).join('');
   if(inp.getAttribute('list')!=='alloSuggest')inp.setAttribute('list','alloSuggest');
@@ -26169,6 +26183,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&(e
 var QUICK_FR=['Disponible ✅','Quel est votre budget ?','Quelle est votre adresse / quartier ?','Je vous réponds dans un instant','Merci !'],QUICK_EN=['Available ✅','What is your budget?','What is your address / area?','I will get back to you shortly','Thanks!'];
 function quickAll(){return (EN()?QUICK_EN:QUICK_FR).map(function(t){return{t:t,c:0};}).concat(lsGet(K('quick'),[]).map(function(t){return{t:t,c:1};}));}
 function paintQuick(){
+  var _q=document.getElementById('fxQuick');if(_q)_q.remove();return; /* réponses rapides supprimées */
   var ta=document.getElementById('chText');if(!ta)return;
   var host=document.getElementById('fxQuick');
   if(!host){host=document.createElement('div');host.id='fxQuick';host.className='fx-quick';var anchor=ta.closest('.ch-composer,.ch-input,.ch-bar')||ta.parentElement;anchor.insertAdjacentElement('beforebegin',host);}
@@ -27293,6 +27308,7 @@ function chFmt(s, q){
   if (q) { const re = new RegExp(E(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'); h = h.split(/(<[^>]+>)/).map((p, i) => i % 2 ? p : p.replace(re, '<mark>$&</mark>')).join(''); }
   return h; }
 window.chBubbleBody = function(m, mine, fr, q){
+  if (m.kind === 'image' && m.image_url) { const cap = strip(m.body); return `<img class="ch-img" loading="lazy" decoding="async" alt="${fr ? 'Photo' : 'Photo'}" src="${E(m.image_url)}" onclick="chImgView(this.src)">${cap && cap !== '📷 Photo' ? '<div class="ch-cap">' + chFmt(cap, q) + '</div>' : ''}`; }
   if (m.kind === 'audio' && m.audio_url) return `<audio controls preload="none" src="${E(m.audio_url)}"></audio>`;
   const t = strip(m.body); if (mine || m.kind === 'audio') return chFmt(t, q);
   const info = chTrInfo(m);
@@ -27305,7 +27321,7 @@ const chFind = ref => CH.msgs.find(x => String(x.id) === ref) || CH.msgs.find(x 
 const chRef = m => { const s = String(m.id); return s.length <= 12 ? s : s.slice(0, 8); };
 function chQuote(m, me, fr){ const r = RE.exec(m.body || ''); if (!r) return ''; const o = chFind(r[1]);
   const who = o ? (String(o.sender_id) === me ? (fr ? 'Vous' : 'You') : chName(o.sender_id)) : '';
-  const tx = o ? (o.kind === 'audio' ? '🎤 ' + (fr ? 'Message vocal' : 'Voice message') : strip(o.body)) : (fr ? 'Message indisponible' : 'Message unavailable');
+  const tx = o ? (o.kind === 'audio' ? '🎤 ' + (fr ? 'Message vocal' : 'Voice message') : o.kind === 'image' ? '📷 Photo' : strip(o.body)) : (fr ? 'Message indisponible' : 'Message unavailable');
   return `<div class="ch-q"${o ? ` onclick="chJump('${E(o.id)}')"` : ''}>${who ? `<b>${E(who)}</b>` : ''}${E(tx.slice(0, 120))}</div>`; }
 function chBubbles(list, me, fr, q){
   const S = stars(); let out = '', prevDay = '', prev = null;
@@ -27361,12 +27377,12 @@ window.chList = function(){
 
 // ---------- Discussion ----------
 const chQrList = fr => fr ? ['Bonjour 👋', 'C’est disponible ?', 'Quel est le prix ?', 'Merci 🙏'] : ['Hello 👋', 'Is it available?', 'What’s the price?', 'Thank you 🙏'];
-function chQrHtml(msgs, me, fr){ const l = msgs[msgs.length - 1]; if (l && String(l.sender_id) === me) return '';
+function chQrHtml(msgs, me, fr){ return ''; const l = msgs[msgs.length - 1]; if (l && String(l.sender_id) === me) return '';
   return chQrList(fr).map((t, i) => `<button onclick="chQuick(${i})">${E(t)}</button>`).join(''); }
 window.chQuick = function(i){ if (CH.open) chInsert(CH.open, { body: chQrList(fr0())[i], kind: 'text' }); };
 function chRepHtml(fr){ const r = CH.reply; if (!r) return ''; const m = CH.msgs.find(x => String(x.id) === String(r.id)); if (!m) return '';
   const mine = String(m.sender_id) === String(currentUser.id);
-  return `<div class="ch-repin"><div><b>${E(mine ? (fr ? 'Vous' : 'You') : chName(m.sender_id))}</b><span>${E(m.kind === 'audio' ? '🎤' : strip(m.body))}</span></div><button onclick="chReplyClear()" aria-label="${fr ? 'Annuler' : 'Cancel'}">✕</button></div>`; }
+  return `<div class="ch-repin"><div><b>${E(mine ? (fr ? 'Vous' : 'You') : chName(m.sender_id))}</b><span>${E(m.kind === 'audio' ? '🎤' : m.kind === 'image' ? '📷 Photo' : strip(m.body))}</span></div><button onclick="chReplyClear()" aria-label="${fr ? 'Annuler' : 'Cancel'}">✕</button></div>`; }
 window.chReplyTo = function(id){ const m = CH.msgs.find(x => String(x.id) === String(id)); if (!m) return; CH.reply = { id: m.id, ref: chRef(m) };
   const b = document.getElementById('chRep'); if (b) b.innerHTML = chRepHtml(fr0()); const ta = document.getElementById('chText'); if (ta) ta.focus(); };
 window.chReplyClear = function(){ CH.reply = null; const b = document.getElementById('chRep'); if (b) b.innerHTML = ''; };
@@ -27396,9 +27412,9 @@ function chCopy(t){ const done = () => chToast(fr0() ? 'Copié' : 'Copied');
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, done);
   else { const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch (e) { window.__alloErr && window.__alloErr(e); } a.remove(); done(); } }
 window.chMsgMenu = function(id){ const m = CH.msgs.find(x => String(x.id) === String(id)); if (!m) return; const fr = fr0(), S = stars(), st = S.has(String(m.id));
-  chSheet(m.kind === 'audio' ? '🎤' : strip(m.body).slice(0, 70), [
+  chSheet(m.kind === 'audio' ? '🎤' : m.kind === 'image' ? '📷 Photo' : strip(m.body).slice(0, 70), [
     (m._tmp || m._failed) ? null : ['↩', fr ? 'Répondre' : 'Reply', () => chReplyTo(m.id)],
-    m.kind === 'audio' ? null : ['⧉', fr ? 'Copier' : 'Copy', () => chCopy(strip(m.body))],
+    (m.kind === 'audio' || (m.kind === 'image' && (!m.body || m.body === '📷 Photo'))) ? null : ['⧉', fr ? 'Copier' : 'Copy', () => chCopy(strip(m.body))],
     [st ? '☆' : '★', st ? (fr ? 'Retirer des favoris' : 'Remove star') : (fr ? 'Ajouter aux favoris' : 'Star'), () => { st ? S.delete(String(m.id)) : S.add(String(m.id)); SV('allo_ch_stars', [...S]); chPane(true); }]]); };
 function chBind(sc){
   if (sc._b) return; sc._b = 1; let lp = 0, tgt = null, x0 = 0, y0 = 0, sw = false;
@@ -27442,7 +27458,7 @@ window.chPane = function(keep){
     <div class="ch-body"><div class="ch-scroll" id="chScroll">${html}</div><button class="ch-fab" id="chFab" onclick="chToBottom()" aria-label="${fr ? 'Aller au dernier message' : 'Jump to latest'}">⌄<b id="chFabN"></b></button></div>
     ${blocked ? `<div class="empty ch-e">${fr ? 'Contact bloqué. Débloquez-le pour lui écrire.' : 'Contact blocked. Unblock to message.'} <button class="ch-chip" onclick="chToggleBlock('${E(peer)}')">${fr ? 'Débloquer' : 'Unblock'}</button></div>` :
     `<div class="ch-qr" id="chQr">${qr}</div><div class="ch-rep" id="chRep">${chRepHtml(fr)}</div><div class="ch-emo" id="chEmo">${EMO.map(c => `<button onmousedown="event.preventDefault()" onclick="chEmoPut('${c}')">${c}</button>`).join('')}</div>
-    <div class="ch-in${draft.trim() ? ' has' : ''}" id="chIn"><button class="ch-ib" onmousedown="event.preventDefault()" onclick="chEmoToggle()" aria-label="Emoji">😊</button><textarea id="chText" rows="1" placeholder="${fr ? 'Votre message' : 'Message'}" oninput="chInput(this)" onfocus="chKb(true)" onblur="chKb(false)" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!chTouch()){event.preventDefault();chSend();}">${E(draft)}</textarea><div class="ch-recbar"><i></i><span id="chRecT">0:00</span><button onclick="chVoiceCancel()">${fr ? 'Annuler' : 'Cancel'}</button></div><button class="ch-btn ch-mic" id="chMic" onclick="chVoice()" aria-label="${fr ? 'Message vocal' : 'Voice message'}">🎤</button><button class="ch-btn ch-snd" onclick="chSend()" onmousedown="event.preventDefault()" aria-label="${fr ? 'Envoyer' : 'Send'}">➤</button></div>`}</div>`;
+    <div class="ch-in${draft.trim() ? ' has' : ''}" id="chIn"><button class="ch-ib" onmousedown="event.preventDefault()" onclick="chEmoToggle()" aria-label="Emoji">😊</button><button class="ch-ib ch-photo" onmousedown="event.preventDefault()" onclick="chPickImage()" aria-label="${fr ? 'Envoyer une photo' : 'Send a photo'}">🖼️</button><textarea id="chText" rows="1" placeholder="${fr ? 'Votre message' : 'Message'}" oninput="chInput(this)" onfocus="chKb(true)" onblur="chKb(false)" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!chTouch()){event.preventDefault();chSend();}">${E(draft)}</textarea><div class="ch-recbar"><i></i><span id="chRecT">0:00</span><button onclick="chVoiceCancel()">${fr ? 'Annuler' : 'Cancel'}</button></div><button class="ch-btn ch-mic" id="chMic" onclick="chVoice()" aria-label="${fr ? 'Message vocal' : 'Voice message'}">🎤</button><button class="ch-btn ch-snd" onclick="chSend()" onmousedown="event.preventDefault()" aria-label="${fr ? 'Envoyer' : 'Send'}">➤</button></div>`}</div>`;
   document.body.appendChild(tmp.firstElementChild);
   const sc = document.getElementById('chScroll'); if (sc) { chBind(sc); sc.scrollTop = (keep && old && old.scrollHeight - old.scrollTop - old.clientHeight > 80) ? old.scrollTop : sc.scrollHeight; }
   try { chGrow(document.getElementById('chText')); chFit(); } catch (e) { window.__alloErr && window.__alloErr(e); }
@@ -29101,6 +29117,278 @@ setInterval(function(){
 document.addEventListener('keydown',function(e){
   if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.classList&&e.target.classList.contains('adb')){e.preventDefault();window.alloAdOpen(e,e.target.getAttribute('data-product-id-ad'));}
 });
+})();
+</script>
+
+<style id="alloChatImgCss">
+.ch-img{display:block;width:min(240px,62vw);max-height:320px;object-fit:cover;border-radius:12px;cursor:zoom-in;background:rgba(255,255,255,.08)}
+.ch-cap{margin-top:5px;white-space:pre-wrap;overflow-wrap:anywhere}
+#chImgPrev,#chImgView{position:fixed;inset:0;z-index:100010;display:flex;align-items:center;justify-content:center;background:rgba(2,6,18,.88);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);padding:14px;box-sizing:border-box}
+#chImgPrev .cip-box{width:min(420px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px;background:#10182f;color:#fff;border-radius:18px;padding:12px;box-shadow:0 20px 50px rgba(0,0,0,.55)}
+#chImgPrev img{width:100%;max-height:52vh;max-height:52dvh;object-fit:contain;border-radius:12px;background:#000}
+#chImgPrev textarea{width:100%;box-sizing:border-box;min-height:44px;max-height:96px;resize:none;border-radius:12px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;padding:10px 12px;font:inherit;font-size:14px}
+#chImgPrev textarea::placeholder{color:rgba(255,255,255,.6)}
+#chImgPrev .cip-btns{display:flex;gap:8px}
+#chImgPrev .cip-btns button{flex:1;border:0;border-radius:12px;padding:12px;font:inherit;font-weight:800;font-size:14px;cursor:pointer}
+#chImgPrev .cip-no{background:rgba(255,255,255,.12);color:#fff}
+#chImgPrev .cip-ok{background:linear-gradient(180deg,#8be22b,#3f9b0b);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+#chImgPrev .cip-ok:disabled{opacity:.6}
+#chImgView img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+#chImgView .civ-x,#chImgView .civ-dl{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));width:42px;height:42px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:20px;cursor:pointer}
+#chImgView .civ-x{right:12px}#chImgView .civ-dl{right:62px}
+</style>
+<script id="alloChatImages">
+/* Messagerie : envoi de photos (stockage Supabase « chat-images », colonne messages.image_url). */
+(function(){
+'use strict';
+function err(e){window.__alloErr&&window.__alloErr(e);}
+function en(){return typeof lang!=='undefined'&&lang==='en';}
+function T(f,e){return en()?e:f;}
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function toast(m){try{window.alloToast?alloToast(m):alert(m);}catch(_){}}
+var inp=null,sending=false;
+window.chPickImage=function(){
+  try{if(!CH||!CH.open)return;}catch(_){return;}
+  if(!inp){
+    inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.style.display='none';
+    inp.addEventListener('change',function(){var f=inp.files&&inp.files[0];inp.value='';if(f)prepare(f);});
+    document.body.appendChild(inp);
+  }
+  inp.click();
+};
+function loadImg(file){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){URL.revokeObjectURL(u);res(im);};
+    im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('img'));};
+    im.src=u;
+  });
+}
+/* Photo réduite (1600 px max, JPEG) : envoi rapide même en 3G */
+function shrink(file){
+  if(file.type==='image/gif'&&file.size<=5*1024*1024)return Promise.resolve({blob:file,type:'image/gif',ext:'gif'});
+  return loadImg(file).then(function(im){
+    var w=im.naturalWidth||im.width,h=im.naturalHeight||im.height,s=Math.min(1,1600/Math.max(w,h)),cw=Math.max(1,Math.round(w*s)),chh=Math.max(1,Math.round(h*s));
+    var c=document.createElement('canvas');c.width=cw;c.height=chh;
+    var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cw,chh);x.drawImage(im,0,0,cw,chh);
+    return new Promise(function(res,rej){c.toBlob(function(b){b?res({blob:b,type:'image/jpeg',ext:'jpg'}):rej(new Error('encode'));},'image/jpeg',.82);});
+  });
+}
+function prepare(file){
+  var peer;try{peer=CH.open;}catch(_){}
+  if(!peer)return;
+  shrink(file).then(function(r){
+    if(r.blob.size>5*1024*1024){toast(T('Image trop lourde (5 Mo max).','Image too large (5 MB max).'));return;}
+    preview(peer,r);
+  }).catch(function(e){err(e);toast(T('Image non prise en charge.','Unsupported image.'));});
+}
+function closePrev(){var o=document.getElementById('chImgPrev');if(o){var im=o.querySelector('img');if(im&&im.src.indexOf('blob:')===0)try{URL.revokeObjectURL(im.src);}catch(_){}o.remove();}sending=false;}
+function preview(peer,r){
+  closePrev();
+  var url=URL.createObjectURL(r.blob),ta0=document.getElementById('chText'),pre=ta0?ta0.value.trim():'';
+  var o=document.createElement('div');o.id='chImgPrev';
+  o.innerHTML='<div class="cip-box" role="dialog" aria-modal="true"><img alt="" src="'+url+'"><textarea rows="1" maxlength="500" placeholder="'+esc(T('Ajouter une légende (facultatif)','Add a caption (optional)'))+'">'+esc(pre)+'</textarea>'
+    +'<div class="cip-btns"><button type="button" class="cip-no">'+esc(T('Annuler','Cancel'))+'</button><button type="button" class="cip-ok">'+esc(T('Envoyer','Send'))+' ➤</button></div></div>';
+  document.body.appendChild(o);
+  o.addEventListener('click',function(e){if(e.target===o)closePrev();});
+  o.querySelector('.cip-no').onclick=closePrev;
+  var ok=o.querySelector('.cip-ok'),ta=o.querySelector('textarea');
+  ok.onclick=function(){
+    if(sending)return;sending=true;ok.disabled=true;ok.textContent=T('Envoi…','Sending…');
+    var cap=ta.value.trim().slice(0,500);
+    send(peer,r,cap).then(function(){
+      if(ta0&&pre&&ta0.value.trim()===pre){ta0.value='';try{chGrow(ta0);}catch(_){}try{CH.drafts[peer]='';}catch(_){}}
+      closePrev();
+    }).catch(function(e){err(e);sending=false;ok.disabled=false;ok.textContent=T('Envoyer','Send')+' ➤';toast(T('Échec de l’envoi de la photo. Réessayez.','Photo upload failed. Please try again.'));});
+  };
+}
+function send(peer,r,caption){
+  var path=String(currentUser.id)+'/'+(crypto.randomUUID?crypto.randomUUID():Date.now())+'.'+r.ext;
+  return sb.storage.from('chat-images').upload(path,r.blob,{contentType:r.type}).then(function(up){
+    if(up.error)throw up.error;
+    var url=sb.storage.from('chat-images').getPublicUrl(path).data.publicUrl;
+    return window.chInsert(peer,{body:caption||'📷 Photo',kind:'image',image_url:url});
+  });
+}
+/* Visionneuse plein écran */
+window.chImgView=function(src){
+  var o=document.getElementById('chImgView');if(o)o.remove();
+  o=document.createElement('div');o.id='chImgView';
+  o.innerHTML='<img alt="" src="'+esc(src)+'"><button type="button" class="civ-dl" aria-label="'+esc(T('Enregistrer','Save'))+'">⬇</button><button type="button" class="civ-x" aria-label="'+esc(T('Fermer','Close'))+'">✕</button>';
+  document.body.appendChild(o);
+  o.addEventListener('click',function(e){if(e.target===o||e.target.classList.contains('civ-x'))o.remove();});
+  o.querySelector('.civ-dl').onclick=function(e){
+    e.stopPropagation();
+    fetch(src,{mode:'cors',credentials:'omit'}).then(function(r){return r.blob();}).then(function(b){
+      var u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='allo-photo.'+((b.type.split('/')[1]||'jpg').replace('jpeg','jpg'));document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},4000);
+    }).catch(function(){try{window.open(src,'_blank','noopener');}catch(_){}});
+  };
+};
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){var v=document.getElementById('chImgView');if(v)v.remove();closePrev();}});
+})();
+</script>
+
+<style id="alloSearchUxCss">
+#searchFilters,#searchFiltersBar,#fxRecent{display:none!important}
+#view-search .field{position:relative}
+#view-search #searchInput{padding-right:44px!important}
+#shxClearBtn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:none}
+#shxDrop{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;max-height:56vh;max-height:56dvh;overflow:auto;-webkit-overflow-scrolling:touch;background:#0d1b3d;border:1px solid rgba(255,255,255,.22);border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.5);padding:4px;display:none}
+#shxDrop.on{display:block}
+.shx-sg,.shx-row{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:10px;cursor:pointer;color:#fff;-webkit-tap-highlight-color:transparent}
+.shx-sg:active,.shx-row:active{background:rgba(255,255,255,.1)}
+.shx-ic{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:15px;flex:none}
+.shx-tx{flex:1;min-width:0;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shx-tx b{color:#ffd54a}
+.shx-tx small{display:block;font-size:11px;opacity:.65;margin-top:1px}
+.shx-go{opacity:.7;font-size:20px;flex:none}
+.shx-fill,.shx-x{flex:none;width:30px;height:30px;border:0;border-radius:50%;background:none;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer}
+.shx-tag{flex:none;font-size:10px;font-weight:800;letter-spacing:.4px;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;text-transform:uppercase}
+.shx-head{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 8px}
+.shx-head b{font-size:15px}
+.shx-clear{border:0;background:none;color:#7fc4ff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:6px}
+.shx{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:8px}
+.shx-co,.shx-shop{display:flex;align-items:center;gap:8px}
+.shx-co>div:first-child,.shx-shop>div:first-child{flex:1;min-width:0}
+</style>
+<script id="alloSearchUx">
+/* Recherche : historique, suggestions pendant la frappe, ouverture directe des boutiques et entreprises. */
+(function(){
+'use strict';
+function err(e){window.__alloErr&&window.__alloErr(e);}
+function en(){return typeof lang!=='undefined'&&lang==='en';}
+function T(f,e){return en()?e:f;}
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function N(s){return window.alloNormSearch?alloNormSearch(s):String(s==null?'':s).toLowerCase();}
+function match(text,q){return window.alloTextMatches?alloTextMatches(text,q):N(text).indexOf(N(q))>-1;}
+function inp(){return document.getElementById('searchInput');}
+
+/* ---------- Historique ---------- */
+var KEY='allo_search_hist_v2',MAXH=12;
+function hist(){
+  try{var a=JSON.parse(localStorage.getItem(KEY)||'null');if(Array.isArray(a))return a;}catch(_){}
+  try{var u=currentUser&&currentUser.id,old=JSON.parse(localStorage.getItem('allo_recent_'+u)||'[]');if(Array.isArray(old))return old.filter(function(x){return typeof x==='string'&&x.trim();}).slice(0,MAXH);}catch(_){}
+  return [];
+}
+function saveH(a){try{localStorage.setItem(KEY,JSON.stringify(a.slice(0,MAXH)));}catch(_){}}
+function add(q){q=String(q||'').trim();if(q.length<2)return;var a=hist().filter(function(x){return N(x)!==N(q);});a.unshift(q.slice(0,80));saveH(a);}
+function refreshHome(){var i=inp();if(i&&!i.value.trim()){var r=document.getElementById('searchResults');if(r)r.innerHTML=window.alloSearchHome();}}
+window.alloSearchHome=function(){
+  var h=hist();
+  if(!h.length)return '<div class="empty">'+esc(T('Tapez un mot-clé pour rechercher','Type a keyword to search'))+'</div>';
+  return '<div class="shx"><div class="shx-head"><b>'+esc(T('Recherches récentes','Recent searches'))+'</b><button type="button" class="shx-clear" onclick="alloSearchUx.clear()">'+esc(T('Tout effacer','Clear all'))+'</button></div>'
+    +h.map(function(x,i){return '<div class="shx-row" onclick="alloSearchUx.use('+i+')"><span class="shx-ic">🕘</span><span class="shx-tx">'+esc(x)+'</span>'
+      +'<button type="button" class="shx-fill" aria-label="'+esc(T('Modifier','Edit'))+'" onclick="event.stopPropagation();alloSearchUx.fill('+i+')">↖</button>'
+      +'<button type="button" class="shx-x" aria-label="'+esc(T('Supprimer','Remove'))+'" onclick="event.stopPropagation();alloSearchUx.del('+i+')">✕</button></div>';}).join('')+'</div>';
+};
+
+/* ---------- Données : boutiques et entreprises ---------- */
+function shopsList(){
+  try{return(data.shops||[]).filter(function(s){if(currentUser&&currentUser.role==='client')return s.companyId===currentUser.companyId;return true;});}catch(_){return [];}
+}
+window.alloSearchCompanies=function(q){
+  try{return(data.companies||[]).filter(function(c){return c&&c.name&&match(c.name,q);}).slice(0,10);}catch(_){return [];}
+};
+window.alloSearchOpenShop=function(id){
+  var s=(data.shops||[]).find(function(x){return String(x.id)===String(id);});
+  if(s)add(s.name);
+  hide();
+  try{openShopPage(String(id));}catch(e){err(e);}
+};
+window.alloSearchOpenCompany=function(id){
+  var c=(data.companies||[]).find(function(x){return String(x.id)===String(id);});
+  if(c)add(c.name);
+  hide();
+  try{if(typeof switchView==='function')switchView('client-space');}catch(e){err(e);}
+  try{var r=openCompanyPreview(String(id));if(r&&r.catch)r.catch(err);}catch(e){err(e);}
+};
+
+/* ---------- Suggestions pendant la frappe ---------- */
+var cur=[];
+function sugg(q){
+  var qn=N(q);if(!qn)return [];
+  var out=[],seen={};
+  function push(o){var k=o.type+'|'+N(o.label);if(seen[k])return;seen[k]=1;out.push(o);}
+  hist().filter(function(x){return N(x).indexOf(qn)>-1&&N(x)!==qn;}).slice(0,2).forEach(function(x){push({type:'hist',label:x});});
+  var starts=function(a,b){return(N(a.name).indexOf(qn)===0?0:1)-(N(b.name).indexOf(qn)===0?0:1);};
+  shopsList().filter(function(s){return s.name&&match(s.name,q);}).sort(starts).slice(0,3).forEach(function(s){push({type:'shop',label:s.name,id:s.id,sub:T('Boutique','Shop')});});
+  window.alloSearchCompanies(q).sort(starts).slice(0,2).forEach(function(c){push({type:'co',label:c.name,id:c.id,sub:T('Entreprise','Company')});});
+  try{
+    searchProductsOptimized({q:q,pageSize:12,page:1,sort:'relevance'}).items.slice(0,6).forEach(function(p){push({type:'prod',label:displayProductName(p.name)});});
+  }catch(e){err(e);}
+  try{
+    var cats=(typeof collectAllProductCats==='function')?collectAllProductCats(getVisibleProducts()):[];
+    cats.filter(function(c){return match(tCat(c),q);}).slice(0,2).forEach(function(c){push({type:'cat',label:tCat(c)});});
+  }catch(e){err(e);}
+  return out.slice(0,10);
+}
+function hl(label,q){
+  var t=esc(label),qq=String(q||'').trim();
+  if(!qq)return t;
+  try{return t.replace(new RegExp('('+esc(qq).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'),'<b>$1</b>');}catch(_){return t;}
+}
+var ICON={hist:'🕘',shop:'🏪',co:'🏢',prod:'🔎',cat:'🏷️'};
+function drop(){
+  var d=document.getElementById('shxDrop');
+  if(!d){var i=inp();if(!i)return null;var host=i.closest('.field')||i.parentNode;d=document.createElement('div');d.id='shxDrop';
+    d.addEventListener('mousedown',function(e){e.preventDefault();});
+    d.addEventListener('click',onDropClick);host.appendChild(d);}
+  return d;
+}
+function show(){
+  var i=inp();if(!i)return;
+  var q=i.value.trim(),d=drop();if(!d)return;
+  if(!q){hide();return;}
+  cur=sugg(q);
+  var rows='<div class="shx-sg" data-i="-1"><span class="shx-ic">🔎</span><span class="shx-tx">'+esc(T('Rechercher','Search'))+' « '+esc(q)+' »</span></div>';
+  rows+=cur.map(function(s,k){
+    var go=(s.type==='shop'||s.type==='co');
+    return '<div class="shx-sg" data-i="'+k+'"><span class="shx-ic">'+ICON[s.type]+'</span><span class="shx-tx">'+hl(s.label,q)+'</span>'
+      +(go?'<span class="shx-tag">'+esc(s.sub)+'</span><span class="shx-go">›</span>':'<button type="button" class="shx-fill" data-fill="'+k+'" aria-label="'+esc(T('Utiliser','Use'))+'">↖</button>')+'</div>';
+  }).join('');
+  d.innerHTML=rows;d.classList.add('on');
+}
+function hide(){var d=document.getElementById('shxDrop');if(d){d.classList.remove('on');d.innerHTML='';}}
+function setInput(v){var i=inp();if(i){i.value=v;i.dispatchEvent(new Event('input',{bubbles:true}));}}
+function runSearch(v){var i=inp();setInput(v);add(v);hide();try{doSearch();}catch(e){err(e);}if(i)i.blur();}
+function onDropClick(e){
+  var f=e.target.closest&&e.target.closest('[data-fill]');
+  if(f){e.stopPropagation();var s0=cur[+f.getAttribute('data-fill')];if(s0){setInput(s0.label);var i0=inp();if(i0)i0.focus();}return;}
+  var row=e.target.closest&&e.target.closest('.shx-sg');if(!row)return;
+  var k=+row.getAttribute('data-i');
+  if(k<0){runSearch(inp().value.trim());return;}
+  var s=cur[k];if(!s)return;
+  if(s.type==='shop'){window.alloSearchOpenShop(s.id);}
+  else if(s.type==='co'){window.alloSearchOpenCompany(s.id);}
+  else runSearch(s.label);
+}
+
+/* ---------- Bouton ✕ + événements ---------- */
+function clearBtn(){
+  var i=inp();if(!i)return;
+  var b=document.getElementById('shxClearBtn');
+  if(!b){b=document.createElement('button');b.type='button';b.id='shxClearBtn';b.textContent='✕';b.setAttribute('aria-label',T('Effacer','Clear'));
+    b.addEventListener('mousedown',function(e){e.preventDefault();});
+    b.addEventListener('click',function(){setInput('');var x=inp();if(x)x.focus();hide();try{doSearch();}catch(e){err(e);}b.style.display='none';});
+    (i.closest('.field')||i.parentNode).appendChild(b);}
+  b.style.display=i.value?'block':'none';
+}
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='searchInput'){clearBtn();show();}},true);
+document.addEventListener('focusin',function(e){if(e.target&&e.target.id==='searchInput'){clearBtn();show();}});
+document.addEventListener('focusout',function(e){if(e.target&&e.target.id==='searchInput')setTimeout(hide,200);});
+document.addEventListener('keydown',function(e){
+  if(e.target&&e.target.id==='searchInput'&&e.key==='Enter'){var v=e.target.value.trim();if(v){e.preventDefault();runSearch(v);}}
+},true);
+
+window.alloSearchUx={
+  use:function(i){var q=hist()[i];if(q!=null)runSearch(q);},
+  fill:function(i){var q=hist()[i];if(q==null)return;setInput(q);var x=inp();if(x)x.focus();},
+  del:function(i){var a=hist();a.splice(i,1);saveH(a);refreshHome();},
+  clear:function(){saveH([]);refreshHome();}
+};
+/* À l'ouverture de la page : l'historique remplace les anciennes options */
+var _rs=window.renderSearch;
+if(typeof _rs==='function')window.renderSearch=function(){var r=_rs.apply(this,arguments);try{clearBtn();refreshHome();}catch(e){err(e);}return r;};
 })();
 </script>
 
