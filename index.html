@@ -22746,7 +22746,7 @@ function appendFeedBatch(n) {
   idx += slice.length;
   window._feedIdx = idx;
   window._feedLoaded = idx;
-  grid.insertAdjacentHTML('beforeend', (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(slice, window._feedCanAdd, (window._alloFeedBase || 0) + (idx - slice.length)) : slice.map(p => productCardHTML(p, window._feedCanAdd)).join(''));
+  grid.insertAdjacentHTML('beforeend', (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(slice, window._feedCanAdd, (window._alloFeedBase || 0) + (idx - slice.length), { promo: true, maxPromo: 2 }) : slice.map(p => productCardHTML(p, window._feedCanAdd)).join(''));
   _feedMarkSeen(slice.map(p => String(p.id)));
   try { refreshAllProductViewCountsUI(); } catch (e) { window.__alloErr && window.__alloErr(e); }
   return idx < list.length;
@@ -23104,7 +23104,7 @@ function renderRecommendationSectionsHTML(canAdd) {
   sections.forEach(sec => {
     html += `<div class="cat-title">${sec.title}</div>`;
     html += '<div class="products-grid">';
-    html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(sec.products, canAdd, _adRun) : sec.products.map(p => productCardHTML(p, canAdd)).join('');
+    html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(sec.products, canAdd, _adRun, { promo: sec.key === 'promosSection', maxPromo: 6 }) : sec.products.map(p => productCardHTML(p, canAdd)).join('');
     _adRun += sec.products.length;
     sec.products.forEach(p => used.add(String(p.id)));
     html += '</div>';
@@ -25015,7 +25015,7 @@ html body .order-role-badge{color:#ffb3c7!important}
         var pl = plan[i]; if (!pl) return;
         var showAdd = el.getAttribute('data-show-add') === '1';
         var tmp = document.createElement('div');
-        tmp.innerHTML = productCardHTML(pl.p, showAdd).trim();
+        tmp.innerHTML = productCardHTML(pl.p, showAdd, false, false, true).trim();
         var nel = tmp.firstElementChild;
         if (!nel) return;
         nel.setAttribute('data-pcc-hist', JSON.stringify(pl.hist));
@@ -25076,7 +25076,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     if (!strip._queue) buildQueue(strip);
     if (!strip._queue.length) return;
     var part = strip._queue.splice(0, CHUNK);
-    var html = part.map(function(p){ return productCardHTML(p, strip._add); }).join('');
+    var html = part.map(function(p){ return productCardHTML(p, strip._add, false, false, true); }).join('');
     strip.insertAdjacentHTML('beforeend', html);
     try { refreshAllProductViewCountsUI(); } catch (e) { window.__alloErr && window.__alloErr(e); }
   }
@@ -25260,20 +25260,20 @@ html body .order-role-badge{color:#ffb3c7!important}
     Object.keys(state.urls).forEach(function(k){ try { URL.revokeObjectURL(state.urls[k]); } catch (_) { window.__alloErr && window.__alloErr(_); } });
     state.blobs = {}; state.urls = {};
   }
-  function openModal(cardEl, pid){
+  function openModal(cardEl, pid, banner){
     build();
     var prod = null;
     try { prod = (data.products || []).find(function(x){ return String(x.id) === String(pid); }); } catch (_) { window.__alloErr && window.__alloErr(_); }
     state.name = ((prod && prod.name) || 'carte').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'carte';
     var hasEl = !!cardEl;
-    state.src = { el: cardEl, pid: pid, prod: prod, showAdd: hasEl ? cardEl.getAttribute('data-show-add') === '1' : true, compact: hasEl ? cardEl.classList.contains('pc-compact') : false };
-    state.blobs = {}; state.urls = {}; state.mode = hasEl ? 'asis' : 'peek';
+    state.src = { el: cardEl, pid: pid, prod: prod, showAdd: hasEl ? cardEl.getAttribute('data-show-add') === '1' : true, compact: hasEl ? cardEl.classList.contains('pc-compact') : false, banner: banner || null };
+    state.blobs = {}; state.urls = {}; state.mode = banner ? 'banner' : (hasEl ? 'asis' : 'peek');
     modal.querySelector('h3').textContent = T('Télécharger cette carte', 'Download this card');
     modal.querySelector('.cdl-cancel').textContent = T('Annuler', 'Cancel');
     var opts = modal.querySelector('.cdl-opts');
     var canPreview = !!(prod && typeof productCardHTML === 'function');
-    opts.innerHTML = (hasEl ? '<button type="button" class="cdl-opt" data-m="asis">' + T('Telle quelle', 'As is') + '<small>' + T('exactement comme affichée', 'exactly as displayed') + '</small></button>' : '') +
-      (canPreview && (state.src.compact || !hasEl) ? '<button type="button" class="cdl-opt" data-m="peek">' + T('Comme l’aperçu', 'Like the preview') + '<small>' + T('carte complète', 'full card') + '</small></button>' : '');
+    opts.innerHTML = banner ? ('<button type="button" class="cdl-opt" data-m="banner">' + T('Telle quelle', 'As is') + '<small>' + T('la bannière exactement comme affichée', 'the banner exactly as displayed') + '</small></button>') : ((hasEl ? '<button type="button" class="cdl-opt" data-m="asis">' + T('Telle quelle', 'As is') + '<small>' + T('exactement comme affichée', 'exactly as displayed') + '</small></button>' : '') +
+      (canPreview && (state.src.compact || !hasEl) ? '<button type="button" class="cdl-opt" data-m="peek">' + T('Comme l’aperçu', 'Like the preview') + '<small>' + T('carte complète', 'full card') + '</small></button>' : ''));
     if (!(canPreview && state.src.compact && hasEl)) opts.style.gridTemplateColumns = '1fr';
     modal.querySelector('.sub').textContent = T('Choisissez le rendu, puis téléchargez l’image (PNG).', 'Choose the look, then download the image (PNG).');
     optBtns = opts.querySelectorAll('.cdl-opt');
@@ -25288,14 +25288,15 @@ html body .order-role-badge{color:#ffb3c7!important}
     if (state.urls[mode]) { showPrev(state.urls[mode]); return; }
     dlBtn.disabled = true; dlBtn.textContent = T('Préparation…', 'Preparing…');
     prevBox.innerHTML = '<span>' + T('Génération de l’image…', 'Generating image…') + '</span>';
-    render(mode).then(function(blob){
+    var gen = ((mode === 'peek' || mode === 'banner') && typeof window.alloProductCardBlob === 'function') ? window.alloProductCardBlob(state.src.pid, state.src.banner) : render(mode);
+    gen.then(function(blob){
       if (token !== state.token) return;
       state.blobs[mode] = blob; state.urls[mode] = URL.createObjectURL(blob);
       showPrev(state.urls[mode]);
     }).catch(function(err){
       console.warn('card render', err);
       if (token !== state.token) return;
-      prevBox.innerHTML = '<span>' + T('Impossible de générer l’image. Vérifiez votre connexion et réessayez.', 'Could not generate the image. Check your connection and try again.') + '</span>';
+      prevBox.innerHTML = '<span>' + T('Impossible de générer l’image. Réessayez.', 'Could not generate the image. Please try again.') + '</span>';
       dlBtn.textContent = T('Télécharger', 'Download');
     });
   }
@@ -25305,7 +25306,7 @@ html body .order-role-badge{color:#ffb3c7!important}
   }
   function download(){
     var b = state.blobs[state.mode]; if (!b) return;
-    var fname = 'carte-' + state.name + (state.mode === 'peek' ? '-apercu' : '') + '.png';
+    var fname = 'carte-' + state.name + (state.mode === 'peek' ? '-apercu' : (state.mode === 'banner' ? '-banniere' : '')) + '.png';
     var a = document.createElement('a'); a.href = state.urls[state.mode]; a.download = fname;
     document.body.appendChild(a); a.click(); a.remove();
   }
@@ -25395,7 +25396,12 @@ html body .order-role-badge{color:#ffb3c7!important}
   function render(mode){
     var src = state.src, host = document.createElement('div'), node, width;
     host.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;';
-    if (mode === 'peek') {
+    if (mode === 'banner') {
+      width = Math.min(360, Math.max(300, window.innerWidth - 24));
+      host.style.width = width + 'px';
+      host.innerHTML = window.alloAdBanner(src.banner, src.prod, src.showAdd);
+      node = host.firstElementChild;
+    } else if (mode === 'peek') {
       width = 210;
       host.style.width = width + 'px';
       host.innerHTML = productCardHTML(src.prod, src.showAdd, false, true);
@@ -25410,7 +25416,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     node.style.cssText += ';animation:none!important;transition:none!important;transform:none!important;opacity:1!important;margin:0!important;width:' + width + 'px;';
     node.querySelectorAll('.pcc-hint,.pcm-btn,.svc-hide,.jcard-hide' + (state.shareMode ? ',.pcc-add,.svc-offer,.yc-btn' : '')).forEach(function(h){ h.style.display = 'none'; });
     /* cadre : la carte est centrée avec de la marge sur un fond uni, pour qu'elle ne remplisse pas toute l'image */
-    var cardW = width, padX = Math.round(cardW * 0.34), padY = Math.round(cardW * 0.22);
+    var cardW = width, isB = (mode === 'banner'), padX = Math.round(cardW * (isB ? 0.05 : 0.34)), padY = Math.round(cardW * (isB ? 0.05 : 0.22));
     var frame = document.createElement('div');
     frame.style.cssText = 'box-sizing:border-box;display:flex;justify-content:center;align-items:center;padding:' + padY + 'px ' + padX + 'px;width:' + (cardW + 2 * padX) + 'px;background:radial-gradient(120% 90% at 50% 40%,#252a4a 0%,#14172b 55%,#0a0c18 100%);';
     frame.appendChild(node);
@@ -25423,6 +25429,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     var prevSc = mode === 'peek' ? hh0 : (hh0 * BASE / cardW);
     var sc = Math.max(1, Math.min(1.2, (window.innerWidth * 0.9) / BASE, (window.innerHeight * 0.84) / prevSc));
     var ratio = (BASE * sc) / cardW;
+    if (isB) ratio = 1;
     var px = Math.max(1.5, Math.min(3, (window.devicePixelRatio || 1) * 1.5)) * ratio;
     var h = Math.ceil(frame.getBoundingClientRect().height);
     px = Math.min(px, 2400 / Math.max(width, h || 1));
@@ -25445,7 +25452,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     }).then(function(b){ done(); return b; }, function(e){ done(); throw e; });
   }
   /* Rendu de la carte produit en image, pour le partage (boutons d'action masqués) */
-  function buildProductCardBlob(pid){
+  function buildProductCardBlob(pid, banner){
     var prod = null;
     try { prod = (data.products || []).find(function(x){ return String(x.id) === String(pid); }); } catch (_) { window.__alloErr && window.__alloErr(_); }
     if (!prod) return Promise.reject(new Error('no product'));
@@ -25453,31 +25460,79 @@ html body .order-role-badge{color:#ffb3c7!important}
     try { el = document.querySelector('.product-card[data-product-id="' + String(pid).replace(/[^\w-]/g, '') + '"]'); } catch (_) { window.__alloErr && window.__alloErr(_); }
     el = null; /* toujours la carte complète (comme l'aperçu), jamais la version compacte de la liste */
     var prev = state.src;
-    state.src = { el: null, pid: pid, prod: prod, showAdd: true, compact: false };
+    state.src = { el: null, pid: pid, prod: prod, showAdd: true, compact: false, banner: banner || null };
     state.shareMode = false; /* on garde tous les boutons */
     var restore = function(){ state.src = prev; state.shareMode = false; };
-    return render('peek').then(function(b){ restore(); return b; }, function(e){ restore(); throw e; });
+    return render(banner ? 'banner' : 'peek').then(function(b){ restore(); return b; }, function(e){ restore(); throw e; });
   }
   /* Cartes prêtes à l'avance : cache par produit + file d'attente (un rendu à la fois) */
   var cardCache = {}, cardQueue = Promise.resolve();
-  function cardSig(pid){
-    try { var p = (data.products || []).find(function(x){ return String(x.id) === String(pid); }); return p ? [p.name, p.price, p.image || p.img || (p.images && p.images[0]) || '', p.stock].join('|') : ''; } catch (_) { return ''; }
+  function cardSig(pid, banner){
+    try {
+      var p = (data.products || []).find(function(x){ return String(x.id) === String(pid); });
+      if (!p) return '';
+      var sg = [p.name, p.price, p.image || p.img || (p.images && p.images[0]) || '', p.stock, (typeof lang !== 'undefined' ? lang : ''), p.cat || '', (p.promo ? (p.promo.pct + '/' + p.promo.endsAt) : '')].join('|');
+      if (banner) sg += '|' + banner.kind + '|' + (banner.ends_at || '') + '|h' + Math.floor(Date.now() / 3600000); /* le compte à rebours est dessiné dans l'image : on la refait chaque heure */
+      return sg;
+    } catch (_) { return ''; }
   }
-  window.alloProductCardBlob = function(pid){
-    var key = String(pid), sig = cardSig(pid), c = cardCache[key];
+  /* Cache persistant : la carte déjà générée est gardée sur l'appareil (fonctionne sans connexion) */
+  var IDB_V = 'v1', idbP = null;
+  function idb(){
+    if (idbP) return idbP;
+    idbP = new Promise(function(res){
+      try {
+        var r = indexedDB.open('allo_cards', 1);
+        r.onupgradeneeded = function(){ var os = r.result.createObjectStore('c', { keyPath: 'k' }); os.createIndex('t', 't'); };
+        r.onsuccess = function(){ res(r.result); };
+        r.onerror = function(){ res(null); };
+      } catch (_) { res(null); }
+    });
+    return idbP;
+  }
+  function idbGet(k){
+    return idb().then(function(db){
+      if (!db) return null;
+      return new Promise(function(res){
+        try { var q = db.transaction('c').objectStore('c').get(k); q.onsuccess = function(){ res(q.result || null); }; q.onerror = function(){ res(null); }; } catch (_) { res(null); }
+      });
+    });
+  }
+  function idbPut(rec){
+    idb().then(function(db){
+      if (!db) return;
+      try {
+        var st = db.transaction('c', 'readwrite').objectStore('c');
+        st.put(rec);
+        var cq = st.count();
+        cq.onsuccess = function(){
+          var extra = cq.result - 120; if (extra <= 0) return;
+          var cur = st.index('t').openCursor();
+          cur.onsuccess = function(){ var c = cur.result; if (c && extra-- > 0) { c.delete(); c.continue(); } };
+        };
+      } catch (_) { window.__alloErr && window.__alloErr(_); }
+    });
+  }
+  window.alloProductCardBlob = function(pid, banner){
+    var key = String(pid) + (banner ? '|' + banner.kind : ''), sig = cardSig(pid, banner), c = cardCache[key];
     if (c && c.sig === sig) return c.p;
-    var run = cardQueue.then(function(){ return buildProductCardBlob(pid); });
-    cardQueue = run.catch(function(){});
+    var full = IDB_V + '|' + key + '|' + sig;
+    var run = idbGet(full).then(function(rec){
+      if (rec && rec.blob && rec.blob.size) return rec.blob;
+      var build = cardQueue.then(function(){ return buildProductCardBlob(pid, banner); });
+      cardQueue = build.catch(function(){});
+      return build.then(function(blob){ idbPut({ k: full, t: Date.now(), blob: blob }); return blob; });
+    });
     var ent = { sig: sig, p: run };
     cardCache[key] = ent;
     run.catch(function(){ if (cardCache[key] === ent) delete cardCache[key]; });
     return run;
   };
   /* Ouvre la fenêtre de téléchargement de la carte (depuis le menu ⋮) */
-  window.alloCardDownloadOpen = function(pid){
+  window.alloCardDownloadOpen = function(pid, banner){
     var el = null;
-    try { el = document.querySelector('.product-card.pc-compact[data-product-id="' + String(pid).replace(/[^\w-]/g, '') + '"]'); } catch (_) { window.__alloErr && window.__alloErr(_); }
-    cardQueue.then(function(){ openModal(el, pid); });
+    if (!banner) try { el = document.querySelector('.product-card.pc-compact[data-product-id="' + String(pid).replace(/[^\w-]/g, '') + '"]'); } catch (_) { window.__alloErr && window.__alloErr(_); }
+    cardQueue.then(function(){ openModal(el, pid, banner); });
   };
   window.alloPrewarmProductCard = function(pid){
     var go = function(){ try { window.alloProductCardBlob(pid).catch(function(){}); } catch (_) {} };
@@ -26811,11 +26866,11 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
   function linkOf(pid){return window.alloProductLink?alloProductLink(pid):location.href.split('#')[0]+'#product='+encodeURIComponent(pid);}
   function textOf(p){return nameOf(p)+' — '+priceOf(p)+' · Allo';}
   function track(){try{window.alloFx&&alloFx.track&&alloFx.track('share_product',{});}catch(_){}}
-  window.alloShareProductCard=function(pid){
+  window.alloShareProductCard=function(pid,banner){
     var p=(data.products||[]).find(function(x){return String(x.id)===String(pid);});if(!p)return;
     ensure();revoke();var token=Date.now();cur={t:token,pid:pid,p:p};
     modal.className='open';modal.innerHTML=box('<div class="sh-load">'+T('Préparation de la carte…','Preparing the card…')+'</div>');
-    var gen=typeof window.alloProductCardBlob==='function'?window.alloProductCardBlob(pid):Promise.reject(new Error('no renderer'));
+    var gen=typeof window.alloProductCardBlob==='function'?window.alloProductCardBlob(pid,banner):Promise.reject(new Error('no renderer'));
     gen.then(function(blob){
       if(cur.t!==token)return;
       var slug=String(nameOf(p)).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'produit';
@@ -28451,13 +28506,14 @@ function adsAt(n,canAdd){
   });
   return out;
 }
-function cardsHTML(list,canAdd,start){
-  if(!S.loaded||!S.ads.length)return list.map(function(p){return productCardHTML(p,canAdd);}).join('');
+function cardsHTML(list,canAdd,start,opts){
+  function card(p){return productCardHTML(p,canAdd);}
+  if(!S.loaded||!S.ads.length)return list.map(card).join('');
   ensureBase();
   var out='';
   list.forEach(function(p,i){
     var pos=start+i+1;
-    out+=productCardHTML(p,canAdd);
+    out+=card(p);
     if(pos>ST.max)ST.max=pos;
     out+=adsAt(ST.base+pos,canAdd);
   });
@@ -28777,35 +28833,50 @@ window.alloAds={open:open,buy:buy,setTier:setTier,setDays:setDays,cardsHTML:card
 #pcmSheet .pcm-it.danger{color:#ff8a8a}
 #pcmSheet .pcm-sep{height:1px;background:rgba(255,255,255,.08);margin:6px 10px}
 /* ===== Bannière publicitaire (couleur unique par produit) ===== */
-.adb{--h:260;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;border-radius:20px;color:#fff;padding:14px 12px 12px;min-height:276px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+.adb{--h:260;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;border-radius:20px;color:#fff;padding:14px 12px 12px;min-height:316px;cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
   background:radial-gradient(120% 90% at 50% 36%,hsl(var(--h) 70% 36%) 0%,hsl(var(--h) 66% 21%) 55%,hsl(var(--h) 62% 10%) 100%);
   box-shadow:0 10px 28px hsla(var(--h),70%,8%,.55),inset 0 0 0 1px hsla(var(--h),90%,80%,.2)}
-.adb::before{content:"";position:absolute;inset:0;z-index:-1;background:repeating-linear-gradient(115deg,rgba(255,255,255,.055) 0 7px,transparent 7px 16px)}
-.adb::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 40% at 50% 100%,hsla(var(--h),90%,60%,.28),transparent 70%)}
+.adb-fx{position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(115deg,rgba(255,255,255,.055) 0 7px,transparent 7px 16px)}
+.adb-glow{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 40% at 50% 100%,hsla(var(--h),90%,60%,.28),transparent 70%)}
 .adb-tag{position:absolute;top:10px;left:10px;font:800 10px/1 system-ui,sans-serif;letter-spacing:.4px;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.28)}
 .adb .pcm-btn{top:8px;right:8px;bottom:auto}
 .adb-title{margin:20px 0 0;max-width:100%;padding:0 6px;box-sizing:border-box;font:900 clamp(22px,8.2vw,34px)/1.02 "Arial Black",Impact,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.3px;text-shadow:0 3px 14px rgba(0,0,0,.4);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .adb-sub{margin:7px 0 10px;font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;opacity:.88;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .adb-stage{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;flex:1}
-.adb-card{position:relative;flex:none;width:104px;height:136px;border-radius:12px 12px 22px 22px/10px 10px 40px 40px;padding:5px;box-sizing:border-box;background:linear-gradient(160deg,hsl(var(--h) 90% 82%),hsl(var(--h) 80% 56%) 55%,hsl(var(--h) 80% 38%));box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.4)}
-.adb-ph{position:absolute;left:5px;right:5px;top:5px;bottom:36px;border-radius:9px 9px 0 0;overflow:hidden;background:hsl(var(--h) 55% 30%);display:grid;place-items:center;font-size:40px}
+.adb-card{position:relative;flex:none;width:132px;height:176px;border-radius:12px 12px 22px 22px/10px 10px 40px 40px;padding:5px;box-sizing:border-box;background:linear-gradient(160deg,hsl(var(--h) 90% 82%),hsl(var(--h) 80% 56%) 55%,hsl(var(--h) 80% 38%));box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.4)}
+.adb-ph{position:absolute;left:5px;right:5px;top:5px;bottom:40px;border-radius:10px 10px 0 0;overflow:hidden;background:hsl(var(--h) 55% 30%);display:grid;place-items:center;font-size:54px}
 .adb-ph img{width:100%;height:100%;object-fit:cover;display:block}
 .adb-ovr{position:absolute;top:-7px;left:-7px;min-width:34px;height:34px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#16c34a;border:3px solid rgba(255,255,255,.95);display:grid;place-items:center;font:900 14px/1 system-ui,sans-serif;box-shadow:0 3px 8px rgba(0,0,0,.4);z-index:2}
-.adb-foot{position:absolute;left:5px;right:5px;bottom:4px;height:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2a1a05;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.2));border-radius:0 0 18px 18px/0 0 30px 30px;min-width:0}
+.adb-foot{position:absolute;left:5px;right:5px;bottom:4px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2a1a05;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.2));border-radius:0 0 18px 18px/0 0 30px 30px;min-width:0}
 .adb-foot b{font:900 11px/1.1 system-ui,sans-serif;max-width:92%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
 .adb-foot span{font:800 10.5px/1.1 system-ui,sans-serif}
-.adb-ticket{position:relative;flex:none;width:156px;display:flex;transform:rotate(-7deg);border-radius:12px;overflow:hidden;background:linear-gradient(135deg,hsl(calc(var(--h) + 150) 72% 50%),hsl(calc(var(--h) + 150) 76% 34%));box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.28)}
+.adb-ticket{position:relative;flex:none;width:146px;display:flex;transform:rotate(-7deg);border-radius:12px;overflow:hidden;background:linear-gradient(135deg,hsl(calc(var(--h) + 150) 72% 50%),hsl(calc(var(--h) + 150) 76% 34%));box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.28)}
 .tk-main{flex:1;min-width:0;padding:10px 6px 9px 10px;text-align:left;display:flex;flex-direction:column;gap:3px}
 .tk-main small{font:800 9.5px/1.1 system-ui,sans-serif;letter-spacing:.7px;text-transform:uppercase;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tk-price{font:900 19px/1.05 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 6px rgba(0,0,0,.35);overflow-wrap:anywhere}
+.tk-price{font:900 17px/1.05 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 6px rgba(0,0,0,.35);overflow-wrap:anywhere}
 .tk-old{font-size:11px;opacity:.75;text-decoration:line-through}
 .tk-stars{color:#ffb020;font-size:12px;letter-spacing:1px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
-.tk-cta{margin-top:3px;align-self:flex-start;font:900 10.5px/1 system-ui,sans-serif;letter-spacing:.5px;padding:6px 9px;border-radius:999px;background:#fff;color:hsl(calc(var(--h) + 150) 76% 28%)}
+.tk-cta{margin-top:3px;align-self:flex-start;white-space:nowrap;font:900 10px/1 system-ui,sans-serif;letter-spacing:.3px;padding:6px 8px;border-radius:999px;background:#fff;color:hsl(calc(var(--h) + 150) 76% 28%)}
 .tk-side{flex:none;width:26px;display:grid;place-items:center;background:rgba(0,0,0,.22);border-left:2px dashed rgba(255,255,255,.55)}
 .tk-side i{font:900 15px/1 "Arial Black",system-ui,sans-serif;font-style:normal;letter-spacing:2px;writing-mode:vertical-rl;transform:rotate(180deg)}
 .adb-end{margin-top:8px;font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;opacity:.95}
 .adb-cd{display:block;margin-top:2px;font:900 20px/1.1 system-ui,sans-serif;letter-spacing:.6px;font-variant-numeric:tabular-nums}
-@media (max-width:340px){.adb-ticket{width:136px}.adb-card{width:92px;height:122px}}
+.adb-promo{--h:330;background:radial-gradient(120% 90% at 50% 36%,hsl(330 100% 70%) 0%,hsl(328 94% 58%) 52%,hsl(324 86% 42%) 100%);box-shadow:0 10px 28px rgba(190,30,110,.45),inset 0 0 0 1px rgba(255,255,255,.35)}
+.adb-promo .adb-fx{background:repeating-linear-gradient(115deg,rgba(255,255,255,.1) 0 7px,transparent 7px 16px)}
+.adb-promo .adb-glow{background:radial-gradient(60% 40% at 50% 100%,rgba(255,255,255,.32),transparent 70%)}
+.adb-promo .adb-title,.adb-promo .adb-sub,.adb-promo .adb-end{text-shadow:0 2px 10px rgba(130,0,70,.55)}
+.adb-promo .adb-card{background:linear-gradient(160deg,#fff4c2,#f6c64f 55%,#c8921a)}
+.adb-promo .adb-ph{background:#b02a74}
+.adb-promo .adb-ticket{background:linear-gradient(135deg,#1fc8a4,#0d8f78)}
+.adb-promo .tk-cta{color:#0a6b59}
+@media (max-width:350px){.adb-ticket{width:112px}.adb-card{width:114px;height:150px}.tk-cta{padding:5px 7px}}
+/* Cartes produit : la photo passe au premier plan (cadre plus haut, moins de marge) */
+/* Nom du produit : toujours lisible (pastille sombre + texte blanc), même sur les cartes à pastille claire */
+.product-card.pc-compact.pcc-v2:not(.pct-gold) .pcc-name,.product-card.pc-compact.pc-gold:not(.pct-gold) .pcc-name{background:rgba(8,12,28,.46)!important;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.6)!important}
+/* Bouton ⋮ visible aussi sur les photos sombres */
+.pcm-btn{border:1.5px solid rgba(255,255,255,.55);background:rgba(10,14,28,.62)}
+.pc-compact .pcc-img{aspect-ratio:4/5!important;border-radius:12px!important;border:0!important;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.product-card.pc-compact{padding:6px!important;gap:6px!important}
 </style>
 <script id="alloCardMenu">
 /* Menu ⋮ des cartes produit (actions : télécharger, partager, …) + bannière publicitaire. */
@@ -28831,7 +28902,9 @@ var DOTS='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circl
 function btnHTML(pid){return '<button type="button" class="pcm-btn" data-nodl="1" aria-label="'+esc(T('Plus d’options','More options'))+'" aria-haspopup="dialog" onclick="event.stopPropagation();alloCardMenu.open(\''+sid(pid)+'\',this)">'+DOTS+'</button>';}
 var _pc=window.productCardHTML;
 if(typeof _pc==='function'){
-  window.productCardHTML=function(p){
+  window.productCardHTML=function(p,showAdd,manage,full,noBanner){
+    /* produit en promotion = bannière pleine largeur (sauf gestion vendeur, aperçu complet, ou rendu forcé en carte) */
+    try{if(p&&!manage&&!full&&!noBanner&&typeof window.alloPromoCard==='function'&&isProductPromoActive(p))return window.alloPromoCard(p,showAdd);}catch(e){err(e);}
     var h=_pc.apply(this,arguments);
     try{
       if(typeof h==='string'&&p&&p.id!=null&&h.indexOf('pcm-btn')<0&&h.indexOf('product-card')>-1){
@@ -28860,10 +28933,10 @@ function savePhoto(p){
   if(/^data:/.test(src)){save(src,false);return;}
   fetch(src,{mode:'cors',credentials:'omit'}).then(function(r){if(!r.ok)throw 0;return r.blob();}).then(function(b){save(URL.createObjectURL(b),true);}).catch(function(){try{window.open(src,'_blank','noopener');}catch(_){}toast(T('Enregistrez l’image depuis le nouvel onglet.','Save the image from the new tab.'));});
 }
-function downloadCard(p){
+function downloadCard(p,banner){
   if(typeof window.alloProductCardBlob!=='function'){if(window.alloCardDownloadOpen)alloCardDownloadOpen(p.id);return;}
   var done=false,t=setTimeout(function(){if(!done)toast(T('Préparation de la carte…','Preparing the card…'));},250);
-  alloProductCardBlob(p.id).then(function(b){
+  alloProductCardBlob(p.id,banner).then(function(b){
     done=true;clearTimeout(t);
     var url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=fileName(p,'png');
     document.body.appendChild(a);a.click();a.remove();setTimeout(function(){try{URL.revokeObjectURL(url);}catch(_){}},4000);
@@ -28875,8 +28948,8 @@ function copyLink(p){
   function fb(){try{var t=document.createElement('textarea');t.value=url;t.style.cssText='position:fixed;left:-999px';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();ok();}catch(e){err(e);try{prompt(T('Copiez le lien :','Copy the link:'),url);}catch(_){}}}
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(ok,fb);else fb();
 }
-function share(p){
-  try{if(typeof window.alloShareProductCard==='function'){alloShareProductCard(p.id);return;}}catch(e){err(e);}
+function share(p,banner){
+  try{if(typeof window.alloShareProductCard==='function'){alloShareProductCard(p.id,banner);return;}}catch(e){err(e);}
   try{shareProductText(p.id);}catch(e){err(e);}
 }
 function actions(p,ctx){
@@ -28884,9 +28957,9 @@ function actions(p,ctx){
   try{fav=!!(u&&isInWishlist(p.id));}catch(_){}
   var stock=1;try{stock=getProductAvailableStock(p);}catch(_){}
   var canBuy=ctx.canBuy!=null?ctx.canBuy:!!(u&&u.role==='client');
-  list.push({ic:'⬇️',t:T('Télécharger la carte','Download the card'),s:T('Au choix : telle quelle ou carte complète','Your choice: as is or full card'),f:function(){if(window.alloCardDownloadOpen)alloCardDownloadOpen(p.id);else downloadCard(p);}});
+  list.push({ic:'⬇️',t:T('Télécharger la carte','Download the card'),s:T('Au choix : telle quelle ou carte complète','Your choice: as is or full card'),f:function(){if(window.alloCardDownloadOpen)alloCardDownloadOpen(p.id,ctx.banner);else downloadCard(p);}});
   if(imgOf(p))list.push({ic:'🖼️',t:T('Télécharger la photo','Download the photo'),f:function(){savePhoto(p);}});
-  list.push({ic:'📤',t:T('Partager','Share'),f:function(){share(p);}});
+  list.push({ic:'📤',t:T('Partager','Share'),f:function(){share(p,ctx.banner);}});
   list.push({ic:'🔗',t:T('Copier le lien','Copy link'),f:function(){copyLink(p);}});
   list.push({ic:fav?'💔':'❤️',t:fav?T('Retirer des favoris','Remove from favorites'):T('Ajouter aux favoris','Add to favorites'),f:function(){try{toggleWishlist(p.id);}catch(e){err(e);}}});
   if(canBuy&&!own&&stock>0)list.push({ic:'🛒',t:T('Ajouter au panier','Add to cart'),f:function(){try{addToCart(p.id,null);}catch(e){err(e);}}});
@@ -28907,9 +28980,10 @@ function open(pid,btn){
   var p=P(pid);if(!p)return;
   ensure();
   var host=btn&&btn.closest?btn.closest('[data-can-buy]'):null;
-  var ctx={canBuy:host?host.getAttribute('data-can-buy')==='1':null};
+  var ban=btn&&btn.closest?btn.closest('.adb'):null;
+  var ctx={canBuy:host?host.getAttribute('data-can-buy')==='1':null,banner:ban?{kind:ban.getAttribute('data-adkind')||'ad',ends_at:ban.getAttribute('data-ends')||''}:null};
   var list=actions(p,ctx);cur={pid:pid,list:list};
-  try{if(typeof window.alloProductCardBlob==='function')alloProductCardBlob(pid).catch(function(){});}catch(e){err(e);} /* carte préparée pendant que le menu est ouvert */
+  try{if(typeof window.alloProductCardBlob==='function')alloProductCardBlob(pid,ctx.banner).catch(function(){});}catch(e){err(e);} /* carte préparée pendant que le menu est ouvert */
   var th=imgOf(p),h=hueOf(p);
   var rows=list.map(function(a,i){
     if(a.sep)return '<div class="pcm-sep"></div>';
@@ -28931,6 +29005,51 @@ function open(pid,btn){
 }
 window.alloCardMenu={open:open,close:close};
 
+/* ---------- Cartes préparées à l'avance (téléchargement / partage instantanés) ---------- */
+(function(){
+  if(!('IntersectionObserver' in window))return;
+  try{if(navigator.connection&&navigator.connection.saveData)return;}catch(_){}
+  var seen={},queue=[],busy=false,count=0,MAX=80,lastScroll=0,io,mo,tmr;
+  document.addEventListener('scroll',function(){lastScroll=Date.now();},true);
+  function modalOpen(){var m=document.getElementById('cdlModal');return !!(m&&m.classList.contains('show'));}
+  function pump(){
+    if(busy||!queue.length)return;
+    if(document.hidden||modalOpen()||Date.now()-lastScroll<700){setTimeout(pump,800);return;}
+    busy=true;
+    var it=queue.shift();
+    var run=function(){
+      var p=window.alloProductCardBlob?alloProductCardBlob(it.pid,it.banner):Promise.resolve();
+      p.catch(function(){}).then(function(){busy=false;setTimeout(pump,200);});
+    };
+    if(window.requestIdleCallback)requestIdleCallback(run,{timeout:4000});else setTimeout(run,300);
+  }
+  function enqueue(el){
+    var banner=null,pid=el.getAttribute('data-product-id');
+    if(el.classList.contains('adb')){pid=el.getAttribute('data-product-id-ad');banner={kind:el.getAttribute('data-adkind')||'ad',ends_at:el.getAttribute('data-ends')||''};}
+    if(!pid)return;
+    var key=pid+(banner?'|'+banner.kind:'');
+    if(seen[key]||count>=MAX)return;
+    seen[key]=1;count++;queue.push({pid:pid,banner:banner});pump();
+  }
+  io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){io.unobserve(e.target);enqueue(e.target);}});},{rootMargin:'250px'});
+  function scan(){
+    try{document.querySelectorAll('.product-card[data-product-id],.adb[data-product-id-ad]').forEach(function(el){if(!el.__pcmObs){el.__pcmObs=1;io.observe(el);}});}catch(e){err(e);}
+  }
+  window.alloCardScan=function(){seen={};count=0;scan();};
+  mo=new MutationObserver(function(){clearTimeout(tmr);tmr=setTimeout(scan,900);});
+  function start(){scan();mo.observe(document.body,{childList:true,subtree:true});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+  /* après création / modification d'un produit : la carte est refaite tout de suite */
+  var _sp=window.saveProduct;
+  if(typeof _sp==='function'){
+    window.saveProduct=function(){
+      var r=_sp.apply(this,arguments);
+      try{Promise.resolve(r).then(function(){setTimeout(function(){window.alloCardScan();},1200);});}catch(e){err(e);}
+      return r;
+    };
+  }
+})();
+
 /* ---------- Bannière publicitaire ---------- */
 function two(n){return(n<10?'0':'')+n;}
 function remain(end){
@@ -28949,9 +29068,11 @@ window.alloAdBanner=function(ad,p,canAdd){
   var badge=(promo&&pct>0)?('−'+pct+'%'):(function(){try{var rv=(data.reviews||[]).filter(function(r){return String(r.productId)===String(p.id);});if(rv.length)return String(Math.min(99,Math.round(rv.reduce(function(s,r){return s+(Number(r.stars)||0);},0)/rv.length*20)));}catch(_){}return '★';})();
   var cat='';try{cat=((typeof getProductCats==='function'?getProductCats(p):[])[0]||p.cat||'');cat=typeof tCat==='function'?tCat(cat):cat;}catch(_){}
   var shop=shopOf(p),sub=[cat,shop].filter(Boolean).join(' · ');
+  var isPromo=!!(ad&&ad.kind==='promo');
   var nm=nameOf(p),icon=p.icon||'📦';
-  return '<div class="adb" style="--h:'+h+'" data-product-id-ad="'+pid+'" data-can-buy="'+(canAdd?1:0)+'" role="button" tabindex="0" onclick="alloAdOpen(event,\''+pid+'\')">'
-    +'<span class="adb-tag">📢 '+esc(T('Sponsorisé','Sponsored'))+'</span>'+btnHTML(p.id)
+  return '<div class="adb'+(isPromo?' adb-promo':'')+'" style="--h:'+(isPromo?330:h)+'" data-product-id-ad="'+pid+'" data-adkind="'+(isPromo?'promo':'ad')+'" data-ends="'+esc(ad.ends_at||'')+'" data-can-buy="'+(canAdd?1:0)+'" role="button" tabindex="0" onclick="alloAdOpen(event,\''+pid+'\')">'
+    +'<i class="adb-fx"></i><i class="adb-glow"></i>'
+    +'<span class="adb-tag">'+(isPromo?'🔥 '+esc(T('Promotion','Promotion'))+(pct>0?' −'+pct+'%':''):'📢 '+esc(T('Sponsorisé','Sponsored')))+'</span>'+btnHTML(p.id)
     +'<div class="adb-title">'+esc(nm)+'</div>'
     +'<div class="adb-sub">'+esc(sub||T('Offre à la une','Featured offer'))+'</div>'
     +'<div class="adb-stage">'
@@ -28962,9 +29083,12 @@ window.alloAdBanner=function(ad,p,canAdd){
         +'<div class="tk-stars">'+stars(p)+'</div><span class="tk-cta">'+esc(T('VOIR L’OFFRE','VIEW OFFER'))+' ›</span></div>'
         +'<div class="tk-side"><i>ALLO</i></div></div>'
     +'</div>'
-    +'<div class="adb-end">'+esc(T('L’offre se termine dans','The offer ends in'))+'<b class="adb-cd" data-end="'+esc(ad.ends_at)+'">'+esc(remain(ad.ends_at))+'</b></div>'
+    +(ad.ends_at&&!isNaN(new Date(ad.ends_at).getTime())
+      ?'<div class="adb-end">'+esc(isPromo?T('La promo se termine dans','The promotion ends in'):T('L’offre se termine dans','The offer ends in'))+'<b class="adb-cd" data-end="'+esc(ad.ends_at)+'">'+esc(remain(ad.ends_at))+'</b></div>'
+      :'<div class="adb-end"><b class="adb-cd">'+esc(T('Promotion en cours','Promotion in progress'))+'</b></div>')
   +'</div>';
 };
+window.alloPromoCard=function(p,canAdd){return window.alloAdBanner({kind:'promo',ends_at:(p.promo&&p.promo.endsAt)||''},p,canAdd);};
 window.alloAdOpen=function(ev,pid){
   try{if(ev&&ev.target&&ev.target.closest&&ev.target.closest('.pcm-btn'))return;}catch(_){}
   try{ensureProductView(pid);}catch(_){}
