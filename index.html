@@ -16423,6 +16423,7 @@ function renderAccountSellerProducts() {
 
   let products = (data.products || []).filter(function (p) {
     if (!p) return false;
+    if (p.attrs && p.attrs.type === 'service') return false; /* services et emplois : section « Mes services & annonces » */
     const sid = String(p.shopId || '');
     const ownerId = String(p.ownerId || '');
     const productCompanyId = String(p.companyId || '');
@@ -16586,11 +16587,11 @@ function renderAccount() {
   if (currentUser.role === 'entreprise') {
     // Profil = identité du compte + Mes produits uniquement.
     // Les réglages de l’entreprise sont dans Paramètres.
-    extra.innerHTML = sellerProductsHTML;
+    extra.innerHTML = sellerProductsHTML + (window.alloMyAdsHTML ? window.alloMyAdsHTML() : '');
   } else if (currentUser.role === 'boutique') {
     // Profil = identité du compte + Mes produits uniquement.
     // Les réglages de la boutique sont dans Paramètres.
-    extra.innerHTML = sellerProductsHTML;
+    extra.innerHTML = sellerProductsHTML + (window.alloMyAdsHTML ? window.alloMyAdsHTML() : '');
   } else if (currentUser.role === 'client') {
     const company = data.companies.find(c => c.id === currentUser.companyId);
     extra.innerHTML = `
@@ -25320,7 +25321,7 @@ html body .order-role-badge{color:#ffb3c7!important}
   }
   function download(){
     var b = state.blobs[state.mode]; if (!b) return;
-    var fname = 'carte-' + state.name + (state.mode === 'peek' ? '-apercu' : (state.mode === 'banner' ? '-banniere' : '')) + '.png';
+    var fname = 'carte-' + state.name + (state.mode === 'peek' ? '-apercu' : (state.mode === 'banner' ? '-banniere' : '')) + (/jpeg/.test((state.blobs[state.mode] || {}).type || '') ? '.jpg' : '.png');
     var a = document.createElement('a'); a.href = state.urls[state.mode]; a.download = fname;
     document.body.appendChild(a); a.click(); a.remove();
   }
@@ -25332,17 +25333,50 @@ html body .order-role-badge{color:#ffb3c7!important}
     });
     return net;
   }
+  /* styles par défaut d'une balise (iframe vierge) : on ne recopie que ce qui diffère → SVG 20× plus léger */
+  var defFrame = null, defCache = {};
+  function defaultsFor(tag){
+    if (defCache[tag]) return defCache[tag];
+    try {
+      if (!defFrame) {
+        defFrame = document.createElement('iframe');
+        defFrame.setAttribute('aria-hidden', 'true'); defFrame.tabIndex = -1;
+        defFrame.style.cssText = 'position:fixed;left:-9999px;top:0;width:0;height:0;border:0;visibility:hidden';
+        document.body.appendChild(defFrame);
+        var d0 = defFrame.contentDocument; d0.open(); d0.write('<!doctype html><html><body></body></html>'); d0.close();
+      }
+      var d = defFrame.contentDocument, el = d.createElement(tag); d.body.appendChild(el);
+      var cs = defFrame.contentWindow.getComputedStyle(el), m = {};
+      for (var i = 0; i < cs.length; i++) m[cs[i]] = cs.getPropertyValue(cs[i]);
+      d.body.removeChild(el);
+      return (defCache[tag] = m);
+    } catch (_) { return (defCache[tag] = null); }
+  }
+  var HTMLNS = 'http://www.w3.org/1999/xhtml';
+  var SKIP_PROP = /^(animation|transition|scroll|overscroll|cursor|pointer-events|user-select|-webkit-user|will-change|touch-action|-webkit-tap|view-transition|container|contain|page|caret|counter|quotes|ruby|text-emphasis|shape-(margin|outside|image)|offset|forced-color|print-color|app-region|math|interpolate|anchor|position-|inset-(block|inline)|margin-(block|inline)|padding-(block|inline)|border-(block|inline|start|end)|block-size|inline-size|min-(block|inline)|max-(block|inline)|overflow-(block|inline|anchor)|text-wrap|-webkit-locale|-webkit-rtl|-webkit-writing|text-size-adjust|speak|baseline|dominant|alignment|d$|cx$|cy$|r$|rx$|ry$|x$|y$|vector|-webkit-box-(align|direction|flex|ordinal|pack)$|zoom$)/;
   /* rendu natif (SVG foreignObject) : aucune bibliothèque ni réseau requis */
   function nativeRender(frame, w, h, px){
     return new Promise(function(res, rej){
       try {
+        var PF = window.__alloProf, T0 = performance.now();
         var srcEls = [frame].concat(Array.prototype.slice.call(frame.querySelectorAll('*')));
         var clone = frame.cloneNode(true);
         var cloneEls = [clone].concat(Array.prototype.slice.call(clone.querySelectorAll('*')));
+        var vals = new Map();
         srcEls.forEach(function(el, i){
           var c = cloneEls[i]; if (!c) return;
+          if (el.style && el.style.display === 'none') { c.setAttribute('style', 'display:none'); vals.set(el, {}); return; }
           var cs = getComputedStyle(el), t = '';
-          for (var k = 0; k < cs.length; k++) { var pn = cs[k]; t += pn + ':' + cs.getPropertyValue(pn) + ';'; }
+          var def = (el.namespaceURI === HTMLNS) ? defaultsFor(el.tagName.toLowerCase()) : null;
+          var par = (el !== frame && el.parentElement) ? vals.get(el.parentElement) : null;
+          var mine = {};
+          for (var k = 0; k < cs.length; k++) {
+            var pn = cs[k]; if (SKIP_PROP.test(pn)) continue;
+            var v = cs.getPropertyValue(pn);
+            mine[pn] = v;
+            if (!def || def[pn] !== v || (par && par[pn] !== v) || (!par && el === frame && def[pn] !== v)) t += pn + ':' + v + ';';
+          }
+          vals.set(el, mine);
           c.setAttribute('style', t);
           ['::before', '::after'].forEach(function(ps){
             try {
@@ -25357,22 +25391,28 @@ html body .order-role-badge{color:#ffb3c7!important}
           });
           if (c.tagName === 'SCRIPT') c.parentNode && c.parentNode.removeChild(c);
         });
+        var T1 = performance.now();
         clone.style.margin = '0'; clone.style.transform = 'none';
         var xml = new XMLSerializer().serializeToString(clone);
         var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '"><foreignObject x="0" y="0" width="100%" height="100%">' + xml + '</foreignObject></svg>';
         var img = new Image();
-        var to = setTimeout(function(){ rej(new Error('native timeout')); }, 5000);
+        var to = setTimeout(function(){ rej(new Error('native timeout')); }, 8000);
+        var T2 = performance.now();
         img.onload = function(){
           clearTimeout(to);
           try {
+            var T3 = performance.now();
             var cv = document.createElement('canvas');
             cv.width = Math.round(w * px); cv.height = Math.round(h * px);
-            var ctx = cv.getContext('2d'); ctx.scale(px, px); ctx.drawImage(img, 0, 0, w, h);
-            cv.toBlob(function(b){ b ? res(b) : rej(new Error('blob')); }, 'image/png');
+            var ctx = cv.getContext('2d');
+            ctx.fillStyle = '#0a0c18'; ctx.fillRect(0, 0, cv.width, cv.height); /* fond opaque : JPEG */
+            ctx.scale(px, px); ctx.drawImage(img, 0, 0, w, h);
+            var T4 = performance.now();
+            cv.toBlob(function(b){ if (PF) PF.push({ styles: Math.round(T1 - T0), serialize: Math.round(T2 - T1), svgKB: Math.round(svg.length / 1024), decode: Math.round(T3 - T2), draw: Math.round(T4 - T3), encode: Math.round(performance.now() - T4), px: px, w: cv.width, h: cv.height }); b ? res(b) : rej(new Error('blob')); }, 'image/jpeg', 0.82); /* ~20× plus rapide à encoder que le PNG */
           } catch (e) { rej(e); }
         };
         img.onerror = function(){ clearTimeout(to); rej(new Error('native img')); };
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); /* data: (pas blob:) sinon le canvas est « tainted » */
       } catch (e) { rej(e); }
     });
   }
@@ -25380,10 +25420,11 @@ html body .order-role-badge{color:#ffb3c7!important}
   function imgToData(im){
     try {
       if (!im.complete || !im.naturalWidth) return null;
-      var m = Math.min(1, 900 / Math.max(im.naturalWidth, im.naturalHeight));
+      var m = Math.min(1, 560 / Math.max(im.naturalWidth, im.naturalHeight));
       var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * m)); c.height = Math.max(1, Math.round(im.naturalHeight * m));
       c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-      return c.toDataURL('image/png');
+      var png = /\.png(\?|#|$)|^data:image\/(png|webp|gif)/i.test(im.currentSrc || im.src || ''); /* PNG/WebP : on garde la transparence */
+      return png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.9);
     } catch (e) { return null; }
   }
   function liveData(list){ for (var i = 0; list && i < list.length; i++) { var d = imgToData(list[i]); if (d) return d; } return null; }
@@ -25444,9 +25485,9 @@ html body .order-role-badge{color:#ffb3c7!important}
     var sc = Math.max(1, Math.min(1.2, (window.innerWidth * 0.9) / BASE, (window.innerHeight * 0.84) / prevSc));
     var ratio = (BASE * sc) / cardW;
     if (isB) ratio = 1;
-    var px = Math.max(1.5, Math.min(3, (window.devicePixelRatio || 1) * 1.5)) * ratio;
+    var px = Math.min(3, 960 / ((cardW + 2 * Math.round(cardW * (isB ? 0.05 : 0.34))) || 960));
     var h = Math.ceil(frame.getBoundingClientRect().height);
-    px = Math.min(px, 2400 / Math.max(width, h || 1));
+    px = Math.min(px, 1800 / Math.max(width, h || 1));
     function viaH2I(lib){
       var opt = { pixelRatio: px, width: width, height: h, cacheBust: false, style: { margin: '0', transform: 'none' } };
       return lib.toBlob(frame, opt).catch(function(){ opt.fontEmbedCSS = ''; opt.skipFonts = true; return lib.toBlob(frame, opt); });
@@ -25465,6 +25506,25 @@ html body .order-role-badge{color:#ffb3c7!important}
       return nativeRender(frame, width, h, px).catch(function(e){ console.warn('native failed, fallback h2i', e); return loadH2I().then(viaH2I).then(function(b){ if (!b) throw new Error('empty'); return b; }); }).catch(function(e){ console.warn('h2i failed, fallback h2c', e); return viaH2C(); });
     }).then(function(b){ done(); return b; }, function(e){ done(); throw e; });
   }
+  /* Rendu d'une carte HTML déjà prête (services, emplois) : même moteur natif, aucune bibliothèque externe */
+  function renderCardHTML(html, W){
+    var padX = 28, padY = 28, host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;width:' + (W + 2 * padX) + 'px';
+    host.innerHTML = '<div style="box-sizing:border-box;display:flex;justify-content:center;align-items:center;padding:' + padY + 'px ' + padX + 'px;width:' + (W + 2 * padX) + 'px;background:radial-gradient(120% 90% at 50% 40%,#252a4a 0%,#14172b 55%,#0a0c18 100%)">' + html + '</div>';
+    document.body.appendChild(host);
+    var frame = host.firstElementChild, node = frame.firstElementChild;
+    node.style.cssText += ';animation:none!important;transition:none!important;transform:none!important;opacity:1!important;margin:0!important;width:' + W + 'px;';
+    node.querySelectorAll('.svc-hide,.jcard-hide,.pcm-btn').forEach(function(x){ x.style.display = 'none'; });
+    var done = function(){ if (host.parentNode) host.parentNode.removeChild(host); };
+    var w = W + 2 * padX;
+    return inlineImages(host).then(function(){ return waitImgs(host); }).then(function(){
+      return new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
+    }).then(function(){
+      var h = Math.ceil(frame.getBoundingClientRect().height);
+      return nativeRender(frame, w, h, Math.min(3, 960 / w, 1800 / Math.max(w, h)));
+    }).then(function(b){ done(); return b; }, function(e){ done(); throw e; });
+  }
+  window.alloRenderCardHTML = renderCardHTML;
   /* Rendu de la carte produit en image, pour le partage (boutons d'action masqués) */
   function buildProductCardBlob(pid, banner){
     var prod = null;
@@ -25473,6 +25533,10 @@ html body .order-role-badge{color:#ffb3c7!important}
     var el = null;
     try { el = document.querySelector('.product-card[data-product-id="' + String(pid).replace(/[^\w-]/g, '') + '"]'); } catch (_) { window.__alloErr && window.__alloErr(_); }
     el = null; /* toujours la carte complète (comme l'aperçu), jamais la version compacte de la liste */
+    if (prod.attrs && prod.attrs.type === 'service') { /* service / emploi : carte pleine largeur */
+      var sh = prod.attrs.kind ? (window.alloJobCardHTML ? window.alloJobCardHTML(prod, { exp: true }) : '') : (window.alloSvcCardHTML ? window.alloSvcCardHTML(prod, { exp: true }) : '');
+      if (sh) return renderCardHTML(sh, 360);
+    }
     var prev = state.src;
     state.src = { el: null, pid: pid, prod: prod, showAdd: true, compact: false, banner: banner || null };
     state.shareMode = false; /* on garde tous les boutons */
@@ -25485,13 +25549,13 @@ html body .order-role-badge{color:#ffb3c7!important}
     try {
       var p = (data.products || []).find(function(x){ return String(x.id) === String(pid); });
       if (!p) return '';
-      var sg = [p.name, p.price, p.image || p.img || (p.images && p.images[0]) || '', p.stock, (typeof lang !== 'undefined' ? lang : ''), p.cat || '', (p.promo ? (p.promo.pct + '/' + p.promo.endsAt) : '')].join('|');
+      var sg = [p.name, p.price, p.image || p.img || (p.images && p.images[0]) || '', p.stock, (typeof lang !== 'undefined' ? lang : ''), p.cat || '', (p.promo ? (p.promo.pct + '/' + p.promo.endsAt) : ''), (p.description || '').length + ':' + (p.description || '').slice(0, 40), (p.attrs ? JSON.stringify(p.attrs).slice(0, 200) : '')].join('|');
       if (banner) sg += '|' + banner.kind + '|' + (banner.ends_at || '') + '|h' + Math.floor(Date.now() / 3600000); /* le compte à rebours est dessiné dans l'image : on la refait chaque heure */
       return sg;
     } catch (_) { return ''; }
   }
   /* Cache persistant : la carte déjà générée est gardée sur l'appareil (fonctionne sans connexion) */
-  var IDB_V = 'v1', idbP = null;
+  var IDB_V = 'v2', idbP = null;
   function idb(){
     if (idbP) return idbP;
     idbP = new Promise(function(res){
@@ -26889,8 +26953,8 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
     gen.then(function(blob){
       if(cur.t!==token)return;
       var slug=String(nameOf(p)).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'produit';
-      cur.blob=blob;cur.url=URL.createObjectURL(blob);cur.name='allo-'+slug+'.png';
-      try{cur.file=new File([blob],cur.name,{type:'image/png'});}catch(_){cur.file=null;}
+      cur.blob=blob;cur.url=URL.createObjectURL(blob);cur.name='allo-'+slug+(/jpeg/.test(blob.type)?'.jpg':'.png');
+      try{cur.file=new File([blob],cur.name,{type:blob.type||'image/png'});}catch(_){cur.file=null;}
       modal.innerHTML=box('<img class="sh-prev" alt="" src="'+cur.url+'"><p class="fx-muted" style="text-align:center">'+esc(textOf(p))+'</p><div class="sh-btns"><button type="button" class="btn btn-accent" onclick="alloShare.go()">📤 '+T('Partager la carte et le lien','Share the card and link')+'</button><div class="sh-two"><button type="button" class="btn btn-ghost" onclick="alloShare.save()">⬇ '+T('Enregistrer l’image','Save image')+'</button><button type="button" class="btn btn-ghost" onclick="alloShare.copy()">🔗 '+T('Copier le lien','Copy link')+'</button></div><div class="sh-two"><button type="button" class="btn btn-ghost" onclick="alloShare.wa()">🟢 WhatsApp</button><button type="button" class="btn btn-ghost" onclick="alloShare.fb()">🔵 Facebook</button></div></div>');
     }).catch(function(e){
       err(e);if(cur.t!==token)return;
@@ -26914,7 +26978,7 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
     else copy();
   }
   function save(){
-    if(!cur.url)return;var a=document.createElement('a');a.href=cur.url;a.download=cur.name||'allo-produit.png';document.body.appendChild(a);a.click();a.remove();
+    if(!cur.url)return;var a=document.createElement('a');a.href=cur.url;a.download=cur.name||'allo-produit.jpg';document.body.appendChild(a);a.click();a.remove();
   }
   function copy(){
     var p=cur.p;if(!p)return;var t=textOf(p)+'\n'+linkOf(cur.pid);
@@ -27599,23 +27663,42 @@ const need=()=>{if(!U()){alert('Connectez-vous pour continuer.');return false}re
 const fail=e=>{console.warn('[Allo svc]',e);alert('Action impossible : '+(e&&e.message||e))};
 
 /* ---------- Cartes ---------- */
+const SV_HUES=[172,200,222,252,278,22,42,140];
+const svHue=c=>{let h=0;for(const ch of String(c||'service'))h=(h*31+ch.charCodeAt(0))%997;return SV_HUES[h%SV_HUES.length]};
+const svEn=()=>typeof lang!=='undefined'&&lang==='en';
+const svT=(f,e)=>svEn()?e:f;
 function svcCard(p,o){
   o=o||{};
   const exp=!!o.exp,u=U(),mine=!!(u&&p.ownerId&&String(p.ownerId)===String(u.id));
   const a=p.attrs||{},revs=(D().reviews||[]).filter(r=>String(r.productId)===String(p.id));
-  const note=revs.length?(revs.reduce((s,r)=>s+(+r.stars||0),0)/revs.length).toFixed(1)+' ★ ('+revs.length+')':'Nouveau';
-  const price=a.mode==='quote'?'Sur devis':(a.mode==='from'?'dès ':'')+fc(p.price)+(a.mode==='hour'?' / h':'');
+  const note=revs.length?(revs.reduce((s,r)=>s+(+r.stars||0),0)/revs.length).toFixed(1)+' ★ ('+revs.length+')':svT('Nouveau','New');
+  const price=a.mode==='quote'?'<span class="sv2-q">'+svT('Sur devis','On quote')+'</span>':(a.mode==='from'?'<small>'+svT('dès','from')+'</small>':'')+fc(p.price)+(a.mode==='hour'?'<small>/ h</small>':'');
   const shop=(typeof getShopName==='function'?getShopName(p.shopId):'')||'';
-  const tools=exp?'':'<div class="svc-tools svc-hide">'
-    +'<button type="button" class="svc-ib" aria-label="Télécharger la carte" onclick="event.stopPropagation();alloJobs.download(\''+p.id+'\')">⬇</button>'
-    +(!mine?'<button type="button" class="svc-ib" aria-label="Signaler" onclick="event.stopPropagation();alloFx.report(\'product\',\''+p.id+'\')">🚩</button>':'')
-    +(mine?'<button type="button" class="svc-ib del" aria-label="Supprimer le service" onclick="event.stopPropagation();alloJobs.remove(\''+p.id+'\')">🗑</button>':'')
+  const desc=String(p.description||'').trim();
+  const id=esc(p.id);
+  const tools=exp?'':'<div class="svc-tools svc-hide sv2-tools">'
+    +'<button type="button" class="svc-ib" aria-label="'+svT('Télécharger la carte','Download the card')+'" onclick="event.stopPropagation();alloJobs.download(\''+id+'\')">⬇</button>'
+    +(!mine?'<button type="button" class="svc-ib" aria-label="'+svT('Signaler','Report')+'" onclick="event.stopPropagation();alloFx.report(\'product\',\''+id+'\')">🚩</button>':'')
     +'</div>';
-  return '<div class="product-card svc-card"'+(exp?'':' data-product-id="'+p.id+'" onclick="alloSvc.request(\''+p.id+'\')"')+'>'
-   +tools+'<span class="svc-badge">🛠 SERVICE</span><div class="svc-ico">'+esc(p.icon&&p.icon!=='📦'?p.icon:'🛠')+'</div>'
-   +'<div class="svc-name">'+esc(p.name)+'</div><div class="svc-meta">'+esc(p.cat||'')+(a.zone?' · 📍 '+esc(a.zone):'')+'</div>'
-   +'<div class="svc-meta">'+esc(shop)+' · '+note+'</div><div class="svc-price">'+price+'</div>'
-   +(exp?'':(mine?'<button class="btn btn-accent btn-sm svc-hide" onclick="event.stopPropagation();alloSvc.open(\'requests\')">Voir les demandes</button>':'<button class="btn btn-accent btn-sm svc-hide" onclick="event.stopPropagation();alloSvc.request(\''+p.id+'\')">Demander</button>'))+'</div>';
+  const acts=exp?'':'<div class="sv2-acts svc-hide">'
+    +'<button type="button" class="sv2-more" aria-expanded="false" onclick="event.stopPropagation();alloSvc.toggleDesc(this)"><span>'+svT('Voir la description','View description')+'</span><i>▾</i></button>'
+    +(mine?'<div class="sv2-mine">'+svT('Votre service','Your service')+'</div>':'<button type="button" class="sv2-go" onclick="event.stopPropagation();alloSvc.request(\''+id+'\')">'+svT('Demander','Request')+' ›</button>')
+    +'</div>';
+  return '<div class="product-card svc-card sv2'+(exp?' open':'')+'" style="--h:'+svHue(p.cat)+'"'+(exp?'':' data-product-id="'+id+'"')+'>'
+   +'<i class="sv2-fx"></i><i class="sv2-glow"></i>'+tools
+   +'<div class="sv2-top"><span class="sv2-badge">🛠 '+svT('SERVICE','SERVICE')+'</span>'+(p.cat?'<span class="sv2-cat">'+esc(p.cat)+'</span>':'')+'</div>'
+   +'<div class="sv2-main"><div class="sv2-ico">'+esc(p.icon&&p.icon!=='📦'?p.icon:'🛠')+'</div>'
+     +'<div class="sv2-txt"><div class="sv2-name">'+esc(p.name)+'</div>'
+     +'<div class="sv2-chips">'+(a.zone?'<span>📍 '+esc(a.zone)+'</span>':'')+(shop?'<span>🏪 '+esc(shop)+'</span>':'')+'<span>⭐ '+note+'</span></div></div></div>'
+   +'<div class="sv2-desc"><div class="sv2-desc-in">'+(desc?esc(desc):'<em>'+svT('Aucune description fournie.','No description provided.')+'</em>')+'</div></div>'
+   +'<div class="sv2-price">'+price+'</div>'
+   +acts+'</div>';
+}
+function toggleDesc(btn){
+  const c=btn&&btn.closest('.sv2');if(!c)return;
+  const on=c.classList.toggle('open');
+  btn.setAttribute('aria-expanded',on?'true':'false');
+  const sp=btn.querySelector('span');if(sp)sp.textContent=on?svT('Masquer la description','Hide description'):svT('Voir la description','View description');
 }
 window.alloSvcCardHTML=svcCard;
 const _pc=window.productCardHTML;
@@ -27632,27 +27715,32 @@ if(typeof _gp==='function')window.getEffectivePriceForBuyer=function(p){
 };
 
 /* ---------- Publier un service ---------- */
-function publish(){
+function publish(eid){
   if(!need())return;
   if(!isSeller())return alert('Un compte boutique ou entreprise est nécessaire pour publier un service.');
-  panel('🛠 Publier un service','<label>Titre</label><input id="sv-n" placeholder="Ex : Maçon — murs, dalles, carrelage">'
+  const orig=eid?P(eid):null;
+  panel(orig?'✏️ Modifier le service':'🛠 Publier un service','<label>Titre</label><input id="sv-n" placeholder="Ex : Maçon — murs, dalles, carrelage">'
    +'<label>Catégorie</label><select id="sv-c">'+CATS.map(c=>'<option>'+c+'</option>').join('')+'</select>'
    +'<label>Type de tarif</label><select id="sv-m">'+Object.keys(MODES).map(k=>'<option value="'+k+'">'+MODES[k]+'</option>').join('')+'</select>'
    +'<label>Prix (FCFA, vide si sur devis)</label><input id="sv-p" type="number" inputmode="numeric">'
    +'<label>Zone d’intervention</label><input id="sv-z" placeholder="Ville / quartier">'
    +'<label>Description</label><textarea id="sv-d" rows="3"></textarea>'
-   +'<button class="btn btn-accent btn-block" onclick="alloSvc.savePublish()">Publier (gratuit)</button>');
+   +'<button class="btn btn-accent btn-block" onclick="alloSvc.savePublish('+(orig?'\''+esc(orig.id)+'\'':'')+')">'+(orig?'Enregistrer les modifications':'Publier (gratuit)')+'</button>');
+  if(orig){const a=orig.attrs||{},set=(i,v)=>{const e=$('#'+i);if(e&&v!=null)e.value=v};
+    set('sv-n',orig.name);set('sv-c',orig.cat);set('sv-m',a.mode||'fixed');set('sv-p',a.mode==='quote'?'':(orig.price||''));set('sv-z',a.zone||'');set('sv-d',orig.description||'')}
 }
-async function savePublish(){
+async function savePublish(eid){
   try{
     const u=U(),name=$('#sv-n').value.trim(),mode=$('#sv-m').value,price=parseInt($('#sv-p').value,10)||0;
     if(!name||(mode!=='quote'&&!price))return alert('Renseignez le titre et le prix.');
     let shopId=u.shopId;
     if(u.role==='entreprise'){const s=await ensureCompanyCatalogForCurrentUser();shopId=s&&s.id}
     if(!shopId&&typeof getSellerShopIds==='function')shopId=(getSellerShopIds()||[])[0];
+    const orig=eid?P(eid):null;if(orig&&orig.shopId)shopId=orig.shopId;
     const p={name,description:$('#sv-d').value.trim(),price,stock:999,icon:'🛠',cat:$('#sv-c').value,shopId,ownerId:u.id,
-      companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:[],variants:[],attrs:{type:'service',mode,zone:$('#sv-z').value.trim()}};
-    await sbUpsertProduct(p);await sbLoadAllIntoData();renderAll();close();alert('Service publié ✔');
+      companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:[],variants:[],attrs:Object.assign({},orig&&orig.attrs,{type:'service',mode,zone:$('#sv-z').value.trim()})};
+    if(orig){p.id=orig.id;p.hidden=orig.hidden;p.private=orig.private}
+    await sbUpsertProduct(p);await sbLoadAllIntoData();renderAll();close();alert(orig?'Service modifié ✔':'Service publié ✔');
   }catch(e){fail(e)}
 }
 
@@ -27870,6 +27958,7 @@ const api={open(t){({publish:function(){return (window.alloJobs&&window.alloJobs
   close(){const e=$('#svcPanel');if(e)e.style.display='none'},
   copy,codeSave,codeToggle,codeDel,publish,savePublish,request,sendRequest,act,offer,offerAct,drvJoin,drvOnline,jobNew,jobTake,jobAct,SVC_CATS:CATS};
 function close(){api.close()}
+api.toggleDesc=toggleDesc;
 window.alloSvc=api;
 setTimeout(loadAcc,2500);setInterval(()=>{if(U())loadAcc()},120000);
 })();
@@ -28084,13 +28173,13 @@ function jobCard(p,o){
      +'<div class="jcard-tt"><h3 class="jcard-title">'+esc(p.name)+'</h3><div class="jcard-sub">'+sub+'</div></div></div>'
    +'<div class="jcard-chips">'+chips+'</div>'
    +'<div class="jcard-desc"><div><p'+(desc?'':' class="none"')+'>'+(desc?esc(desc):'Aucune description pour le moment.')+'</p>'
-     +(mine&&!pre&&!exp?'<button type="button" class="jcard-del" onclick="alloJobs.remove(\''+pid+'\')">'+ic('trash',14)+'Supprimer l’annonce</button>':'')+'</div></div>'
+     +'</div></div>'
    +'<div class="jcard-foot">'
      +'<button type="button" class="jcard-call" onclick="alloJobs.call(\''+pid+'\')"'+(phone&&!pre?'':' disabled')+'>'+ic('phone',16)+(phone?esc(phone):'Contact non renseigné')+'</button>'
      +(!mine&&p.ownerId?'<button type="button" class="jcard-sq msg jcard-hide" aria-label="Écrire sur la messagerie Allo" onclick="alloJobs.msg(\''+pid+'\')"'+off+'>'+ic('chat',20)+'</button>':'')
      +(!mine&&!pre&&!exp&&p.ownerId&&p.attrs&&p.attrs.kind==='offer'?'<button type="button" class="jcard-sq apply jcard-hide" aria-label="Postuler" onclick="alloFx.apply(\''+pid+'\')">📨</button>':'')
      +(!mine&&!pre&&!exp&&p.ownerId?'<button type="button" class="jcard-sq flag jcard-hide" aria-label="Signaler" onclick="alloFx.report(\'product\',\''+pid+'\')">🚩</button>':'')
-     +(mine&&!pre&&!exp?'<button type="button" class="jcard-sq trash jcard-hide" aria-label="Supprimer l’annonce" onclick="alloJobs.remove(\''+pid+'\')">'+ic('trash',18)+'</button>':'')
+     +''
      +'<button type="button" class="jcard-sq jcard-descbtn jcard-hide" aria-label="Voir la description" aria-expanded="'+open+'" onclick="alloJobs.desc(\''+pid+'\',this)"'+off+'>'+ic('chev',22)+'</button>'
    +'</div></div>';
 }
@@ -28254,13 +28343,13 @@ async function download(pid){
     +'<button type="button" class="js-b" id="jd-share" style="display:none">Partager</button>'
     +'<button type="button" class="js-b main" id="jd-dl" disabled>Télécharger</button></div>','download');
   try{
-    const blob=await renderCard(p);
+    const blob=await (window.alloProductCardBlob?window.alloProductCardBlob(pid):renderCard(p));
     if(SHEET_MODE!=='download')return;
-    const url=URL.createObjectURL(blob),name='carte-'+(String(p.name||'carte').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'carte')+'.png';
+    const url=URL.createObjectURL(blob),name='carte-'+(String(p.name||'carte').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'carte')+(/jpeg/.test(blob.type)?'.jpg':'.png');
     $('#jd-prev').innerHTML='<img alt="Aperçu de la carte" src="'+url+'">';
     const dl=$('#jd-dl');dl.disabled=false;dl.textContent='Télécharger l’image';
     dl.onclick=()=>{const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()};
-    const file=new File([blob],name,{type:'image/png'});
+    const file=new File([blob],name,{type:blob.type||'image/png'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
       const sh=$('#jd-share');sh.style.display='';
       sh.onclick=()=>navigator.share({files:[file],title:p.name}).catch(function(_e){ window.__alloErr && window.__alloErr(_e); });
@@ -28410,25 +28499,44 @@ async function save(){
     let shopId=u.shopId;
     if(u.role==='entreprise'){const s=await ensureCompanyCatalogForCurrentUser();shopId=s&&s.id}
     if(!shopId&&typeof getSellerShopIds==='function')shopId=(getSellerShopIds()||[])[0];
+    const orig=F.eid?P(F.eid):null;if(orig&&orig.shopId)shopId=orig.shopId;
     if(a.photo&&String(a.photo).startsWith('data:')){
       try{a.photo=await sbEnsureDataUrlUploaded('product-images',u.id,a.photo,'job')||a.photo}catch(e){console.warn('[Allo jobs] photo',e)}
     }
     const p={name:d.name,description:d.description,price:d.price,stock:999,icon:a.kind==='offer'?'📢':'🙋',cat:d.cat,shopId,ownerId:u.id,
       companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:[],variants:[],attrs:a};
+    if(orig){p.id=orig.id;p.hidden=orig.hidden;p.private=orig.private}
     await sbUpsertProduct(p);await sbLoadAllIntoData();
     try{renderAll()}catch (e) { window.__alloErr && window.__alloErr(e); }
+    if(orig){F.eid=null;try{alloSvc.close()}catch(e){}toast('Annonce modifiée ✔');return}
     toast(a.kind==='offer'?'Offre d’emploi publiée ✔':'Recherche d’emploi publiée ✔');
     browse(a.kind);
   }catch(e){
     console.warn('[Allo jobs]',e);alert('Publication impossible : '+(e&&e.message||e));
-    if(btn){btn.disabled=false;btn.textContent='Publier l’annonce (gratuit)'}
+    if(btn){btn.disabled=false;btn.textContent=F.eid?'Enregistrer les modifications':'Publier l’annonce (gratuit)'}
   }
 }
 
 /* Rafraîchit la liste des commentaires ouverte si un nouvel avis arrive */
 setInterval(()=>{if(SHEET_MODE==='comments')renderComments(false)},4000);
 
-window.alloJobs={hub,form,browse,kind,filter:renderList,pick,pm,cnt,photo,pickPhoto,pv,save,like,desc,call,msg,comments,send,download,remove,closeSheet};
+function edit(pid){
+  const p=P(pid);if(!p||!need())return;
+  const a=p.attrs||{},kind=a.kind==='seek'?'seek':'offer';
+  form(kind);F.eid=String(p.id);
+  const set=(i,v)=>{const e=$('#'+i);if(e&&v!=null)e.value=v};
+  set('jf-t',p.name);set('jf-c',p.cat);set('jf-d',p.description||'');set('jf-z',a.zone||'');set('jf-x',a.exp||'');set('jf-ph',(a.contact&&a.contact.phone)||'');
+  const pay=a.pay||{};set('jf-pm',pay.mode||'month');set('jf-pa',pay.amount||'');
+  F.contract=a.contract||'';
+  document.querySelectorAll('.jf-chip').forEach(b=>b.classList.toggle('on',b.dataset.v===(a.contract||'Peu importe')));
+  if(a.photo){F.photoMode='upload';F.photoData=a.photo;document.querySelectorAll('#jf-phs button').forEach(b=>b.classList.toggle('on',b.dataset.m==='upload'))}
+  const u=$('#jf-u');if(u)u.checked=!!a.urgent;
+  const h=$('#svcPanel .svc-h b');if(h)h.textContent='✏️ Modifier l’annonce';
+  const go=$('#jf-go');if(go)go.textContent='Enregistrer les modifications';
+  try{cnt()}catch(e){}try{pm()}catch(e){}pv();
+}
+window.alloJobCardHTML=jobCard;
+window.alloJobs={edit,hub,form,browse,kind,filter:renderList,pick,pm,cnt,photo,pickPhoto,pv,save,like,desc,call,msg,comments,send,download,remove,closeSheet};
 })();
 </script>
 
@@ -28774,7 +28882,7 @@ if(typeof _pc==='function')window.productCardHTML=function(p,showAdd,manage,full
   var h=_pc.apply(this,arguments);
   try{
     if(manage&&p)h=h.replace('VAR</button>','VAR</button><button type="button" class="yc-btn" onclick="event.stopPropagation();alloAds.open(\''+sid(p.id)+'\')"><span class="ico">📢</span>PUB</button>');
-    else if(p&&h.indexOf('jcard-tools')>=0&&isSeller()&&isMine(p))h=h.replace('<div class="jcard-tools">','<div class="jcard-tools"><button type="button" class="jcard-ic" aria-label="Publicité" onclick="alloAds.open(\''+sid(p.id)+'\')">📢</button>');
+    /* le bouton Publicité des annonces se trouve maintenant dans le profil */
   }catch(e){window.__alloErr&&window.__alloErr(e);}
   return h;
 };
@@ -28954,7 +29062,7 @@ function downloadCard(p,banner){
   var done=false,t=setTimeout(function(){if(!done)toast(T('Préparation de la carte…','Preparing the card…'));},250);
   alloProductCardBlob(p.id,banner).then(function(b){
     done=true;clearTimeout(t);
-    var url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=fileName(p,'png');
+    var url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download=fileName(p,/jpeg/.test(b.type)?'jpg':'png');
     document.body.appendChild(a);a.click();a.remove();setTimeout(function(){try{URL.revokeObjectURL(url);}catch(_){}},4000);
   }).catch(function(e){done=true;clearTimeout(t);err(e);if(window.alloCardDownloadOpen)alloCardDownloadOpen(p.id);});
 }
@@ -29389,6 +29497,694 @@ window.alloSearchUx={
 /* À l'ouverture de la page : l'historique remplace les anciennes options */
 var _rs=window.renderSearch;
 if(typeof _rs==='function')window.renderSearch=function(){var r=_rs.apply(this,arguments);try{clearBtn();refreshHome();}catch(e){err(e);}return r;};
+})();
+</script>
+
+<style id="alloMyAdsCss">
+.ma-sec{margin-top:18px}
+.ma-h{margin:0 0 4px;font-size:18px}
+.ma-sub{margin:0 0 12px;font-size:12.5px;opacity:.75}
+.ma-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.ma-tile{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:12px 6px;border-radius:14px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.09);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ma-tile .ico{font-size:24px}
+.ma-tile:active{transform:scale(.97);background:rgba(255,255,255,.16)}
+.ma-grp{margin:14px 0 6px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:6px}
+.ma-grp i{font-style:normal;font-size:11px;background:rgba(255,255,255,.16);border-radius:999px;padding:2px 8px}
+.ma-empty{font-size:12.5px;opacity:.7;padding:8px 2px}
+.ma-item{margin-bottom:12px}
+.ma-card{pointer-events:none}
+.ma-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ma-bar button{flex:1 1 auto;min-width:96px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;border-radius:10px;padding:10px 8px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.ma-bar button:active{background:rgba(255,255,255,.2)}
+.ma-bar .ma-del{border-color:rgba(255,120,120,.55);color:#ff9d9d}
+</style>
+<script id="alloMyAds">
+/* Profil : « Mes services & annonces » — publier, modifier, supprimer (uniquement ici). */
+(function(){
+'use strict';
+function err(e){window.__alloErr&&window.__alloErr(e);}
+function en(){return typeof lang!=='undefined'&&lang==='en';}
+function T(f,e){return en()?e:f;}
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function mine(){
+  var u=currentUser;if(!u)return [];
+  return(data.products||[]).filter(function(p){return p&&p.attrs&&p.attrs.type==='service'&&String(p.ownerId)===String(u.id);});
+}
+function item(p){
+  var isJob=!!p.attrs.kind,id=esc(p.id),h='';
+  try{h=productCardHTML(p,false);}catch(e){err(e);}
+  var bar='<button type="button" data-a="edit" data-id="'+id+'">✏️ '+esc(T('Modifier','Edit'))+'</button>'
+    +(isJob?'':'<button type="button" data-a="req">📥 '+esc(T('Demandes','Requests'))+'</button>')
+    +(window.alloAds&&alloAds.open?'<button type="button" data-a="boost" data-id="'+id+'">📢 '+esc(T('Booster','Boost'))+'</button>':'')
+    +'<button type="button" class="ma-del" data-a="del" data-id="'+id+'">🗑 '+esc(T('Supprimer','Delete'))+'</button>';
+  return '<div class="ma-item"><div class="ma-card">'+h+'</div><div class="ma-bar">'+bar+'</div></div>';
+}
+function group(title,ico,list,emptyTxt){
+  return '<div class="ma-grp">'+ico+' '+esc(title)+' <i>'+list.length+'</i></div>'
+    +(list.length?list.map(item).join(''):'<div class="ma-empty">'+esc(emptyTxt)+'</div>');
+}
+window.alloMyAdsHTML=function(){
+  var u=currentUser;
+  if(!u||(u.role!=='boutique'&&u.role!=='entreprise'))return '';
+  var all=mine(),svc=all.filter(function(p){return !p.attrs.kind;}),off=all.filter(function(p){return p.attrs.kind==='offer';}),seek=all.filter(function(p){return p.attrs.kind==='seek';});
+  return '<div class="ma-sec" id="myAdsSec"><h3 class="ma-h">🛠 '+esc(T('Mes services & annonces','My services & listings'))+'</h3>'
+    +'<p class="ma-sub">'+esc(T('Publiez, modifiez ou supprimez vos annonces ici. Ces actions ne sont disponibles que dans votre profil.','Publish, edit or delete your listings here. These actions are only available in your profile.'))+'</p>'
+    +'<div class="ma-tiles">'
+      +'<button type="button" class="ma-tile" data-a="new-svc"><span class="ico">🛠</span>'+esc(T('Un service','A service'))+'</button>'
+      +'<button type="button" class="ma-tile" data-a="new-offer"><span class="ico">📢</span>'+esc(T('Offre d’emploi','Job offer'))+'</button>'
+      +'<button type="button" class="ma-tile" data-a="new-seek"><span class="ico">🙋</span>'+esc(T('Recherche d’emploi','Job search'))+'</button>'
+    +'</div>'
+    +group(T('Mes services','My services'),'🛠',svc,T('Aucun service publié.','No service published.'))
+    +group(T('Mes offres d’emploi','My job offers'),'📢',off,T('Aucune offre d’emploi publiée.','No job offer published.'))
+    +group(T('Mes recherches d’emploi','My job searches'),'🙋',seek,T('Aucune recherche d’emploi publiée.','No job search published.'))
+    +'</div>';
+};
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('#myAdsSec [data-a]');if(!b)return;
+  var a=b.getAttribute('data-a'),id=b.getAttribute('data-id');
+  try{
+    if(a==='new-svc')alloSvc.publish();
+    else if(a==='new-offer')alloJobs.form('offer');
+    else if(a==='new-seek')alloJobs.form('seek');
+    else if(a==='req')alloSvc.open('requests');
+    else if(a==='boost')alloAds.open(id);
+    else if(a==='del')alloJobs.remove(id);
+    else if(a==='edit'){var p=(data.products||[]).find(function(x){return String(x.id)===String(id);});if(p&&p.attrs&&p.attrs.kind)alloJobs.edit(id);else alloSvc.publish(id);}
+  }catch(x){err(x);}
+});
+/* le profil se redessine quand les annonces changent */
+var _ra=window.renderAccount;
+})();
+</script>
+
+<style id="alloSvcCard2Css">
+.product-card.svc-card.sv2{--h:172;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;display:block!important;height:auto!important;padding:16px 14px 14px!important;cursor:default;border-radius:22px!important;color:#fff;border:0!important;
+  background:linear-gradient(150deg,hsl(var(--h) 62% 28%),hsl(var(--h) 72% 12%))!important;
+  box-shadow:0 12px 30px hsla(var(--h),80%,5%,.55),inset 0 0 0 1px hsla(var(--h),90%,72%,.32)!important}
+.sv2-fx{position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(120deg,rgba(255,255,255,.045) 0 8px,transparent 8px 18px)}
+.sv2-glow{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 55% at 100% 0%,hsla(var(--h),95%,62%,.38),transparent 70%),radial-gradient(60% 40% at 0% 100%,hsla(calc(var(--h) + 40),90%,55%,.22),transparent 70%)}
+.sv2-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:3}
+.sv2-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-right:84px}
+.sv2-badge{font:900 10.5px/1 system-ui,sans-serif;letter-spacing:.6px;padding:6px 10px;border-radius:999px;background:linear-gradient(180deg,#ffe27a,#f5b400);color:#2a1a00}
+.sv2-cat{font:800 10.5px/1 system-ui,sans-serif;letter-spacing:.5px;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22)}
+.sv2-main{display:flex;gap:14px;align-items:center;margin:14px 0 10px}
+.sv2-ico{flex:none;width:68px;height:68px;border-radius:20px;display:grid;place-items:center;font-size:36px;background:linear-gradient(145deg,hsl(var(--h) 92% 64%),hsl(calc(var(--h) + 35) 85% 44%));box-shadow:0 8px 22px hsla(var(--h),90%,50%,.5),inset 0 0 0 2px rgba(255,255,255,.4)}
+.sv2-txt{min-width:0;flex:1}
+.sv2-name{font:900 22px/1.15 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 10px rgba(0,0,0,.35);overflow-wrap:anywhere}
+.sv2-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sv2-chips span{font-size:11.5px;padding:4px 9px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.16);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv2-desc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
+.sv2.open .sv2-desc{grid-template-rows:1fr}
+.sv2-desc-in{overflow:hidden;min-height:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.9);white-space:pre-wrap;overflow-wrap:anywhere}
+.sv2.open .sv2-desc-in{padding:10px 12px;margin:4px 0 8px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.12)}
+.sv2-desc-in em{opacity:.7}
+.sv2-price{display:inline-flex;align-items:baseline;gap:6px;margin:8px 0 12px;padding:8px 16px;border-radius:999px;font:900 20px/1.1 "Arial Black",system-ui,sans-serif;color:#2a1a00;background:linear-gradient(180deg,#ffe98a,#f5b400);box-shadow:0 6px 16px rgba(245,180,0,.35),inset 0 0 0 2px rgba(255,255,255,.5)}
+.sv2-price small{font:800 11px/1 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.4px;opacity:.75}
+.sv2-q{font-size:17px}
+.sv2-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sv2-more,.sv2-go,.sv2-mine{min-height:46px;border-radius:14px;font:800 14px/1.1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sv2-more{border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);color:#fff}
+.sv2-more i{font-style:normal;transition:transform .25s}
+.sv2.open .sv2-more i{transform:rotate(180deg)}
+.sv2-go{border:0;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);background:linear-gradient(180deg,#8be22b,#3f9b0b);box-shadow:0 6px 14px rgba(63,155,11,.45),inset 0 0 0 2px rgba(255,255,255,.28)}
+.sv2-mine{border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.8);font-weight:700}
+.sv2-more:active,.sv2-go:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){.sv2-desc,.sv2-more i{transition:none}}
+</style>
+<style id="alloEbooksCss">
+#view-ebooks{padding:12px 12px 90px}
+.eb-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 10px}
+.eb-h h2{margin:0;font-size:24px}
+.eb-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
+.eb-tab{flex:none;border:1.5px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+.eb-tab.on{background:linear-gradient(180deg,#8be22b,#3f9b0b);border-color:transparent}
+.eb-search{width:100%;box-sizing:border-box;border-radius:14px;border:1.5px solid rgba(255,255,255,.3);background:rgba(8,20,60,.6);color:#fff;padding:12px 14px;font:inherit;font-size:15px;margin-bottom:8px}
+.eb-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
+.eb-chip{flex:none;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;cursor:pointer}
+.eb-chip.on{background:#ffd54a;color:#2a1a00;border-color:transparent;font-weight:800}
+.eb-sec{margin:16px 0 8px;font-size:16px;font-weight:900}
+.eb-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.eb-card{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.eb-cover{--h:260;position:relative;aspect-ratio:2/3;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,hsl(var(--h) 70% 42%),hsl(calc(var(--h) + 40) 70% 22%));background-size:cover;background-position:center;box-shadow:0 8px 18px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.25);display:flex;align-items:flex-end;justify-content:center}
+.eb-cover b{padding:10px;font:900 15px/1.15 "Arial Black",system-ui,sans-serif;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,.5);overflow-wrap:anywhere}
+.eb-cover::after{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(90deg,rgba(0,0,0,.35),transparent)}
+.eb-badge{position:absolute;top:8px;left:8px;z-index:2;font:900 11px/1 system-ui,sans-serif;padding:5px 8px;border-radius:999px;color:#fff}
+.eb-badge.promo{background:#ff3d9a}.eb-badge.free{background:#16c34a}.eb-badge.mine{background:#2563eb;left:auto;right:8px}
+.eb-t{margin-top:7px;font-weight:800;font-size:13.5px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.eb-a{font-size:11.5px;opacity:.7;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eb-p{margin-top:3px;font-weight:900;color:#ffd54a;font-size:14px}.eb-p s{opacity:.6;font-weight:600;font-size:12px;margin-left:4px;color:#fff}
+.eb-empty{text-align:center;padding:28px 10px;opacity:.75;font-size:14px}
+.eb-big{display:block;width:100%;border:0;border-radius:14px;padding:14px;font:inherit;font-size:15px;font-weight:900;color:#fff;cursor:pointer;background:linear-gradient(180deg,#8be22b,#3f9b0b);text-shadow:0 1px 2px rgba(0,0,0,.4);box-shadow:0 6px 14px rgba(63,155,11,.4);margin-bottom:12px}
+.eb-big.alt{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}
+/* feuilles */
+.eb-ov{position:fixed;inset:0;z-index:100012;background:rgba(3,8,20,.66);display:flex;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.eb-box{width:min(560px,100%);max-height:92vh;max-height:92dvh;overflow:auto;-webkit-overflow-scrolling:touch;background:#10182f;color:#fff;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.5);animation:ebUp .22s ease-out}
+@keyframes ebUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.eb-box h3{margin:0 0 4px;font-size:18px}
+.eb-x{float:right;background:rgba(255,255,255,.12);border:0;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer}
+.eb-det{display:flex;gap:14px;margin:10px 0}
+.eb-det .eb-cover{width:118px;flex:none}
+.eb-info{min-width:0;flex:1}
+.eb-info h3{font-size:19px;line-height:1.2}
+.eb-meta{font-size:12px;opacity:.75;margin:3px 0}
+.eb-price{font:900 22px/1.1 system-ui,sans-serif;color:#ffd54a;margin-top:6px}.eb-price s{font-size:14px;color:#fff;opacity:.6;margin-left:6px}
+.eb-desc{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.5;opacity:.92;margin:8px 0 14px;max-height:34vh;overflow:auto}
+.eb-note{font-size:12px;opacity:.7;margin:-6px 0 12px}
+.eb-fld{display:block;margin:10px 0 4px;font-size:12px;font-weight:800;opacity:.85}
+.eb-in,.eb-sel,.eb-ta{width:100%;box-sizing:border-box;border-radius:12px;border:1.5px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff;padding:11px 12px;font:inherit;font-size:14.5px}
+.eb-ta{min-height:96px;resize:vertical}
+.eb-sel option{color:#000}
+.eb-row{display:flex;gap:8px}.eb-row>*{flex:1;min-width:0}
+.eb-file{display:flex;align-items:center;gap:10px;padding:10px;border:1.5px dashed rgba(255,255,255,.35);border-radius:12px;cursor:pointer;font-size:13px}
+.eb-file img{width:42px;height:58px;object-fit:cover;border-radius:6px}
+.eb-sw{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.07);margin-top:10px;font-size:13.5px}
+.eb-sw small{display:block;opacity:.65;font-size:11.5px;margin-top:2px}
+.eb-sw input{width:46px;height:26px;appearance:none;-webkit-appearance:none;border-radius:999px;background:rgba(255,255,255,.25);position:relative;flex:none;cursor:pointer;transition:background .2s}
+.eb-sw input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+.eb-sw input:checked{background:#16c34a}.eb-sw input:checked::after{transform:translateX(20px)}
+.eb-sw input:disabled{opacity:.5}
+.eb-btns{display:flex;gap:8px;margin-top:14px}.eb-btns button{flex:1;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:800;cursor:pointer}
+.eb-no{background:rgba(255,255,255,.12);color:#fff}.eb-ok{background:linear-gradient(180deg,#8be22b,#3f9b0b);color:#fff}.eb-danger{background:#b91c1c;color:#fff}
+.eb-btns button:disabled{opacity:.55}
+.eb-net{font-size:12.5px;margin-top:6px;color:#9be37a}
+/* espace auteur */
+.eb-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.eb-stat{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:10px 6px;text-align:center}
+.eb-stat b{display:block;font-size:17px}.eb-stat span{font-size:11px;opacity:.75}
+.eb-mine{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:10px;margin-bottom:12px}
+.eb-mine-top{display:flex;gap:10px;cursor:pointer}
+.eb-mine-top .eb-cover{width:64px;flex:none;border-radius:8px}
+.eb-chip2{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.15);margin-right:4px}
+.eb-chip2.ok{background:#166534}.eb-chip2.off{background:#92400e}.eb-chip2.promo{background:#be185d}
+.eb-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.eb-bar button{flex:1 1 auto;min-width:92px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;border-radius:10px;padding:9px 6px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.eb-bar .d{border-color:rgba(255,120,120,.55);color:#ff9d9d}
+/* admin */
+.eb-adm-in{display:flex;gap:8px;align-items:center;margin:8px 0}.eb-adm-in .eb-in{max-width:110px}
+.eb-table{width:100%;border-collapse:collapse;font-size:12.5px}.eb-table td,.eb-table th{padding:7px 4px;border-bottom:1px solid rgba(255,255,255,.12);text-align:left}
+.eb-table th{opacity:.7;font-weight:700}
+/* lecteur */
+#ebReader{position:fixed;inset:0;z-index:100020;background:#0b0f1f;color:#fff;display:flex;flex-direction:column}
+#ebReader .ebr-top{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:#10182f;border-bottom:1px solid rgba(255,255,255,.12)}
+#ebReader .ebr-t{flex:1;min-width:0;font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ebReader .ebr-pg-n{font-size:12px;opacity:.8}
+#ebReader .ebr-pages{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#ebReader .ebr-pg{background:#fff;margin:0 auto 10px;max-width:900px;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+#ebReader canvas{display:block;width:100%;height:auto}
+#ebReader .ebr-msg{padding:40px 20px;text-align:center;opacity:.85}
+</style>
+<script id="alloEbooks">
+/* E-books : boutique, bibliothèque, espace auteur (publier / promo / pub / télécharger), commission admin. */
+(function(){
+'use strict';
+function err(e){window.__alloErr&&window.__alloErr(e);}
+function en(){return typeof lang!=='undefined'&&lang==='en';}
+function T(f,e){return en()?e:f;}
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function money(n){try{return formatMoney(n);}catch(_){return Number(n||0).toLocaleString('fr-FR')+' FCFA';}}
+function toast(m){try{window.alloToast?alloToast(m):alert(m);}catch(_){}}
+function me(){try{return currentUser||null;}catch(_){return null;}}
+function uuid(){return(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});}
+function hue(s){var h=7;s=String(s||'');for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;}
+function cleanErr(e){var m=(e&&(e.message||e.error_description))||String(e||'');return m.replace(/^.*?(ERROR:\s*)/,'').slice(0,200);}
+var CATS=['Business','Éducation','Roman','Santé & bien-être','Technologie','Religion & spiritualité','Cuisine','Développement personnel','Enfants','Autre'];
+var CATS_EN={'Business':'Business','Éducation':'Education','Roman':'Fiction','Santé & bien-être':'Health & wellness','Technologie':'Technology','Religion & spiritualité':'Religion & spirituality','Cuisine':'Cooking','Développement personnel':'Self-improvement','Enfants':'Kids','Autre':'Other'};
+function catL(c){return en()?(CATS_EN[c]||c):c;}
+
+var S={tab:'store',q:'',cat:'all',list:[],names:{},ads:{},owned:{},mine:[],sales:[],tiers:[],brackets:[],pct:null,admin:null,loaded:false,busy:false};
+function isAdmin(){var u=me();return !!(u&&u.role==='admin');}
+function logged(){try{return isLoggedIn()&&typeof sb!=='undefined'&&sb;}catch(_){return false;}}
+function priceNow(e){
+  var p=Number(e.price)||0;
+  if(e.promo_pct&&e.promo_ends_at&&new Date(e.promo_ends_at).getTime()>Date.now())return Math.max(Math.round(p*(100-e.promo_pct)/100),0);
+  return p;
+}
+function onPromo(e){return !!(e.promo_pct&&e.promo_ends_at&&new Date(e.promo_ends_at).getTime()>Date.now()&&Number(e.price)>0);}
+function isMine(e){var u=me();return !!(u&&String(e.author_id)===String(u.id));}
+function byId(id){return S.list.concat(S.mine).find(function(e){return String(e.id)===String(id);})||null;}
+
+/* ---------- Vue + menu ---------- */
+function ensureView(){
+  var v=document.getElementById('view-ebooks');if(v)return v;
+  var ref=document.getElementById('view-search');if(!ref||!ref.parentNode)return null;
+  v=document.createElement('div');v.className='view';v.id='view-ebooks';ref.parentNode.appendChild(v);return v;
+}
+var _menu=window.alloSvcMenu;
+window.alloSvcMenu=function(items,role){
+  try{if(typeof _menu==='function')_menu(items,role);}catch(e){err(e);}
+  try{
+    if(!items.some(function(i){return i.view==='ebooks';})){
+      var at=items.findIndex(function(i){return i.view==='home';});
+      items.splice(at>=0?at+1:Math.min(1,items.length),0,{view:'ebooks',ico:'📚',label:T('E-books','E-books')});
+    }
+  }catch(e){err(e);}
+};
+var _sv=window.switchView;
+window.switchView=function(view){
+  if(view==='ebooks'){try{ensureView();}catch(e){err(e);}}
+  var r=_sv.apply(this,arguments);
+  try{if(view==='ebooks')open_view();}catch(e){err(e);}
+  return r;
+};
+window.sidebarGo=(function(orig){return function(view){if(view==='ebooks'){try{closeSidebar();}catch(_){}switchView('ebooks');return;}return orig.apply(this,arguments);};})(window.sidebarGo);
+
+/* ---------- Données ---------- */
+async function names(ids){
+  ids=ids.filter(function(i){return i&&!S.names[i];});if(!ids.length)return;
+  try{var r=await sb.rpc('chat_profiles',{ids:ids});(r.data||[]).forEach(function(p){S.names[p.id]=p.name||'Auteur';});}catch(e){err(e);}
+}
+async function loadStore(){
+  if(!logged()){S.list=[];S.loaded=true;return;}
+  var r=await sb.from('ebooks').select('*').eq('status','published').order('created_at',{ascending:false}).limit(300);
+  if(r.error)throw r.error;S.list=r.data||[];
+  var a=await sb.from('ebook_ads').select('ebook_id,tier,ends_at').gt('ends_at',new Date().toISOString());
+  S.ads={};(a.data||[]).forEach(function(x){S.ads[x.ebook_id]=x;});
+  var u=me();
+  if(u){var p=await sb.from('ebook_purchases').select('ebook_id').eq('buyer_id',u.id);S.owned={};(p.data||[]).forEach(function(x){S.owned[x.ebook_id]=1;});}
+  await names(S.list.map(function(e){return e.author_id;}));
+  S.loaded=true;
+}
+async function loadMine(){
+  var u=me();if(!u||!logged())return;
+  var r=await sb.from('ebooks').select('*').eq('author_id',u.id).neq('status','deleted').order('created_at',{ascending:false});
+  S.mine=r.data||[];
+  var s=await sb.from('ebook_purchases').select('ebook_id,price_paid,author_earning,commission').eq('author_id',u.id);
+  S.sales=s.data||[];
+}
+async function loadLibrary(){
+  var u=me();if(!u||!logged())return [];
+  var p=await sb.from('ebook_purchases').select('ebook_id,created_at').eq('buyer_id',u.id).order('created_at',{ascending:false});
+  var ids=(p.data||[]).map(function(x){return x.ebook_id;});S.owned={};ids.forEach(function(i){S.owned[i]=1;});
+  if(!ids.length)return [];
+  var r=await sb.from('ebooks').select('*').in('id',ids);
+  var map={};(r.data||[]).forEach(function(e){map[e.id]=e;});
+  await names((r.data||[]).map(function(e){return e.author_id;}));
+  return ids.map(function(i){return map[i];}).filter(Boolean);
+}
+async function loadAdmin(){
+  var r=await sb.rpc('admin_ebook_summary');if(r.error)throw r.error;S.admin=r.data;
+}
+async function loadTiers(){
+  if(S.tiers.length)return;
+  var t=await sb.from('ad_tiers').select('*').eq('active',true).order('sort');var b=await sb.from('ad_price_brackets').select('*');
+  S.tiers=t.data||[];S.brackets=b.data||[];
+}
+function quote(tier,days){
+  var b=(S.brackets||[]).find(function(x){return x.tier===tier&&days>=x.min_days&&days<=x.max_days;});
+  return b?b.price_per_day*days:null;
+}
+
+/* ---------- Rendu ---------- */
+function coverStyle(e){return '--h:'+hue(e.id||e.title)+(e.cover_url?';background-image:url(&quot;'+esc(e.cover_url)+'&quot;)':'');}
+function cardHTML(e){
+  var pn=priceNow(e),pr=onPromo(e);
+  var badge=Number(e.price)===0?'<span class="eb-badge free">'+esc(T('GRATUIT','FREE'))+'</span>':(pr?'<span class="eb-badge promo">−'+e.promo_pct+'%</span>':'');
+  var mine=isMine(e)?'<span class="eb-badge mine">'+esc(T('Mon livre','Mine'))+'</span>':(S.owned[e.id]?'<span class="eb-badge mine">'+esc(T('Acquis','Owned'))+'</span>':'');
+  return '<div class="eb-card" data-id="'+esc(e.id)+'"><div class="eb-cover" style="'+coverStyle(e)+'">'+badge+mine+(e.cover_url?'':'<b>'+esc(e.title)+'</b>')+'</div>'
+    +'<div class="eb-t">'+esc(e.title)+'</div><div class="eb-a">'+esc(S.names[e.author_id]||'')+'</div>'
+    +'<div class="eb-p">'+(Number(e.price)===0?esc(T('Gratuit','Free')):esc(money(pn))+(pr?'<s>'+esc(money(e.price))+'</s>':''))+'</div></div>';
+}
+function bannerHTML(e,kind,endsAt){
+  var promo=kind==='promo',h=promo?330:hue(e.id),pn=priceNow(e),pr=onPromo(e);
+  var end=endsAt||'';
+  var cd=end?'<div class="adb-end">'+esc(promo?T('La promo se termine dans','The promotion ends in'):T('L’offre se termine dans','The offer ends in'))+'<b class="adb-cd" data-end="'+esc(end)+'">…</b></div>':'';
+  return '<div class="adb'+(promo?' adb-promo':'')+'" style="--h:'+h+'" data-eb="'+esc(e.id)+'" role="button" tabindex="0">'
+   +'<i class="adb-fx"></i><i class="adb-glow"></i>'
+   +'<span class="adb-tag">'+(promo?'🔥 '+esc(T('Promotion','Promotion'))+' −'+e.promo_pct+'%':'📢 '+esc(T('Sponsorisé','Sponsored')))+'</span>'
+   +'<div class="adb-title">'+esc(e.title)+'</div>'
+   +'<div class="adb-sub">'+esc([catL(e.category),S.names[e.author_id]].filter(Boolean).join(' · '))+'</div>'
+   +'<div class="adb-stage"><div class="adb-card"><div class="adb-ovr">'+(promo?'−'+e.promo_pct+'%':'📚')+'</div>'
+   +'<div class="adb-ph">'+(e.cover_url?'<img src="'+esc(e.cover_url)+'" alt="" loading="lazy">':'📚')+'</div>'
+   +'<div class="adb-foot"><b>'+esc(e.title)+'</b><span>'+(Number(e.price)===0?esc(T('Gratuit','Free')):esc(money(pn)))+'</span></div></div>'
+   +'<div class="adb-ticket"><div class="tk-main"><small>'+esc(S.names[e.author_id]||'E-book')+'</small>'
+   +'<div class="tk-price">'+(Number(e.price)===0?esc(T('Gratuit','Free')):esc(money(pn)))+'</div>'+(pr?'<div class="tk-old">'+esc(money(e.price))+'</div>':'')
+   +'<span class="tk-cta">'+esc(T('VOIR LE LIVRE','VIEW BOOK'))+' ›</span></div><div class="tk-side"><i>E-BOOK</i></div></div></div>'+cd+'</div>';
+}
+function tabsHTML(){
+  var t=[['store','🛒 '+T('Boutique','Store')],['lib','📖 '+T('Ma bibliothèque','My library')]];
+  if(logged())t.push(['mine','✍️ '+T('Mes e-books','My e-books')]);
+  if(isAdmin())t.push(['admin','⚙️ '+T('Commission','Commission')]);
+  return '<div class="eb-tabs">'+t.map(function(x){return '<button type="button" class="eb-tab'+(S.tab===x[0]?' on':'')+'" data-tab="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';
+}
+function storeHTML(){
+  var q=S.q.trim(),list=S.list.filter(function(e){
+    if(S.cat!=='all'&&e.category!==S.cat)return false;
+    if(!q)return true;
+    return window.alloTextMatches?alloTextMatches(e.title+' '+(S.names[e.author_id]||'')+' '+e.category+' '+e.description,q):(e.title+' '+e.description).toLowerCase().indexOf(q.toLowerCase())>-1;
+  });
+  var h='<input class="eb-search" id="ebQ" type="search" placeholder="'+esc(T('Rechercher un livre, un auteur…','Search a book or author…'))+'" value="'+esc(S.q)+'">'
+    +'<div class="eb-chips"><button type="button" class="eb-chip'+(S.cat==='all'?' on':'')+'" data-cat="all">'+esc(T('Tous','All'))+'</button>'
+    +CATS.map(function(c){return '<button type="button" class="eb-chip'+(S.cat===c?' on':'')+'" data-cat="'+esc(c)+'">'+esc(catL(c))+'</button>';}).join('')+'</div>';
+  if(!S.list.length)return h+'<div class="eb-empty">'+esc(logged()?T('Aucun e-book publié pour le moment. Soyez le premier !','No e-book yet. Be the first!'):T('Connectez-vous pour découvrir les e-books.','Sign in to discover e-books.'))+'</div>';
+  if(!q&&S.cat==='all'){
+    var ads=list.filter(function(e){return S.ads[e.id];}).slice(0,3),used={};ads.forEach(function(e){used[e.id]=1;});
+    var promos=list.filter(function(e){return onPromo(e)&&!used[e.id];}).slice(0,4);promos.forEach(function(e){used[e.id]=1;});
+    if(ads.length)h+='<div class="eb-sec">📢 '+esc(T('Sponsorisés','Sponsored'))+'</div>'+ads.map(function(e){return bannerHTML(e,'ad',S.ads[e.id].ends_at);}).join('');
+    if(promos.length)h+='<div class="eb-sec">🔥 '+esc(T('Promotions','Promotions'))+'</div>'+promos.map(function(e){return bannerHTML(e,'promo',e.promo_ends_at);}).join('');
+    var free=list.filter(function(e){return Number(e.price)===0&&!used[e.id];}).slice(0,6);
+    if(free.length)h+='<div class="eb-sec">🎁 '+esc(T('Gratuits','Free'))+'</div><div class="eb-grid">'+free.map(cardHTML).join('')+'</div>';
+    h+='<div class="eb-sec">🆕 '+esc(T('Tous les e-books','All e-books'))+'</div><div class="eb-grid">'+list.map(cardHTML).join('')+'</div>';
+    return h;
+  }
+  return h+(list.length?'<div class="eb-grid" style="margin-top:8px">'+list.map(cardHTML).join('')+'</div>':'<div class="eb-empty">'+esc(T('Aucun résultat.','No result.'))+'</div>');
+}
+async function libHTML(){
+  if(!logged())return '<div class="eb-empty">'+esc(T('Connectez-vous pour voir votre bibliothèque.','Sign in to see your library.'))+'</div>';
+  var l=await loadLibrary();
+  if(!l.length)return '<div class="eb-empty">'+esc(T('Votre bibliothèque est vide. Obtenez un e-book gratuit ou achetez-en un !','Your library is empty. Get a free e-book or buy one!'))+'</div>';
+  return '<div class="eb-grid">'+l.map(cardHTML).join('')+'</div>';
+}
+function mineHTML(){
+  var net=S.sales.reduce(function(s,x){return s+Number(x.author_earning||0);},0),dl=S.mine.reduce(function(s,e){return s+(e.downloads_count||0);},0);
+  var h='<button type="button" class="eb-big" data-act="new">＋ '+esc(T('Publier un e-book','Publish an e-book'))+'</button>'
+   +'<div class="eb-stats"><div class="eb-stat"><b>'+S.sales.filter(function(x){return x.price_paid>0;}).length+'</b><span>'+esc(T('Ventes','Sales'))+'</span></div>'
+   +'<div class="eb-stat"><b>'+esc(money(net))+'</b><span>'+esc(T('Revenus nets','Net earnings'))+'</span></div>'
+   +'<div class="eb-stat"><b>'+dl+'</b><span>'+esc(T('Téléchargements','Downloads'))+'</span></div></div>';
+  if(!S.mine.length)return h+'<div class="eb-empty">'+esc(T('Vous n’avez encore publié aucun e-book.','You have not published any e-book yet.'))+'</div>';
+  return h+S.mine.map(function(e){
+    var pr=onPromo(e),isPdf=e.file_mime==='application/pdf';
+    return '<div class="eb-mine" data-id="'+esc(e.id)+'"><div class="eb-mine-top" data-act="view" data-id="'+esc(e.id)+'"><div class="eb-cover" style="'+coverStyle(e)+'"></div>'
+      +'<div style="min-width:0;flex:1"><div class="eb-t" style="margin:0">'+esc(e.title)+'</div>'
+      +'<div style="margin:5px 0"><span class="eb-chip2 '+(e.status==='published'?'ok':'off')+'">'+esc(e.status==='published'?T('Publié','Published'):T('Masqué','Hidden'))+'</span>'
+      +(pr?'<span class="eb-chip2 promo">−'+e.promo_pct+'%</span>':'')+(S_ad(e)?'<span class="eb-chip2">📢 '+esc(T('Pub active','Ad active'))+'</span>':'')+'</div>'
+      +'<div class="eb-a">'+(Number(e.price)===0?esc(T('Gratuit','Free')):esc(money(priceNow(e)))+(pr?' <s>'+esc(money(e.price))+'</s>':''))+' · '+(e.sales_count||0)+' '+esc(T('ventes','sales'))+' · '+(e.downloads_count||0)+' ⬇</div></div></div>'
+      +'<label class="eb-sw"><span>⬇ '+esc(T('Téléchargement autorisé','Download allowed'))+'<small>'+esc(isPdf?T('Désactivé : lecture en ligne uniquement','Off: online reading only'):T('Obligatoire pour les fichiers EPUB','Required for EPUB files'))+'</small></span>'
+      +'<input type="checkbox" data-act="dl" data-id="'+esc(e.id)+'"'+(e.download_enabled?' checked':'')+(isPdf?'':' disabled')+'></label>'
+      +'<label class="eb-sw"><span>👁 '+esc(T('Visible dans la boutique','Visible in the store'))+'</span><input type="checkbox" data-act="vis" data-id="'+esc(e.id)+'"'+(e.status==='published'?' checked':'')+'></label>'
+      +'<div class="eb-bar"><button type="button" data-act="edit" data-id="'+esc(e.id)+'">✏️ '+esc(T('Modifier','Edit'))+'</button>'
+      +'<button type="button" data-act="promo" data-id="'+esc(e.id)+'">🏷 '+esc(T('Promo','Promo'))+'</button>'
+      +'<button type="button" data-act="ad" data-id="'+esc(e.id)+'">📢 '+esc(T('Publicité','Advert'))+'</button>'
+      +'<button type="button" class="d" data-act="del" data-id="'+esc(e.id)+'">🗑 '+esc(T('Supprimer','Delete'))+'</button></div></div>';
+  }).join('');
+}
+function S_ad(e){var a=S.ads[e.id];return !!(a&&new Date(a.ends_at).getTime()>Date.now());}
+function adminHTML(){
+  var a=S.admin;if(!a)return '<div class="eb-empty">…</div>';
+  var st=a.settings||{},ov=st.overrides||{},ids=Object.keys(ov);
+  var h='<div class="eb-stats"><div class="eb-stat"><b>'+esc(money(a.commission_total))+'</b><span>'+esc(T('Commissions totales','Total commission'))+'</span></div>'
+   +'<div class="eb-stat"><b>'+esc(money(a.commission_30d))+'</b><span>'+esc(T('30 derniers jours','Last 30 days'))+'</span></div>'
+   +'<div class="eb-stat"><b>'+a.sales+'</b><span>'+esc(T('Ventes','Sales'))+'</span></div></div>'
+   +'<div class="eb-stats"><div class="eb-stat"><b>'+esc(money(a.gross))+'</b><span>'+esc(T('Volume brut','Gross volume'))+'</span></div>'
+   +'<div class="eb-stat"><b>'+esc(money(a.author_earnings))+'</b><span>'+esc(T('Reversé aux auteurs','Paid to authors'))+'</span></div>'
+   +'<div class="eb-stat"><b>'+esc(money(a.ads_revenue))+'</b><span>'+esc(T('Pubs e-books','E-book ads'))+'</span></div></div>'
+   +'<div class="eb-mine"><h3>'+esc(T('Commission par défaut','Default commission'))+'</h3><div class="eb-note">'+esc(T('Pourcentage prélevé par Allo sur chaque vente. Modifiable à tout moment : il s’applique aux prochaines ventes.','Percentage Allo keeps on each sale. Editable any time: applies to future sales.'))+'</div>'
+   +'<div class="eb-adm-in"><input class="eb-in" id="ebDef" type="number" min="0" max="90" step="0.5" value="'+esc(st.default_pct)+'"> <b>%</b><button type="button" class="eb-big" style="margin:0;padding:11px;width:auto;flex:1" data-act="setdef">'+esc(T('Enregistrer','Save'))+'</button></div></div>'
+   +'<div class="eb-mine"><h3>'+esc(T('Pourcentage par auteur','Per-author percentage'))+'</h3><div class="eb-note">'+esc(T('Remplace le pourcentage par défaut pour un auteur précis.','Overrides the default for a specific author.'))+'</div>'
+   +(ids.length?'<table class="eb-table">'+ids.map(function(i){return '<tr><td>'+esc(S.names[i]||i.slice(0,8))+'</td><td><b>'+esc(ov[i])+' %</b></td><td><button type="button" class="eb-chip" data-act="rmov" data-id="'+esc(i)+'">'+esc(T('Retirer','Remove'))+'</button></td></tr>';}).join('')+'</table>':'<div class="eb-note">'+esc(T('Aucun pourcentage personnalisé.','No custom percentage.'))+'</div>')
+   +'<div class="eb-adm-in"><select class="eb-sel" id="ebAu"><option value="">'+esc(T('Choisir un auteur…','Pick an author…'))+'</option>'+authors().map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>';}).join('')+'</select>'
+   +'<input class="eb-in" id="ebAp" type="number" min="0" max="90" step="0.5" placeholder="%"><button type="button" class="eb-chip on" data-act="setau">OK</button></div></div>'
+   +'<div class="eb-mine"><h3>'+esc(T('Dernières ventes','Latest sales'))+'</h3>'
+   +((a.recent||[]).length?'<table class="eb-table"><tr><th>'+esc(T('Livre','Book'))+'</th><th>'+esc(T('Prix','Price'))+'</th><th>%</th><th>'+esc(T('Commission','Comm.'))+'</th></tr>'
+     +a.recent.map(function(r){return '<tr><td>'+esc(r.title)+'<div class="eb-a">'+esc(r.buyer||'')+' → '+esc(r.author||'')+'</div></td><td>'+esc(money(r.price_paid))+'</td><td>'+esc(r.commission_pct)+'</td><td>'+esc(money(r.commission))+'</td></tr>';}).join('')+'</table>'
+     :'<div class="eb-note">'+esc(T('Aucune vente.','No sale.'))+'</div>')+'</div>';
+  return h;
+}
+function authors(){var m={};S.list.forEach(function(e){m[e.author_id]=S.names[e.author_id]||e.author_id.slice(0,8);});return Object.keys(m).map(function(k){return{id:k,name:m[k]};});}
+
+async function paint(){
+  var v=ensureView();if(!v)return;
+  var body='';
+  try{
+    if(S.tab==='store')body=storeHTML();else if(S.tab==='lib')body=await libHTML();else if(S.tab==='mine')body=mineHTML();else if(S.tab==='admin')body=adminHTML();
+  }catch(e){err(e);body='<div class="eb-empty">'+esc(cleanErr(e))+'</div>';}
+  var keep=document.getElementById('ebQ'),focus=keep&&document.activeElement===keep,pos=keep?keep.selectionStart:0;
+  v.innerHTML='<div class="eb-h"><h2>📚 E-books</h2></div>'+tabsHTML()+'<div id="ebBody">'+body+'</div>';
+  if(S.tab==='store'&&focus){var q=document.getElementById('ebQ');if(q){q.focus();try{q.setSelectionRange(pos,pos);}catch(_){}}}
+  tick();
+}
+function tick(){
+  document.querySelectorAll('#view-ebooks .adb-cd[data-end]').forEach(function(el){
+    var ms=new Date(el.getAttribute('data-end')).getTime()-Date.now();
+    if(!(ms>0)){el.textContent=T('Terminée','Ended');return;}
+    var m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60,p=function(n){return(n<10?'0':'')+n;};
+    el.textContent=(d>0?d+(en()?'D ':'J '):'')+p(h)+'H '+p(mi)+'M';
+  });
+}
+setInterval(tick,20000);
+async function open_view(){
+  var v=ensureView();if(!v)return;
+  if(!S.loaded){v.innerHTML='<div class="eb-h"><h2>📚 E-books</h2></div><div class="eb-empty">…</div>';}
+  try{await loadStore();if(logged())await loadMine();if(isAdmin())await loadAdmin();}catch(e){err(e);toast(cleanErr(e));}
+  paint();
+}
+
+/* ---------- Feuilles ---------- */
+function sheet(html,onReady){
+  closeSheet();
+  var o=document.createElement('div');o.className='eb-ov';o.id='ebSheet';o.innerHTML='<div class="eb-box" role="dialog" aria-modal="true">'+html+'</div>';
+  o.addEventListener('click',function(e){if(e.target===o)closeSheet();});
+  document.body.appendChild(o);
+  var x=o.querySelector('.eb-x');if(x)x.onclick=closeSheet;
+  if(onReady)onReady(o);return o;
+}
+function closeSheet(){var o=document.getElementById('ebSheet');if(o)o.remove();}
+function head(t){return '<button type="button" class="eb-x" aria-label="'+esc(T('Fermer','Close'))+'">✕</button><h3>'+esc(t)+'</h3>';}
+
+function detail(id){
+  var e=byId(id);if(!e)return;
+  var mine=isMine(e),owned=!!S.owned[e.id],pn=priceNow(e),pr=onPromo(e),free=Number(e.price)===0;
+  var act='';
+  if(mine||owned||(S.admin&&isAdmin())){
+    act='<button type="button" class="eb-big" data-do="read">📖 '+esc(T('Lire en ligne','Read online'))+'</button>'
+      +((e.download_enabled||mine)?'<button type="button" class="eb-big alt" data-do="dl">⬇ '+esc(T('Télécharger','Download'))+'</button>':'<div class="eb-note">'+esc(T('Le téléchargement est désactivé par l’auteur : lecture en ligne uniquement.','Download is disabled by the author: online reading only.'))+'</div>');
+  }else{
+    act='<button type="button" class="eb-big" data-do="buy">'+(free?'🎁 '+esc(T('Obtenir gratuitement','Get it for free')):'🛒 '+esc(T('Acheter','Buy'))+' · '+esc(money(pn)))+'</button>'
+      +(e.download_enabled?'':'<div class="eb-note">'+esc(T('Lecture en ligne uniquement (téléchargement désactivé par l’auteur).','Online reading only (download disabled by the author).'))+'</div>');
+  }
+  sheet(head(e.title)+'<div class="eb-det"><div class="eb-cover" style="'+coverStyle(e)+'">'+(e.cover_url?'':'<b>'+esc(e.title)+'</b>')+'</div>'
+    +'<div class="eb-info"><div class="eb-meta">'+esc(S.names[e.author_id]||'')+'</div><div class="eb-meta">'+esc(catL(e.category))+' · '+esc((e.language||'fr').toUpperCase())+' · '+(e.file_mime==='application/pdf'?'PDF':'EPUB')+(e.file_size?' · '+(e.file_size/1048576).toFixed(1)+' Mo':'')+'</div>'
+    +'<div class="eb-price">'+(free?esc(T('Gratuit','Free')):esc(money(pn))+(pr?'<s>'+esc(money(e.price))+'</s>':''))+'</div>'
+    +(pr?'<div class="eb-meta" style="color:#ff7ac0">🔥 −'+e.promo_pct+'%</div>':'')+'<div class="eb-meta">'+(e.sales_count||0)+' '+esc(T('lecteurs','readers'))+'</div></div></div>'
+    +'<div class="eb-desc">'+esc(e.description||T('Aucune description.','No description.'))+'</div>'+act,function(o){
+    o.querySelectorAll('[data-do]').forEach(function(b){b.onclick=function(){var d=b.getAttribute('data-do');
+      if(d==='read'){closeSheet();reader(e);}else if(d==='dl'){download(e);}else if(d==='buy'){buy(e,b);}};});
+  });
+}
+async function buy(e,btn){
+  if(!logged()){try{requireAuth(T('Connectez-vous pour obtenir ce livre.','Sign in to get this book.'),'ebooks');}catch(_){}return;}
+  var pn=priceNow(e);
+  if(pn>0&&!confirm(T('Acheter « '+e.title+' » pour '+money(pn)+' ?\nLe montant sera débité de votre solde Allo.','Buy “'+e.title+'” for '+money(pn)+'?\nThe amount will be debited from your Allo balance.')))return;
+  btn.disabled=true;
+  try{
+    var r=await sb.rpc('buy_ebook',{p_ebook_id:e.id,p_request_id:uuid()});
+    if(r.error)throw r.error;
+    S.owned[e.id]=1;e.sales_count=(e.sales_count||0)+(r.data&&r.data.already_owned?0:1);
+    toast(pn>0?T('Achat réussi ✔','Purchase successful ✔'):T('Ajouté à votre bibliothèque ✔','Added to your library ✔'));
+    try{await sbLoadAllIntoData();renderAll();}catch(_){}
+    detail(e.id);paint();
+  }catch(x){err(x);btn.disabled=false;var m=cleanErr(x);toast(/insuffisant/i.test(m)?T('Solde insuffisant : rechargez votre portefeuille.','Insufficient balance: top up your wallet.'):m);}
+}
+async function signed(e,mode){
+  var a=await sb.rpc('ebook_access',{p_ebook_id:e.id,p_mode:mode});if(a.error)throw a.error;
+  var opts=mode==='download'?{download:(a.data.name||e.title)+(/epub/.test(a.data.mime||'')?'.epub':'.pdf')}:undefined;
+  var s=await sb.storage.from('ebooks').createSignedUrl(a.data.path,mode==='download'?90:900,opts);
+  if(s.error)throw s.error;return{url:s.data.signedUrl,info:a.data};
+}
+async function download(e){
+  try{var r=await signed(e,'download');var a=document.createElement('a');a.href=r.url;a.download='';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast(T('Téléchargement lancé ⬇','Download started ⬇'));if(e.downloads_count!=null&&!isMine(e))e.downloads_count++;}
+  catch(x){err(x);toast(cleanErr(x));}
+}
+
+/* ---------- Lecteur PDF (pdf.js à la demande) ---------- */
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve();
+  return new Promise(function(res,rej){
+    var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=function(){try{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res();}catch(e){rej(e);}};
+    s.onerror=function(){rej(new Error('pdfjs'));};document.head.appendChild(s);
+  });
+}
+async function reader(e){
+  var old=document.getElementById('ebReader');if(old)old.remove();
+  var o=document.createElement('div');o.id='ebReader';
+  o.innerHTML='<div class="ebr-top"><button type="button" class="eb-x" style="float:none">✕</button><div class="ebr-t">'+esc(e.title)+'</div><div class="ebr-pg-n" id="ebrN"></div></div><div class="ebr-pages" id="ebrP"><div class="ebr-msg">'+esc(T('Chargement…','Loading…'))+'</div></div>';
+  document.body.appendChild(o);
+  o.querySelector('.eb-x').onclick=function(){o.remove();};
+  var P=o.querySelector('#ebrP');
+  P.addEventListener('contextmenu',function(ev){ev.preventDefault();});
+  try{
+    var r=await signed(e,'read');
+    if(/epub/.test(r.info.mime||'')){
+      P.innerHTML='<div class="ebr-msg">'+esc(T('Ce livre est au format EPUB : téléchargez-le pour le lire avec votre application de lecture.','This book is an EPUB file: download it to read it in your reading app.'))+'<br><br><button type="button" class="eb-big alt" id="ebrDl">⬇ '+esc(T('Télécharger','Download'))+'</button></div>';
+      var b=P.querySelector('#ebrDl');if(b)b.onclick=function(){download(e);};return;
+    }
+    await loadPdfJs();
+    var pdf=await pdfjsLib.getDocument({url:r.url}).promise;
+    var N=pdf.numPages,first=await pdf.getPage(1),vp1=first.getViewport({scale:1}),ratio=vp1.height/vp1.width;
+    P.innerHTML='';var n=document.getElementById('ebrN');
+    var holders=[];
+    for(var i=1;i<=N;i++){var d=document.createElement('div');d.className='ebr-pg';d.dataset.p=i;d.style.aspectRatio=(1/ratio).toFixed(4);P.appendChild(d);holders.push(d);}
+    var done={};
+    var io=new IntersectionObserver(function(es){es.forEach(function(en2){
+      var d=en2.target,p=+d.dataset.p;
+      if(en2.isIntersecting){if(n)n.textContent=p+' / '+N;if(!done[p]){done[p]=1;renderPage(pdf,p,d);}}
+    });},{root:P,rootMargin:'900px 0px'});
+    holders.forEach(function(d){io.observe(d);});
+    if(n)n.textContent='1 / '+N;
+  }catch(x){err(x);P.innerHTML='<div class="ebr-msg">'+esc(/pdfjs/.test(String(x&&x.message))?T('Le lecteur n’a pas pu se charger (connexion requise la première fois).','The reader could not load (connection required the first time).'):cleanErr(x))+'</div>';}
+}
+async function renderPage(pdf,p,holder){
+  try{
+    var pg=await pdf.getPage(p),w=holder.clientWidth||360,vp0=pg.getViewport({scale:1}),sc=(w/vp0.width)*Math.min(window.devicePixelRatio||1,2),vp=pg.getViewport({scale:sc});
+    var c=document.createElement('canvas');c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);
+    await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;holder.style.aspectRatio='';holder.appendChild(c);
+  }catch(e){err(e);}
+}
+
+/* ---------- Publier / modifier ---------- */
+function shrinkImg(file,max){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){URL.revokeObjectURL(u);var s=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),w=Math.round(im.naturalWidth*s),h=Math.round(im.naturalHeight*s);
+      var c=document.createElement('canvas');c.width=w;c.height=h;var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);c.toBlob(function(b){b?res(b):rej(new Error('encode'));},'image/jpeg',.85);};
+    im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('img'));};im.src=u;
+  });
+}
+async function myPct(){
+  if(S.pct!=null)return S.pct;
+  try{var r=await sb.rpc('ebook_commission_pct',{p_author:me().id});S.pct=Number(r.data);if(isNaN(S.pct))S.pct=15;}catch(_){S.pct=15;}
+  return S.pct;
+}
+async function form(e){
+  if(!logged()){try{requireAuth(T('Connectez-vous pour publier un e-book.','Sign in to publish an e-book.'),'ebooks');}catch(_){}return;}
+  var pct=await myPct(),edit=!!e;e=e||{title:'',description:'',category:'Autre',language:'fr',price:0,download_enabled:true,status:'published'};
+  var catOpts=CATS.map(function(c){return '<option value="'+esc(c)+'"'+(e.category===c?' selected':'')+'>'+esc(catL(c))+'</option>';}).join('');
+  sheet(head(edit?T('Modifier l’e-book','Edit e-book'):T('Publier un e-book','Publish an e-book'))
+   +'<label class="eb-fld">'+esc(T('Titre','Title'))+'</label><input class="eb-in" id="efT" maxlength="120" value="'+esc(e.title)+'">'
+   +'<div class="eb-row"><div><label class="eb-fld">'+esc(T('Catégorie','Category'))+'</label><select class="eb-sel" id="efC">'+catOpts+'</select></div>'
+   +'<div><label class="eb-fld">'+esc(T('Langue','Language'))+'</label><select class="eb-sel" id="efL"><option value="fr"'+(e.language==='fr'?' selected':'')+'>Français</option><option value="en"'+(e.language==='en'?' selected':'')+'>English</option></select></div></div>'
+   +'<label class="eb-fld">'+esc(T('Description','Description'))+'</label><textarea class="eb-ta" id="efD" maxlength="4000">'+esc(e.description)+'</textarea>'
+   +'<label class="eb-fld">'+esc(T('Prix en FCFA (0 = gratuit)','Price in FCFA (0 = free)'))+'</label><input class="eb-in" id="efP" type="number" min="0" step="100" inputmode="numeric" value="'+esc(e.price)+'">'
+   +'<div class="eb-net" id="efNet"></div>'
+   +'<label class="eb-fld">'+esc(T('Couverture (image)','Cover (image)'))+'</label><label class="eb-file"><input type="file" id="efCv" accept="image/*" hidden><img id="efCvI" alt="" '+(e.cover_url?'src="'+esc(e.cover_url)+'"':'style="display:none"')+'><span id="efCvT">'+esc(e.cover_url?T('Changer la couverture','Change the cover'):T('Choisir une image','Pick an image'))+'</span></label>'
+   +'<label class="eb-fld">'+esc(T('Fichier du livre (PDF ou EPUB, 40 Mo max)','Book file (PDF or EPUB, 40 MB max)'))+(edit?' — '+esc(T('laisser vide pour garder l’actuel','leave empty to keep the current one')):'')+'</label>'
+   +'<label class="eb-file"><input type="file" id="efF" accept=".pdf,.epub,application/pdf,application/epub+zip" hidden><span id="efFT">'+esc(edit&&e.file_name?'📄 '+e.file_name:T('📄 Choisir le fichier','📄 Pick the file'))+'</span></label>'
+   +'<label class="eb-sw"><span>⬇ '+esc(T('Autoriser le téléchargement','Allow download'))+'<small>'+esc(T('Désactivé : les lecteurs ne peuvent que lire en ligne (PDF uniquement).','Off: readers can only read online (PDF only).'))+'</small></span><input type="checkbox" id="efDl"'+(e.download_enabled?' checked':'')+'></label>'
+   +'<div class="eb-btns"><button type="button" class="eb-no" id="efNo">'+esc(T('Annuler','Cancel'))+'</button><button type="button" class="eb-ok" id="efOk">'+esc(edit?T('Enregistrer','Save'):T('Publier','Publish'))+'</button></div>',function(o){
+    var cvFile=null,bkFile=null,$=function(i){return o.querySelector('#'+i);};
+    function net(){var p=Math.max(0,parseInt($('efP').value||'0',10)||0);$('efNet').textContent=p>0?T('Commission Allo : '+pct+' % · vous recevez '+money(p-Math.round(p*pct/100))+' par vente','Allo commission: '+pct+'% · you receive '+money(p-Math.round(p*pct/100))+' per sale'):T('Livre gratuit : aucune commission.','Free book: no commission.');}
+    $('efP').oninput=net;net();$('efNo').onclick=closeSheet;
+    $('efCv').onchange=function(){cvFile=this.files[0]||null;if(cvFile){$('efCvI').src=URL.createObjectURL(cvFile);$('efCvI').style.display='block';$('efCvT').textContent=cvFile.name;}};
+    $('efF').onchange=function(){bkFile=this.files[0]||null;if(bkFile){var ep=/\.epub$/i.test(bkFile.name);$('efFT').textContent='📄 '+bkFile.name+' ('+(bkFile.size/1048576).toFixed(1)+' Mo)';if(ep){$('efDl').checked=true;$('efDl').disabled=true;}else $('efDl').disabled=false;}};
+    if(edit&&e.file_mime==='application/epub+zip'){$('efDl').checked=true;$('efDl').disabled=true;}
+    $('efOk').onclick=async function(){
+      var title=$('efT').value.trim(),price=Math.max(0,parseInt($('efP').value||'0',10)||0);
+      if(title.length<2)return toast(T('Titre trop court.','Title too short.'));
+      if(!edit&&!bkFile)return toast(T('Ajoutez le fichier du livre.','Add the book file.'));
+      if(bkFile){var ext=(bkFile.name.split('.').pop()||'').toLowerCase();if(ext!=='pdf'&&ext!=='epub')return toast(T('Format accepté : PDF ou EPUB.','Accepted: PDF or EPUB.'));if(bkFile.size>40*1048576)return toast(T('Fichier trop lourd (40 Mo max).','File too large (40 MB max).'));}
+      var btn=$('efOk');btn.disabled=true;btn.textContent=T('Envoi…','Uploading…');
+      var uid=me().id,oldFile=edit?e.file_path:null,oldCover=edit?e.cover_url:null,newFile=null,newCover=null;
+      try{
+        var row={title:title,description:$('efD').value.trim(),category:$('efC').value,language:$('efL').value,price:price,download_enabled:$('efDl').checked};
+        if(cvFile){var cb=await shrinkImg(cvFile,800),cp=uid+'/'+uuid()+'.jpg';var cu=await sb.storage.from('ebook-covers').upload(cp,cb,{contentType:'image/jpeg'});if(cu.error)throw cu.error;newCover=cp;row.cover_url=sb.storage.from('ebook-covers').getPublicUrl(cp).data.publicUrl;}
+        if(bkFile){var ex=(bkFile.name.split('.').pop()||'pdf').toLowerCase(),mime=ex==='epub'?'application/epub+zip':'application/pdf',fp=uid+'/'+uuid()+'.'+ex;
+          var fu=await sb.storage.from('ebooks').upload(fp,bkFile,{contentType:mime});if(fu.error)throw fu.error;newFile=fp;
+          row.file_path=fp;row.file_name=bkFile.name.replace(/\.[^.]+$/,'');row.file_size=bkFile.size;row.file_mime=mime;if(mime!=='application/pdf')row.download_enabled=true;}
+        var q;
+        if(edit)q=await sb.from('ebooks').update(row).eq('id',e.id).select().single();
+        else{row.author_id=uid;row.status='published';q=await sb.from('ebooks').insert(row).select().single();}
+        if(q.error)throw q.error;
+        if(edit&&newFile&&oldFile){try{await sb.storage.from('ebooks').remove([oldFile]);}catch(_){}}
+        if(edit&&newCover&&oldCover){try{var m=String(oldCover).split('/ebook-covers/')[1];if(m)await sb.storage.from('ebook-covers').remove([m]);}catch(_){}}
+        toast(edit?T('E-book modifié ✔','E-book updated ✔'):T('E-book publié ✔','E-book published ✔'));
+        closeSheet();await loadStore();await loadMine();S.tab='mine';paint();
+      }catch(x){err(x);
+        try{if(newFile)await sb.storage.from('ebooks').remove([newFile]);if(newCover)await sb.storage.from('ebook-covers').remove([newCover]);}catch(_){}
+        btn.disabled=false;btn.textContent=edit?T('Enregistrer','Save'):T('Publier','Publish');toast(cleanErr(x));}
+    };
+  });
+}
+function promoSheet(e){
+  var on=onPromo(e);
+  sheet(head(T('Promotion','Promotion'))+'<div class="eb-note">'+esc(T('Réduisez le prix pour une durée limitée. Le livre apparaît en bannière rose dans la boutique.','Lower the price for a limited time. The book appears as a pink banner in the store.'))+'</div>'
+   +'<div class="eb-row"><div><label class="eb-fld">'+esc(T('Réduction (%)','Discount (%)'))+'</label><input class="eb-in" id="pcP" type="number" min="1" max="90" value="'+(e.promo_pct||20)+'"></div>'
+   +'<div><label class="eb-fld">'+esc(T('Durée (jours)','Duration (days)'))+'</label><input class="eb-in" id="pcD" type="number" min="1" max="60" value="7"></div></div>'
+   +'<div class="eb-net" id="pcN"></div>'
+   +'<div class="eb-btns">'+(on?'<button type="button" class="eb-danger" id="pcOff">'+esc(T('Arrêter','Stop'))+'</button>':'<button type="button" class="eb-no" id="pcNo">'+esc(T('Annuler','Cancel'))+'</button>')+'<button type="button" class="eb-ok" id="pcOk">'+esc(T('Activer','Start'))+'</button></div>',function(o){
+    var $=function(i){return o.querySelector('#'+i);};
+    function n(){var p=Math.min(90,Math.max(1,parseInt($('pcP').value||'0',10)||0));$('pcN').textContent=Number(e.price)>0?T('Nouveau prix : ','New price: ')+money(Math.round(e.price*(100-p)/100)):T('Un livre gratuit ne peut pas être en promotion.','A free book cannot be on promotion.');}
+    $('pcP').oninput=n;n();
+    var no=$('pcNo');if(no)no.onclick=closeSheet;
+    async function save(vals){var q=await sb.from('ebooks').update(vals).eq('id',e.id);if(q.error)throw q.error;await loadStore();await loadMine();closeSheet();paint();}
+    $('pcOk').onclick=async function(){
+      if(!(Number(e.price)>0))return toast(T('Définissez d’abord un prix.','Set a price first.'));
+      var p=Math.min(90,Math.max(1,parseInt($('pcP').value||'0',10)||0)),d=Math.min(60,Math.max(1,parseInt($('pcD').value||'0',10)||0));
+      try{await save({promo_pct:p,promo_ends_at:new Date(Date.now()+d*86400000).toISOString()});toast(T('Promotion activée 🔥','Promotion started 🔥'));}catch(x){err(x);toast(cleanErr(x));}
+    };
+    var off=$('pcOff');if(off)off.onclick=async function(){try{await save({promo_pct:null,promo_ends_at:null});toast(T('Promotion arrêtée','Promotion stopped'));}catch(x){err(x);toast(cleanErr(x));}};
+  });
+}
+async function adSheet(e){
+  try{await loadTiers();}catch(x){err(x);}
+  if(!S.tiers.length)return toast(T('Publicité indisponible pour le moment.','Advertising unavailable right now.'));
+  if(S_ad(e))return toast(T('Une publicité est déjà active sur ce livre.','An ad is already running on this book.'));
+  sheet(head(T('Publicité','Advert'))+'<div class="eb-note">'+esc(T('Votre livre apparaît en bannière « Sponsorisé » en haut de la boutique. Même tarif que les produits Allo, débité de votre solde.','Your book appears as a “Sponsored” banner at the top of the store. Same rates as Allo products, debited from your balance.'))+'</div>'
+   +'<label class="eb-fld">'+esc(T('Formule','Plan'))+'</label><select class="eb-sel" id="adT">'+S.tiers.map(function(t){return '<option value="'+esc(t.tier)+'">'+esc(en()?t.label_en:t.label_fr)+'</option>';}).join('')+'</select>'
+   +'<label class="eb-fld">'+esc(T('Durée (jours, 1 à 30)','Duration (days, 1-30)'))+'</label><input class="eb-in" id="adD" type="number" min="1" max="30" value="7">'
+   +'<div class="eb-price" id="adP" style="margin:10px 0"></div>'
+   +'<div class="eb-btns"><button type="button" class="eb-no" id="adNo">'+esc(T('Annuler','Cancel'))+'</button><button type="button" class="eb-ok" id="adOk">'+esc(T('Payer et lancer','Pay & start'))+'</button></div>',function(o){
+    var $=function(i){return o.querySelector('#'+i);};
+    function p(){var d=Math.min(30,Math.max(1,parseInt($('adD').value||'0',10)||0)),q=quote($('adT').value,d);$('adP').textContent=q==null?'—':money(q);return q;}
+    $('adT').onchange=p;$('adD').oninput=p;p();$('adNo').onclick=closeSheet;
+    $('adOk').onclick=async function(){
+      var d=Math.min(30,Math.max(1,parseInt($('adD').value||'0',10)||0)),q=p();
+      if(q==null)return toast(T('Tarif indisponible.','Rate unavailable.'));
+      if(!confirm(T('Payer '+money(q)+' pour '+d+' jour(s) de publicité ?','Pay '+money(q)+' for '+d+' day(s) of advertising?')))return;
+      var b=$('adOk');b.disabled=true;
+      try{var r=await sb.rpc('buy_ebook_ad',{p_ebook_id:e.id,p_tier:$('adT').value,p_days:d,p_request_id:uuid()});if(r.error)throw r.error;
+        toast(T('Publicité lancée 📢','Ad started 📢'));closeSheet();try{await sbLoadAllIntoData();renderAll();}catch(_){}await loadStore();await loadMine();paint();}
+      catch(x){err(x);b.disabled=false;var m=cleanErr(x);toast(/insuffisant/i.test(m)?T('Solde insuffisant : rechargez votre portefeuille.','Insufficient balance: top up your wallet.'):m);}
+    };
+  });
+}
+async function removeBook(e){
+  var hard=!(e.sales_count>0);
+  if(!confirm(hard?T('Supprimer définitivement « '+e.title+' » ?','Permanently delete “'+e.title+'”?'):T('« '+e.title+' » a déjà des lecteurs : il sera retiré de la boutique mais restera accessible à ceux qui l’ont obtenu. Continuer ?','“'+e.title+'” already has readers: it will be removed from the store but stay available to those who got it. Continue?')))return;
+  try{
+    if(hard){var d=await sb.from('ebooks').delete().eq('id',e.id);if(d.error)throw d.error;
+      try{if(e.file_path)await sb.storage.from('ebooks').remove([e.file_path]);var m=String(e.cover_url||'').split('/ebook-covers/')[1];if(m)await sb.storage.from('ebook-covers').remove([m]);}catch(_){}}
+    else{var u=await sb.from('ebooks').update({status:'deleted'}).eq('id',e.id);if(u.error)throw u.error;}
+    toast(T('E-book supprimé','E-book deleted'));await loadStore();await loadMine();paint();
+  }catch(x){err(x);toast(cleanErr(x));}
+}
+async function quickUpdate(e,vals,msg){
+  var q=await sb.from('ebooks').update(vals).eq('id',e.id);
+  if(q.error){toast(cleanErr(q.error));await loadMine();paint();return;}
+  Object.assign(e,vals);if(msg)toast(msg);await loadStore();
+}
+
+/* ---------- Événements ---------- */
+document.addEventListener('click',async function(ev){
+  var v=document.getElementById('view-ebooks');if(!v||!v.contains(ev.target))return;
+  var t=ev.target.closest('[data-tab],[data-cat],[data-act],.eb-card,.adb[data-eb]');if(!t)return;
+  try{
+    if(t.hasAttribute('data-tab')){S.tab=t.getAttribute('data-tab');if(S.tab==='mine'){await loadMine();}else if(S.tab==='admin'){try{await loadAdmin();await names(Object.keys(((S.admin||{}).settings||{}).overrides||{}));}catch(x){toast(cleanErr(x));}}paint();return;}
+    if(t.hasAttribute('data-cat')){S.cat=t.getAttribute('data-cat');paint();return;}
+    if(t.classList.contains('eb-card')){detail(t.getAttribute('data-id'));return;}
+    if(t.classList.contains('adb')){detail(t.getAttribute('data-eb'));return;}
+    var a=t.getAttribute('data-act'),id=t.getAttribute('data-id'),e=id?byId(id):null;
+    if(a==='new')form();
+    else if(a==='view'&&e)detail(id);
+    else if(a==='edit'&&e)form(e);
+    else if(a==='promo'&&e)promoSheet(e);
+    else if(a==='ad'&&e)adSheet(e);
+    else if(a==='del'&&e)removeBook(e);
+    else if(a==='setdef'){var p=parseFloat(document.getElementById('ebDef').value);var r=await sb.rpc('admin_set_ebook_commission',{p_default:p});if(r.error)throw r.error;toast(T('Commission par défaut : '+p+' %','Default commission: '+p+'%'));await loadAdmin();paint();}
+    else if(a==='setau'){var au=document.getElementById('ebAu').value,ap=parseFloat(document.getElementById('ebAp').value);if(!au||isNaN(ap))return toast(T('Choisissez un auteur et un pourcentage.','Pick an author and a percentage.'));var r2=await sb.rpc('admin_set_ebook_author_commission',{p_author:au,p_pct:ap});if(r2.error)throw r2.error;toast(T('Pourcentage enregistré','Percentage saved'));await loadAdmin();await names([au]);paint();}
+    else if(a==='rmov'){var r3=await sb.rpc('admin_set_ebook_author_commission',{p_author:id,p_pct:null});if(r3.error)throw r3.error;toast(T('Retiré : le pourcentage par défaut s’applique','Removed: the default applies'));await loadAdmin();paint();}
+  }catch(x){err(x);toast(cleanErr(x));}
+});
+document.addEventListener('change',async function(ev){
+  var t=ev.target;if(!t||!t.getAttribute||!document.getElementById('view-ebooks')||!document.getElementById('view-ebooks').contains(t))return;
+  var a=t.getAttribute('data-act'),id=t.getAttribute('data-id'),e=id?byId(id):null;if(!e)return;
+  if(a==='dl')await quickUpdate(e,{download_enabled:t.checked},t.checked?T('Téléchargement autorisé','Download allowed'):T('Téléchargement désactivé (lecture en ligne)','Download disabled (online reading)'));
+  else if(a==='vis')await quickUpdate(e,{status:t.checked?'published':'hidden'},t.checked?T('Livre visible','Book visible'):T('Livre masqué','Book hidden'));
+});
+document.addEventListener('input',function(ev){
+  if(ev.target&&ev.target.id==='ebQ'){S.q=ev.target.value;clearTimeout(input_t);input_t=setTimeout(paint,180);}
+});
+var input_t=null;
+window.alloEbooks={open:function(){switchView('ebooks');},detail:detail,reader:reader,refresh:open_view};
 })();
 </script>
 
