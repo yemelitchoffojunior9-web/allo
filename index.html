@@ -10432,34 +10432,53 @@ function buildNav() {
 }
 
 function openCenterNavAction() {
-  // Le bouton + sert à créer un produit OU un service.
-  // Il ne doit jamais ouvrir la recherche.
+  // Le bouton + sert à créer tout ce qui se publie sur Allo : produit, service, emploi, e-book, publicité.
   if (!currentUser) {
-    requireAuth(lang === 'en' ? 'Sign in to create a product or a service.' : 'Connectez-vous pour créer un produit ou un service.', 'account');
+    requireAuth(lang === 'en' ? 'Sign in to create something on Allo.' : 'Connectez-vous pour créer sur Allo.', 'account');
     return;
   }
   const en = lang === 'en';
   let el = document.getElementById('svcPanel');
   if (!el) { el = document.createElement('div'); el.id = 'svcPanel'; document.body.appendChild(el); }
+  const tile = (kind, color, ico, t1, t2) => '<button type="button" class="jh-tile" style="--t:' + color + '" onclick="centerNavPick(\'' + kind + '\')"><span class="ico">' + ico + '</span><div><b>' + t1 + '</b><span>' + t2 + '</span></div></button>';
   el.innerHTML = '<div class="svc-h"><b>' + (en ? 'Create' : 'Créer') + '</b>'
     + '<button type="button" onclick="document.getElementById(\'svcPanel\').style.display=\'none\'" aria-label="' + (en ? 'Close' : 'Fermer') + '">×</button></div>'
     + '<div class="svc-b">'
     + '<p class="svc-meta">' + (en ? 'What do you want to create?' : 'Que voulez-vous créer ?') + '</p>'
-    + '<button type="button" class="jh-tile" style="--t:#a8f535" onclick="centerNavPick(\'product\')"><span class="ico">🛍️</span><div><b>' + (en ? 'A product' : 'Un produit') + '</b><span>' + (en ? 'Add an item to your shop catalogue.' : 'Ajoutez un article au catalogue de votre boutique.') + '</span></div></button>'
-    + '<button type="button" class="jh-tile" style="--t:#19d0ff" onclick="centerNavPick(\'service\')"><span class="ico">🛠</span><div><b>' + (en ? 'A service' : 'Un service') + '</b><span>' + (en ? 'Service, job offer or job search: you pick the type next.' : 'Service, offre d’emploi ou recherche d’emploi : vous choisissez le type ensuite.') + '</span></div></button>'
+    + tile('product', '#a8f535', '🛍️', en ? 'A product' : 'Un produit', en ? 'Add an item to your shop' : 'Ajoutez un article à votre boutique')
+    + tile('service', '#19d0ff', '🛠', en ? 'A service' : 'Un service', en ? 'Offer your skills and get requests' : 'Proposez vos compétences et recevez des demandes')
+    + tile('offer', '#ffb627', '📢', en ? 'A job offer' : 'Une offre d’emploi', en ? 'Recruit someone' : 'Recrutez quelqu’un')
+    + tile('seek', '#ff7ac0', '🙋', en ? 'A job search' : 'Une recherche d’emploi', en ? 'Present your profile to employers' : 'Présentez votre profil aux recruteurs')
+    + tile('ebook', '#a78bfa', '📚', en ? 'An e-book' : 'Un e-book', en ? 'Publish and sell (or give) your book' : 'Publiez et vendez (ou offrez) votre livre')
+    + tile('ad', '#ffd54a', '🚀', en ? 'An advert' : 'Une publicité', en ? 'Promote a product, service or e-book on the home screen' : 'Mettez un produit, un service ou un e-book en avant sur l’accueil')
+    + '<p class="svc-meta" style="margin-top:16px">🌍 Allo Vie — ' + (en ? 'everyday life' : 'le quotidien') + '</p>'
+    + '<div class="jh-minis">'
+    + [['housing','#4da3ff','🏠','Logement','Housing'],['ride','#ff9a3c','🚗','Trajet / covoiturage','Ride / carpool'],['course','#a78bfa','🎓','Éducation & formation','Education & training'],
+       ['health_pro','#34d399','🩺','Médecin / clinique','Doctor / clinic'],['artisan','#fbbf24','🛠','Artisan / pro','Tradesperson'],['diaspora','#2dd4bf','🌍','Pour un proche','For a loved one'],
+       ['translation','#d17bff','🗣','Traduction','Translation'],['pharmacy','#f472b6','💊','Pharmacie de garde','On-duty pharmacy']]
+      .map(function (x) { return '<button type="button" class="jh-mini" style="--t:' + x[1] + '" onclick="centerNavPick(\'life:' + x[0] + '\')"><span>' + x[2] + '</span><b>' + (en ? x[4] : x[3]) + '</b></button>'; }).join('')
+    + '</div>'
     + '</div>';
   el.style.display = 'flex';
 }
 
 function centerNavPick(kind) {
   const el = document.getElementById('svcPanel');
-  if (kind === 'service') {
-    // Ouvre le choix des types de service (service / offre d'emploi / recherche d'emploi)
-    if (window.alloSvc && typeof alloSvc.open === 'function') { alloSvc.open('publish'); return; }
-    if (el) el.style.display = 'none';
-    return;
-  }
-  if (el) el.style.display = 'none';
+  const hide = () => { if (el) el.style.display = 'none'; };
+  try {
+    if (kind === 'service') { if (window.alloSvc && typeof alloSvc.publish === 'function') { alloSvc.publish(); return; } hide(); return; }
+    if (kind === 'offer' || kind === 'seek') { if (window.alloJobs && typeof alloJobs.form === 'function') { alloJobs.form(kind); return; } hide(); return; }
+    if (kind === 'ebook') { hide(); if (window.alloEbooks && alloEbooks.publish) alloEbooks.publish(); return; }
+    if (kind === 'ad') { hide(); if (window.alloEbooks && alloEbooks.adPicker) alloEbooks.adPicker(); return; }
+    if (kind.indexOf('life:') === 0) {
+      hide();
+      const k = kind.slice(5);
+      if (k === 'pharmacy') { if (window.alloLife && alloLife.phForm) alloLife.phForm(); return; }
+      if (window.alloLife && alloLife.form) alloLife.form(k);
+      return;
+    }
+  } catch (e) { window.__alloErr && window.__alloErr(e); }
+  hide();
   openProductCreationWizard();
 }
 
@@ -11229,7 +11248,7 @@ function renderHomeProductsOnly() {
       }</div>`;
       html += '<div class="products-grid">';
       try { if (window.alloAds) alloAds.beginStream(); } catch (e) { window.__alloErr && window.__alloErr(e); }
-      html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(res.items, canAdd, ((res.page || 1) - 1) * (window._catalogPageSize || 40)) : res.items.map(p => productCardHTML(p, canAdd)).join('');
+      html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(res.items, canAdd, ((res.page || 1) - 1) * (window._catalogPageSize || 40), { ebooks: true }) : res.items.map(p => productCardHTML(p, canAdd)).join('');
       html += '</div>';
       html += searchPagerHTML(res.page, res.totalPages, res.total, 'setCatalogResultsPage');
     }
@@ -11268,7 +11287,7 @@ function renderHomeProductsOnly() {
     // Grille filtrée strictement par catégorie si active
     html = '<div class="products-grid">';
     try { if (window.alloAds) alloAds.beginStream(); } catch (e) { window.__alloErr && window.__alloErr(e); }
-    html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(products, canAdd, 0) : products.map(p => productCardHTML(p, canAdd)).join('');
+    html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(products, canAdd, 0, { ebooks: true }) : products.map(p => productCardHTML(p, canAdd)).join('');
     html += '</div>';
   }
   el.innerHTML = html;
@@ -22761,7 +22780,7 @@ function appendFeedBatch(n) {
   idx += slice.length;
   window._feedIdx = idx;
   window._feedLoaded = idx;
-  grid.insertAdjacentHTML('beforeend', (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(slice, window._feedCanAdd, (window._alloFeedBase || 0) + (idx - slice.length), { promo: true, maxPromo: 2 }) : slice.map(p => productCardHTML(p, window._feedCanAdd)).join(''));
+  grid.insertAdjacentHTML('beforeend', (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(slice, window._feedCanAdd, (window._alloFeedBase || 0) + (idx - slice.length), { promo: true, maxPromo: 2, ebooks: true }) : slice.map(p => productCardHTML(p, window._feedCanAdd)).join(''));
   _feedMarkSeen(slice.map(p => String(p.id)));
   try { refreshAllProductViewCountsUI(); } catch (e) { window.__alloErr && window.__alloErr(e); }
   return idx < list.length;
@@ -25304,15 +25323,16 @@ html body .order-role-badge{color:#ffb3c7!important}
     dlBtn.disabled = true; dlBtn.textContent = T('Préparation…', 'Preparing…');
     prevBox.innerHTML = '<span>' + T('Génération de l’image…', 'Generating image…') + '</span>';
     var gen = ((mode === 'peek' || mode === 'banner') && typeof window.alloProductCardBlob === 'function') ? window.alloProductCardBlob(state.src.pid, state.src.banner) : render(mode);
-    gen.then(function(blob){
+    var guard = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('délai dépassé')); }, 30000); });
+    Promise.race([gen, guard]).then(function(blob){
       if (token !== state.token) return;
       state.blobs[mode] = blob; state.urls[mode] = URL.createObjectURL(blob);
       showPrev(state.urls[mode]);
     }).catch(function(err){
       console.warn('card render', err);
       if (token !== state.token) return;
-      prevBox.innerHTML = '<span>' + T('Impossible de générer l’image. Réessayez.', 'Could not generate the image. Please try again.') + '</span>';
-      dlBtn.textContent = T('Télécharger', 'Download');
+      prevBox.innerHTML = '<span>' + T('Impossible de générer l’image. Touchez « Réessayer ».', 'Could not generate the image. Tap “Retry”.') + '</span>';
+      dlBtn.disabled = false; dlBtn.textContent = '↻ ' + T('Réessayer', 'Retry');
     });
   }
   function showPrev(url){
@@ -25320,7 +25340,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     dlBtn.disabled = false; dlBtn.textContent = '⬇ ' + T('Télécharger', 'Download');
   }
   function download(){
-    var b = state.blobs[state.mode]; if (!b) return;
+    var b = state.blobs[state.mode]; if (!b) { delete state.urls[state.mode]; select(state.mode); return; }
     var fname = 'carte-' + state.name + (state.mode === 'peek' ? '-apercu' : (state.mode === 'banner' ? '-banniere' : '')) + (/jpeg/.test((state.blobs[state.mode] || {}).type || '') ? '.jpg' : '.png');
     var a = document.createElement('a'); a.href = state.urls[state.mode]; a.download = fname;
     document.body.appendChild(a); a.click(); a.remove();
@@ -25328,10 +25348,23 @@ html body .order-role-badge{color:#ffb3c7!important}
 
   /* ---------- rendu ---------- */
   function toDataURL(url){
-    var net = fetch(url, { mode: 'cors', credentials: 'omit' }).then(function(r){ if (!r.ok) throw 0; return r.blob(); }).then(function(b){
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = null;
+    var limit = new Promise(function(_, rej){ timer = setTimeout(function(){ try { ctl && ctl.abort(); } catch (_) {} rej(new Error('photo trop lente')); }, 5000); });
+    var net = fetch(url, { mode: 'cors', credentials: 'omit', cache: 'force-cache', signal: ctl ? ctl.signal : undefined }).then(function(r){ if (!r.ok) throw 0; return r.blob(); }).then(function(b){
+      /* grosse photo (réseau lent) : on la réduit avant de l'intégrer → rendu et décodage plus rapides */
+      var keep = /png|webp|gif/i.test(b.type) || b.size < 150000 || typeof createImageBitmap !== 'function';
+      if (!keep) {
+        return createImageBitmap(b).then(function(bm){
+          var m = Math.min(1, 560 / Math.max(bm.width, bm.height)), c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(bm.width * m)); c.height = Math.max(1, Math.round(bm.height * m));
+          c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height); try { bm.close(); } catch (_) {}
+          return c.toDataURL('image/jpeg', 0.9);
+        });
+      }
       return new Promise(function(res, rej){ var f = new FileReader(); f.onload = function(){ res(f.result); }; f.onerror = rej; f.readAsDataURL(b); });
     });
-    return net;
+    return Promise.race([net, limit]).then(function(d){ clearTimeout(timer); return d; }, function(e){ clearTimeout(timer); throw e; });
   }
   /* styles par défaut d'une balise (iframe vierge) : on ne recopie que ce qui diffère → SVG 20× plus léger */
   var defFrame = null, defCache = {};
@@ -25445,7 +25478,7 @@ html body .order-role-badge{color:#ffb3c7!important}
   }
   function waitImgs(root){
     return Promise.all(Array.prototype.map.call(root.querySelectorAll('img'), function(im){
-      return im.complete ? 0 : new Promise(function(r){ im.onload = im.onerror = r; });
+      return im.complete ? 0 : new Promise(function(r){ var t = setTimeout(r, 2500); im.onload = im.onerror = function(){ clearTimeout(t); r(); }; });
     }));
   }
   function render(mode){
@@ -28632,12 +28665,14 @@ function adsAt(n,canAdd){
 }
 function cardsHTML(list,canAdd,start,opts){
   function card(p){return productCardHTML(p,canAdd);}
-  if(!S.loaded||!S.ads.length)return list.map(card).join('');
+  var slot=function(pos){return(opts&&opts.ebooks&&typeof window.alloEbookSlot==='function')?window.alloEbookSlot(pos):'';};
+  if(!S.loaded||!S.ads.length){var o2='';list.forEach(function(p,i){o2+=card(p)+slot(start+i+1);});return o2;}
   ensureBase();
   var out='';
   list.forEach(function(p,i){
     var pos=start+i+1;
     out+=card(p);
+    out+=slot(pos);
     if(pos>ST.max)ST.max=pos;
     out+=adsAt(ST.base+pos,canAdd);
   });
@@ -29613,6 +29648,45 @@ var _ra=window.renderAccount;
 </style>
 <style id="alloEbooksCss">
 #view-ebooks{padding:12px 12px 90px}
+.eb-home-h{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;font-size:17px}
+/* ===== Carte e-book (style publicité + j'aime) ===== */
+.ebk{--h:260;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;border-radius:22px;color:#fff;padding:14px 14px 14px;margin:0 0 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-sizing:border-box;
+  background:linear-gradient(150deg,hsl(var(--h) 62% 30%),hsl(calc(var(--h) + 30) 68% 13%));
+  box-shadow:0 12px 28px hsla(var(--h),75%,5%,.55),inset 0 0 0 1px hsla(var(--h),90%,75%,.3)}
+.ebk-fx{position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(118deg,rgba(255,255,255,.05) 0 8px,transparent 8px 18px)}
+.ebk-glow{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 55% at 100% 0%,hsla(var(--h),95%,62%,.36),transparent 70%),radial-gradient(60% 45% at 0% 100%,hsla(calc(var(--h) + 50),90%,55%,.22),transparent 70%)}
+.ebk-promo{background:radial-gradient(120% 90% at 50% 30%,hsl(330 100% 70%) 0%,hsl(328 94% 58%) 52%,hsl(324 86% 42%) 100%);box-shadow:0 12px 28px rgba(190,30,110,.45),inset 0 0 0 1px rgba(255,255,255,.35)}
+.ebk-promo .ebk-fx{background:repeating-linear-gradient(118deg,rgba(255,255,255,.1) 0 8px,transparent 8px 18px)}
+.ebk-promo .ebk-glow{background:radial-gradient(60% 40% at 50% 100%,rgba(255,255,255,.32),transparent 70%)}
+.ebk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ebk-tags{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.ebk-tag{font:900 10px/1 system-ui,sans-serif;letter-spacing:.5px;padding:6px 9px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.26);white-space:nowrap}
+.ebk-tag.main{background:linear-gradient(180deg,#ffe27a,#f5b400);color:#2a1a00;border-color:transparent}
+.ebk-tag.promo{background:#ff3d9a;border-color:transparent}.ebk-tag.free{background:#16c34a;border-color:transparent}.ebk-tag.own{background:#2563eb;border-color:transparent}
+.ebk-like{flex:none;display:flex;align-items:center;gap:5px;border:1.5px solid rgba(255,255,255,.4);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 11px;font:800 13px/1 system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.ebk-like i{font-style:normal;font-size:17px;line-height:1;transition:transform .2s}
+.ebk-like.on{border-color:#ff4d6d;background:rgba(255,77,109,.22)}.ebk-like.on i{color:#ff4d6d;transform:scale(1.15)}
+.ebk-like:active{transform:scale(.94)}
+.ebk-main{display:flex;gap:16px;align-items:center;margin:14px 0 10px}
+.ebk-book{--h:260;position:relative;flex:none;width:104px;aspect-ratio:2/3;border-radius:5px 12px 12px 5px;overflow:hidden;background:linear-gradient(160deg,hsl(var(--h) 72% 46%),hsl(calc(var(--h) + 40) 70% 22%));background-size:cover;background-position:center;transform:perspective(520px) rotateY(-13deg);transform-origin:left center;box-shadow:12px 14px 24px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.22);margin-left:6px}
+.ebk-spine{position:absolute;left:0;top:0;bottom:0;width:11px;background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(255,255,255,.18) 55%,transparent)}
+.ebk-gloss{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.28) 0%,transparent 42%)}
+.ebk-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 8px 8px 16px;text-align:center;font-size:30px}
+.ebk-ph b{font:900 12px/1.15 system-ui,sans-serif;text-shadow:0 2px 6px rgba(0,0,0,.5);overflow-wrap:anywhere}
+.ebk-txt{min-width:0;flex:1}
+.ebk-title{font:900 21px/1.12 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 10px rgba(0,0,0,.35);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.ebk-by{margin-top:6px;font-size:12.5px;opacity:.88}
+.ebk-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.ebk-chips span{font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.16)}
+.ebk-end{margin-top:2px;font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;text-align:center;opacity:.95}
+.ebk-end b{font:900 15px/1 system-ui,sans-serif;margin-left:4px;font-variant-numeric:tabular-nums;letter-spacing:.4px}
+.ebk-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.ebk-price{display:inline-flex;align-items:baseline;gap:6px;padding:8px 16px;border-radius:999px;font:900 18px/1.1 "Arial Black",system-ui,sans-serif;color:#2a1a00;background:linear-gradient(180deg,#ffe98a,#f5b400);box-shadow:0 6px 16px rgba(245,180,0,.35),inset 0 0 0 2px rgba(255,255,255,.5)}
+.ebk-price s{font:700 12px/1 system-ui,sans-serif;opacity:.7}
+.ebk-price.free{background:linear-gradient(180deg,#5ee27a,#16a34a);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.ebk-go{flex:none;border:0;border-radius:14px;min-height:46px;padding:0 18px;font:800 14px/1 system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);cursor:pointer;background:linear-gradient(180deg,#8be22b,#3f9b0b);box-shadow:0 6px 14px rgba(63,155,11,.45),inset 0 0 0 2px rgba(255,255,255,.28)}
+.eb-pick{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;border-radius:12px;padding:11px 12px;margin:5px 0;font:inherit;cursor:pointer}
+.eb-pick span{font-size:20px}.eb-pick b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .eb-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 10px}
 .eb-h h2{margin:0;font-size:24px}
 .eb-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
@@ -29623,7 +29697,7 @@ var _ra=window.renderAccount;
 .eb-chip{flex:none;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;cursor:pointer}
 .eb-chip.on{background:#ffd54a;color:#2a1a00;border-color:transparent;font-weight:800}
 .eb-sec{margin:16px 0 8px;font-size:16px;font-weight:900}
-.eb-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.eb-grid{display:block}
 .eb-card{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .eb-cover{--h:260;position:relative;aspect-ratio:2/3;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,hsl(var(--h) 70% 42%),hsl(calc(var(--h) + 40) 70% 22%));background-size:cover;background-position:center;box-shadow:0 8px 18px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.25);display:flex;align-items:flex-end;justify-content:center}
 .eb-cover b{padding:10px;font:900 15px/1.15 "Arial Black",system-ui,sans-serif;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,.5);overflow-wrap:anywhere}
@@ -29711,7 +29785,7 @@ var CATS=['Business','Éducation','Roman','Santé & bien-être','Technologie','R
 var CATS_EN={'Business':'Business','Éducation':'Education','Roman':'Fiction','Santé & bien-être':'Health & wellness','Technologie':'Technology','Religion & spiritualité':'Religion & spirituality','Cuisine':'Cooking','Développement personnel':'Self-improvement','Enfants':'Kids','Autre':'Other'};
 function catL(c){return en()?(CATS_EN[c]||c):c;}
 
-var S={tab:'store',q:'',cat:'all',list:[],names:{},ads:{},owned:{},mine:[],sales:[],tiers:[],brackets:[],pct:null,admin:null,loaded:false,busy:false};
+var S={tab:'store',q:'',cat:'all',list:[],names:{},ads:{},owned:{},likes:{},lib:[],mine:[],sales:[],tiers:[],brackets:[],pct:null,admin:null,loaded:false,busy:false};
 function isAdmin(){var u=me();return !!(u&&u.role==='admin');}
 function logged(){try{return isLoggedIn()&&typeof sb!=='undefined'&&sb;}catch(_){return false;}}
 function priceNow(e){
@@ -29721,7 +29795,7 @@ function priceNow(e){
 }
 function onPromo(e){return !!(e.promo_pct&&e.promo_ends_at&&new Date(e.promo_ends_at).getTime()>Date.now()&&Number(e.price)>0);}
 function isMine(e){var u=me();return !!(u&&String(e.author_id)===String(u.id));}
-function byId(id){return S.list.concat(S.mine).find(function(e){return String(e.id)===String(id);})||null;}
+function byId(id){return S.list.concat(S.mine,S.lib).find(function(e){return String(e.id)===String(id);})||null;}
 
 /* ---------- Vue + menu ---------- */
 function ensureView(){
@@ -29760,7 +29834,8 @@ async function loadStore(){
   var a=await sb.from('ebook_ads').select('ebook_id,tier,ends_at').gt('ends_at',new Date().toISOString());
   S.ads={};(a.data||[]).forEach(function(x){S.ads[x.ebook_id]=x;});
   var u=me();
-  if(u){var p=await sb.from('ebook_purchases').select('ebook_id').eq('buyer_id',u.id);S.owned={};(p.data||[]).forEach(function(x){S.owned[x.ebook_id]=1;});}
+  if(u){var p=await sb.from('ebook_purchases').select('ebook_id').eq('buyer_id',u.id);S.owned={};(p.data||[]).forEach(function(x){S.owned[x.ebook_id]=1;});
+    var lk=await sb.from('ebook_likes').select('ebook_id').eq('user_id',u.id);S.likes={};(lk.data||[]).forEach(function(x){S.likes[x.ebook_id]=1;});}
   await names(S.list.map(function(e){return e.author_id;}));
   S.loaded=true;
 }
@@ -29779,7 +29854,8 @@ async function loadLibrary(){
   var r=await sb.from('ebooks').select('*').in('id',ids);
   var map={};(r.data||[]).forEach(function(e){map[e.id]=e;});
   await names((r.data||[]).map(function(e){return e.author_id;}));
-  return ids.map(function(i){return map[i];}).filter(Boolean);
+  S.lib=ids.map(function(i){return map[i];}).filter(Boolean);
+  return S.lib;
 }
 async function loadAdmin(){
   var r=await sb.rpc('admin_ebook_summary');if(r.error)throw r.error;S.admin=r.data;
@@ -29796,30 +29872,42 @@ function quote(tier,days){
 
 /* ---------- Rendu ---------- */
 function coverStyle(e){return '--h:'+hue(e.id||e.title)+(e.cover_url?';background-image:url(&quot;'+esc(e.cover_url)+'&quot;)':'');}
-function cardHTML(e){
-  var pn=priceNow(e),pr=onPromo(e);
-  var badge=Number(e.price)===0?'<span class="eb-badge free">'+esc(T('GRATUIT','FREE'))+'</span>':(pr?'<span class="eb-badge promo">−'+e.promo_pct+'%</span>':'');
-  var mine=isMine(e)?'<span class="eb-badge mine">'+esc(T('Mon livre','Mine'))+'</span>':(S.owned[e.id]?'<span class="eb-badge mine">'+esc(T('Acquis','Owned'))+'</span>':'');
-  return '<div class="eb-card" data-id="'+esc(e.id)+'"><div class="eb-cover" style="'+coverStyle(e)+'">'+badge+mine+(e.cover_url?'':'<b>'+esc(e.title)+'</b>')+'</div>'
-    +'<div class="eb-t">'+esc(e.title)+'</div><div class="eb-a">'+esc(S.names[e.author_id]||'')+'</div>'
-    +'<div class="eb-p">'+(Number(e.price)===0?esc(T('Gratuit','Free')):esc(money(pn))+(pr?'<s>'+esc(money(e.price))+'</s>':''))+'</div></div>';
+function variantOf(e){return S.ads[e.id]?'ad':(onPromo(e)?'promo':'plain');}
+function remTxt(end){
+  var ms=new Date(end).getTime()-Date.now();if(!(ms>0))return T('Terminée','Ended');
+  var m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60,p=function(n){return(n<10?'0':'')+n;};
+  return(d>0?d+(en()?'D ':'J '):'')+p(h)+'H '+p(mi)+'M';
 }
-function bannerHTML(e,kind,endsAt){
-  var promo=kind==='promo',h=promo?330:hue(e.id),pn=priceNow(e),pr=onPromo(e);
-  var end=endsAt||'';
-  var cd=end?'<div class="adb-end">'+esc(promo?T('La promo se termine dans','The promotion ends in'):T('L’offre se termine dans','The offer ends in'))+'<b class="adb-cd" data-end="'+esc(end)+'">…</b></div>':'';
-  return '<div class="adb'+(promo?' adb-promo':'')+'" style="--h:'+h+'" data-eb="'+esc(e.id)+'" role="button" tabindex="0">'
-   +'<i class="adb-fx"></i><i class="adb-glow"></i>'
-   +'<span class="adb-tag">'+(promo?'🔥 '+esc(T('Promotion','Promotion'))+' −'+e.promo_pct+'%':'📢 '+esc(T('Sponsorisé','Sponsored')))+'</span>'
-   +'<div class="adb-title">'+esc(e.title)+'</div>'
-   +'<div class="adb-sub">'+esc([catL(e.category),S.names[e.author_id]].filter(Boolean).join(' · '))+'</div>'
-   +'<div class="adb-stage"><div class="adb-card"><div class="adb-ovr">'+(promo?'−'+e.promo_pct+'%':'📚')+'</div>'
-   +'<div class="adb-ph">'+(e.cover_url?'<img src="'+esc(e.cover_url)+'" alt="" loading="lazy">':'📚')+'</div>'
-   +'<div class="adb-foot"><b>'+esc(e.title)+'</b><span>'+(Number(e.price)===0?esc(T('Gratuit','Free')):esc(money(pn)))+'</span></div></div>'
-   +'<div class="adb-ticket"><div class="tk-main"><small>'+esc(S.names[e.author_id]||'E-book')+'</small>'
-   +'<div class="tk-price">'+(Number(e.price)===0?esc(T('Gratuit','Free')):esc(money(pn)))+'</div>'+(pr?'<div class="tk-old">'+esc(money(e.price))+'</div>':'')
-   +'<span class="tk-cta">'+esc(T('VOIR LE LIVRE','VIEW BOOK'))+' ›</span></div><div class="tk-side"><i>E-BOOK</i></div></div></div>'+cd+'</div>';
+function likeBtn(e){
+  var on=!!S.likes[e.id];
+  return '<button type="button" class="ebk-like'+(on?' on':'')+'" data-like="'+esc(e.id)+'" aria-pressed="'+(on?'true':'false')+'" aria-label="'+esc(T('J’aime','Like'))+'"><i>'+(on?'♥':'♡')+'</i><span>'+(e.likes_count||0)+'</span></button>';
 }
+/* Carte e-book : même niveau de finition que les cartes publicité, avec « j'aime » */
+function ebkHTML(e,variant,endsAt){
+  variant=variant||variantOf(e);
+  var promoCard=variant==='promo',pn=priceNow(e),pr=onPromo(e),free=Number(e.price)===0,id=esc(e.id);
+  var mine=isMine(e),owned=!!S.owned[e.id];
+  var end=endsAt||(variant==='ad'&&S.ads[e.id]?S.ads[e.id].ends_at:(pr?e.promo_ends_at:''));
+  var tags='<span class="ebk-tag main">📚 E-BOOK</span>'
+    +(variant==='ad'?'<span class="ebk-tag ad">📢 '+esc(T('Sponsorisé','Sponsored'))+'</span>':'')
+    +(pr?'<span class="ebk-tag promo">🔥 −'+e.promo_pct+'%</span>':'')
+    +(free?'<span class="ebk-tag free">'+esc(T('GRATUIT','FREE'))+'</span>':'')
+    +(mine?'<span class="ebk-tag own">'+esc(T('Mon livre','Mine'))+'</span>':(owned?'<span class="ebk-tag own">✔ '+esc(T('Acquis','Owned'))+'</span>':''));
+  var book='<div class="ebk-book" style="'+coverStyle(e)+'"><i class="ebk-spine"></i><i class="ebk-gloss"></i>'+(e.cover_url?'':'<span class="ebk-ph">📚<b>'+esc(e.title)+'</b></span>')+'</div>';
+  var chips=[catL(e.category),(e.language||'fr').toUpperCase(),(e.file_mime==='application/pdf'?'PDF':'EPUB')].map(function(c){return '<span>'+esc(c)+'</span>';}).join('')
+    +((e.sales_count||0)>0?'<span>👥 '+e.sales_count+'</span>':'');
+  var price=free?'<div class="ebk-price free">'+esc(T('GRATUIT','FREE'))+'</div>':'<div class="ebk-price">'+esc(money(pn))+(pr?'<s>'+esc(money(e.price))+'</s>':'')+'</div>';
+  var go=(mine||owned)?'📖 '+T('Lire','Read'):(free?'🎁 '+T('Obtenir','Get'):'🛒 '+T('Acheter','Buy'));
+  return '<div class="ebk'+(promoCard?' ebk-promo':'')+'" style="--h:'+(promoCard?330:hue(e.id))+'" data-eb="'+id+'" role="button" tabindex="0">'
+    +'<i class="ebk-fx"></i><i class="ebk-glow"></i>'
+    +'<div class="ebk-top"><div class="ebk-tags">'+tags+'</div>'+likeBtn(e)+'</div>'
+    +'<div class="ebk-main">'+book+'<div class="ebk-txt"><div class="ebk-title">'+esc(e.title)+'</div>'
+    +'<div class="ebk-by">'+esc(T('par','by'))+' '+esc(S.names[e.author_id]||T('Auteur','Author'))+'</div><div class="ebk-chips">'+chips+'</div></div></div>'
+    +(end?'<div class="ebk-end">'+esc(promoCard||pr?T('La promo se termine dans','The promotion ends in'):T('L’offre se termine dans','The offer ends in'))+' <b class="adb-cd" data-end="'+esc(end)+'">'+esc(remTxt(end))+'</b></div>':'')
+    +'<div class="ebk-foot">'+price+'<button type="button" class="ebk-go">'+go+' ›</button></div></div>';
+}
+function cardHTML(e){return ebkHTML(e);}
+function bannerHTML(e,kind,endsAt){return ebkHTML(e,kind,endsAt);}
 function tabsHTML(){
   var t=[['store','🛒 '+T('Boutique','Store')],['lib','📖 '+T('Ma bibliothèque','My library')]];
   if(logged())t.push(['mine','✍️ '+T('Mes e-books','My e-books')]);
@@ -29843,7 +29931,9 @@ function storeHTML(){
     if(promos.length)h+='<div class="eb-sec">🔥 '+esc(T('Promotions','Promotions'))+'</div>'+promos.map(function(e){return bannerHTML(e,'promo',e.promo_ends_at);}).join('');
     var free=list.filter(function(e){return Number(e.price)===0&&!used[e.id];}).slice(0,6);
     if(free.length)h+='<div class="eb-sec">🎁 '+esc(T('Gratuits','Free'))+'</div><div class="eb-grid">'+free.map(cardHTML).join('')+'</div>';
-    h+='<div class="eb-sec">🆕 '+esc(T('Tous les e-books','All e-books'))+'</div><div class="eb-grid">'+list.map(cardHTML).join('')+'</div>';
+    free.forEach(function(e){used[e.id]=1;});
+    var others=list.filter(function(e){return !used[e.id];});
+    if(others.length)h+='<div class="eb-sec">🆕 '+esc(Object.keys(used).length?T('Autres e-books','More e-books'):T('Tous les e-books','All e-books'))+'</div><div class="eb-grid">'+others.map(cardHTML).join('')+'</div>';
     return h;
   }
   return h+(list.length?'<div class="eb-grid" style="margin-top:8px">'+list.map(cardHTML).join('')+'</div>':'<div class="eb-empty">'+esc(T('Aucun résultat.','No result.'))+'</div>');
@@ -29913,7 +30003,7 @@ async function paint(){
   tick();
 }
 function tick(){
-  document.querySelectorAll('#view-ebooks .adb-cd[data-end]').forEach(function(el){
+  document.querySelectorAll('.ebk .adb-cd[data-end],#view-ebooks .adb-cd[data-end]').forEach(function(el){
     var ms=new Date(el.getAttribute('data-end')).getTime()-Date.now();
     if(!(ms>0)){el.textContent=T('Terminée','Ended');return;}
     var m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60,p=function(n){return(n<10?'0':'')+n;};
@@ -30155,13 +30245,13 @@ async function quickUpdate(e,vals,msg){
 
 /* ---------- Événements ---------- */
 document.addEventListener('click',async function(ev){
-  var v=document.getElementById('view-ebooks');if(!v||!v.contains(ev.target))return;
-  var t=ev.target.closest('[data-tab],[data-cat],[data-act],.eb-card,.adb[data-eb]');if(!t)return;
+  var v=ev.target.closest&&ev.target.closest('#view-ebooks,.ebk');if(!v)return;
+  var t=ev.target.closest('[data-tab],[data-cat],[data-act],.eb-card,.adb[data-eb],.ebk');if(!t)return;
   try{
     if(t.hasAttribute('data-tab')){S.tab=t.getAttribute('data-tab');if(S.tab==='mine'){await loadMine();}else if(S.tab==='admin'){try{await loadAdmin();await names(Object.keys(((S.admin||{}).settings||{}).overrides||{}));}catch(x){toast(cleanErr(x));}}paint();return;}
     if(t.hasAttribute('data-cat')){S.cat=t.getAttribute('data-cat');paint();return;}
     if(t.classList.contains('eb-card')){detail(t.getAttribute('data-id'));return;}
-    if(t.classList.contains('adb')){detail(t.getAttribute('data-eb'));return;}
+    if(t.classList.contains('adb')||t.classList.contains('ebk')){detail(t.getAttribute('data-eb'));return;}
     var a=t.getAttribute('data-act'),id=t.getAttribute('data-id'),e=id?byId(id):null;
     if(a==='new')form();
     else if(a==='view'&&e)detail(id);
@@ -30184,7 +30274,221 @@ document.addEventListener('input',function(ev){
   if(ev.target&&ev.target.id==='ebQ'){S.q=ev.target.value;clearTimeout(input_t);input_t=setTimeout(paint,180);}
 });
 var input_t=null;
-window.alloEbooks={open:function(){switchView('ebooks');},detail:detail,reader:reader,refresh:open_view};
+/* ---------- Sélecteur « Quoi promouvoir ? » (bouton +) ---------- */
+async function adPicker(){
+  if(!logged()){try{requireAuth(T('Connectez-vous pour faire une publicité.','Sign in to advertise.'),'account');}catch(_){}return;}
+  try{await loadMine();}catch(e){err(e);}
+  var u=me(),prods=(typeof data!=='undefined'&&data.products||[]).filter(function(p){return u&&String(p.ownerId)===String(u.id);}).slice(0,40);
+  var h=head(T('Quoi mettre en avant ?','What do you want to promote?'));
+  h+='<div class="eb-sec">📚 '+esc(T('Mes e-books','My e-books'))+'</div>';
+  h+=S.mine.length?S.mine.map(function(e){return '<button type="button" class="eb-pick" data-pick="eb:'+esc(e.id)+'"><span>📚</span><b>'+esc(e.title)+'</b></button>';}).join('')
+    :'<div class="eb-note">'+esc(T('Aucun e-book publié.','No e-book published.'))+'</div>';
+  h+='<div class="eb-sec">🛍️ '+esc(T('Mes produits & services','My products & services'))+'</div>';
+  h+=prods.length?prods.map(function(p){return '<button type="button" class="eb-pick" data-pick="pr:'+esc(p.id)+'"><span>'+esc(p.icon||'🛍️')+'</span><b>'+esc(p.name)+'</b></button>';}).join('')
+    :'<div class="eb-note">'+esc(T('Aucun produit ou service publié.','No product or service published.'))+'</div>';
+  sheet(h,function(o){o.querySelectorAll('[data-pick]').forEach(function(b){b.onclick=function(){
+    var k=b.getAttribute('data-pick'),i=k.slice(3);closeSheet();
+    if(k.indexOf('eb:')===0){var e=byId(i);if(e)adSheet(e);}
+    else{try{alloAds.open(i);}catch(x){err(x);toast(T('Publicité indisponible pour ce produit.','Advertising unavailable for this item.'));}}
+  };});});
+}
+
+/* ---------- J'aime ---------- */
+function paintLikes(id){
+  var e=byId(id),on=!!S.likes[id];
+  document.querySelectorAll('[data-like="'+id+'"]').forEach(function(b){
+    b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');
+    var i=b.querySelector('i'),sp=b.querySelector('span');if(i)i.textContent=on?'♥':'♡';if(sp)sp.textContent=e?(e.likes_count||0):'';
+  });
+}
+async function toggleLike(id){
+  if(!logged()){try{requireAuth(T('Connectez-vous pour aimer ce livre.','Sign in to like this book.'),'account');}catch(_){}return;}
+  var e=byId(id),on=!S.likes[id];
+  S.likes[id]=on?1:0;if(e)e.likes_count=Math.max(0,(e.likes_count||0)+(on?1:-1));paintLikes(id);
+  try{
+    var r=on?await sb.from('ebook_likes').insert({ebook_id:id,user_id:me().id}):await sb.from('ebook_likes').delete().eq('ebook_id',id).eq('user_id',me().id);
+    if(r.error&&!/duplicate|unique/i.test(r.error.message||''))throw r.error;
+  }catch(x){err(x);S.likes[id]=on?0:1;if(e)e.likes_count=Math.max(0,(e.likes_count||0)+(on?-1:1));paintLikes(id);toast(cleanErr(x));}
+}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest&&ev.target.closest('[data-like]');if(!b)return;
+  ev.stopPropagation();ev.preventDefault();toggleLike(b.getAttribute('data-like'));
+},true);
+document.addEventListener('keydown',function(ev){
+  if((ev.key==='Enter'||ev.key===' ')&&ev.target&&ev.target.classList&&ev.target.classList.contains('ebk')){ev.preventDefault();detail(ev.target.getAttribute('data-eb'));}
+});
+
+/* ---------- Mélange dans le catalogue et le fil d'accueil ---------- */
+function score(e){return (e.likes_count||0)*2+(e.sales_count||0)*3+(e.downloads_count||0);}
+function feedQueue(){
+  var key=S.list.length+':'+Object.keys(S.ads).length;
+  if(S._fq&&S._fq.key===key)return S._fq.list;
+  var ads=S.list.filter(function(e){return S.ads[e.id];}),promos=S.list.filter(function(e){return onPromo(e)&&!S.ads[e.id];}),
+      rest=S.list.filter(function(e){return !S.ads[e.id]&&!onPromo(e);}).sort(function(a,b){return score(b)-score(a)||String(b.created_at).localeCompare(String(a.created_at));});
+  var out=[],i=0;
+  while(ads.length||promos.length||rest.length){
+    if(ads.length)out.push(ads.shift());
+    if(promos.length)out.push(promos.shift());
+    if(rest.length)out.push(rest.shift());
+    if(rest.length)out.push(rest.shift());
+    if(++i>400)break;
+  }
+  S._fq={key:key,list:out};return out;
+}
+window.alloEbookSlot=function(pos){
+  try{
+    if(!logged()||isAdmin())return '';
+    var every=7;
+    if(!S.list.length)return pos%every===0&&typeof window.alloLifeSlot==='function'?window.alloLifeSlot(pos):'';
+    if(pos%every===0)return typeof window.alloLifeSlot==='function'?window.alloLifeSlot(pos):'';
+    if(pos%every!==3)return '';
+    var q=feedQueue();if(!q.length)return '';
+    return ebkHTML(q[Math.floor(pos/every)%q.length]);
+  }catch(e){err(e);return '';}
+};
+var homeAt=0,homeOnce=false;
+async function preload(){
+  var old=document.getElementById('homeEbooks');if(old)old.remove();
+  var u=me();if(!u||u.role==='admin'||!logged())return;
+  if(S.loaded&&Date.now()-homeAt<120000)return;
+  homeAt=Date.now();var had=S.list.length;
+  var lfNew=false;
+  try{await loadStore();}catch(e){err(e);}
+  try{lfNew=!!(await (window.alloLifePreload&&window.alloLifePreload()));}catch(e){err(e);}
+  if((S.list.length&&(!homeOnce||!had))||lfNew){homeOnce=true;try{var h=document.getElementById('view-home');if(h&&h.classList.contains('active')&&typeof renderHomeProductsOnly==='function')renderHomeProductsOnly();}catch(e){err(e);}}
+}
+var _rh=window.renderHome;
+if(typeof _rh==='function')window.renderHome=function(){var r=_rh.apply(this,arguments);try{preload();}catch(e){err(e);}return r;};
+window.alloEbooks={open:function(){switchView('ebooks');},detail:detail,reader:reader,refresh:open_view,publish:function(){S.tab='mine';form();},adPicker:adPicker,home:preload};
+})();
+</script>
+
+<style id="alloLifeFeedCss">
+.lfc{--h:205;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;border-radius:22px;color:#fff;padding:14px;margin:0 0 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-sizing:border-box;
+  background:linear-gradient(150deg,hsl(var(--h) 60% 28%),hsl(calc(var(--h) + 24) 66% 12%));
+  box-shadow:0 12px 28px hsla(var(--h),75%,5%,.55),inset 0 0 0 1px hsla(var(--h),90%,75%,.3)}
+.lfc-fx{position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(118deg,rgba(255,255,255,.045) 0 8px,transparent 8px 18px)}
+.lfc-glow{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 55% at 100% 0%,hsla(var(--h),95%,62%,.34),transparent 70%),radial-gradient(60% 45% at 0% 100%,hsla(calc(var(--h) + 50),90%,55%,.2),transparent 70%)}
+.lfc-top{display:flex;flex-wrap:wrap;gap:6px}
+.lfc-tag{font:900 10px/1 system-ui,sans-serif;letter-spacing:.5px;padding:6px 9px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.26);white-space:nowrap}
+.lfc-tag.main{background:linear-gradient(180deg,#ffe27a,#f5b400);color:#2a1a00;border-color:transparent}
+.lfc-tag.ok{background:#16a34a;border-color:transparent}.lfc-tag.own{background:#2563eb;border-color:transparent}.lfc-tag.new{background:#ef4444;border-color:transparent}
+.lfc-main{display:flex;gap:14px;align-items:center;margin:12px 0 10px}
+.lfc-ico{flex:none;width:76px;height:76px;border-radius:22px;display:grid;place-items:center;font-size:40px;background:linear-gradient(145deg,hsl(var(--h) 92% 64%),hsl(calc(var(--h) + 35) 85% 44%));box-shadow:0 8px 22px hsla(var(--h),90%,50%,.5),inset 0 0 0 2px rgba(255,255,255,.4)}
+.lfc-photo{flex:none;position:relative;width:96px;height:96px;border-radius:18px;background:#123 center/cover no-repeat;box-shadow:0 10px 22px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.4)}
+.lfc-photo b{position:absolute;right:-6px;bottom:-6px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:17px;background:hsl(var(--h) 80% 40%);border:2px solid #fff}
+.lfc-txt{min-width:0;flex:1}
+.lfc-title{font:900 19px/1.15 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 10px rgba(0,0,0,.35);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.lfc-meta{margin-top:5px;font-size:12.5px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lfc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.lfc-chips span{font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.16)}
+.lfc-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+.lfc-price{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap;padding:8px 14px;border-radius:999px;font:900 16px/1.1 "Arial Black",system-ui,sans-serif;color:#2a1a00;background:linear-gradient(180deg,#ffe98a,#f5b400);box-shadow:0 6px 16px rgba(245,180,0,.35),inset 0 0 0 2px rgba(255,255,255,.5)}
+.lfc-price small{font:800 11px/1 system-ui,sans-serif;opacity:.75}
+.lfc-price.q{font-size:14px;background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4)}
+.lfc-go{flex:1 1 130px;white-space:nowrap;border:0;border-radius:14px;min-height:46px;padding:0 14px;font:800 14px/1 system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);cursor:pointer;background:linear-gradient(180deg,#8be22b,#3f9b0b);box-shadow:0 6px 14px rgba(63,155,11,.45),inset 0 0 0 2px rgba(255,255,255,.28)}
+/* bouton + : section Allo Vie */
+.jh-minis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.jh-mini{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid rgba(255,255,255,.16);border-left:4px solid var(--t,#fff);background:#16264a;color:#fff;border-radius:14px;padding:12px 10px;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.jh-mini span{font-size:22px}.jh-mini b{font-size:13px;line-height:1.15}
+.jh-mini:active{background:#1d3366}
+</style>
+<script id="alloLifeFeed">
+/* Allo Vie dans le catalogue : cartes soignées mélangées aux produits (annonces logement, trajets, formations, santé, artisans, proches, traduction). */
+(function(){
+'use strict';
+function err(e){window.__alloErr&&window.__alloErr(e);}
+function en(){return typeof lang!=='undefined'&&lang==='en';}
+function T(f,e){return en()?e:f;}
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function money(n){try{return formatMoney(n);}catch(_){return Number(n||0).toLocaleString('fr-FR')+' FCFA';}}
+function me(){try{return currentUser||null;}catch(_){return null;}}
+function logged(){try{return isLoggedIn()&&typeof sb!=='undefined'&&sb;}catch(_){return false;}}
+var K={
+  housing:{ico:'🏠',h:205,t:['Logement','Housing'],go:['Voir le bien','View property'],subs:{rent:['Location','For rent'],sale:['Vente','For sale'],share:['Colocation','Flatshare']}},
+  ride:{ico:'🚗',h:28,t:['Trajet','Ride'],go:['Voir le trajet','View ride'],subs:{carpool:['Covoiturage','Carpool'],parcel:['Colis','Parcel']}},
+  course:{ico:'🎓',h:262,t:['Éducation','Education'],go:['Voir l’offre','View offer'],subs:{tutor:['Cours particuliers','Tutoring'],training:['Formation','Training'],internship:['Stage','Internship'],scholarship:['Bourse','Scholarship']}},
+  health_pro:{ico:'🩺',h:150,t:['Santé','Health'],go:['Prendre contact','Get in touch'],subs:{doctor:['Médecin','Doctor'],clinic:['Clinique / hôpital','Clinic / hospital'],dentist:['Dentiste','Dentist'],lab:['Laboratoire','Lab'],other:['Autre','Other']}},
+  artisan:{ico:'🛠',h:42,t:['Artisan','Tradesperson'],go:['Contacter','Contact'],subs:{plumber:['Plombier','Plumber'],electrician:['Électricien','Electrician'],mechanic:['Mécanicien','Mechanic'],mason:['Maçon','Mason'],carpenter:['Menuisier','Carpenter'],painter:['Peintre','Painter'],other:['Autre','Other']}},
+  diaspora:{ico:'🌍',h:178,t:['Pour un proche','For a loved one'],go:['Proposer mon aide','Offer help'],subs:{delivery:['Livraison','Delivery'],errand:['Course / démarche','Errand'],service:['Service à domicile','Home service'],purchase:['Achat','Purchase']}},
+  translation:{ico:'🗣',h:290,t:['Traduction','Translation'],go:['Contacter','Contact'],subs:{offer:['Je propose','I offer'],seek:['Je cherche','I need']}}
+};
+var LF={list:[],loaded:false,at:0,names:{}};
+function regionOf(c){try{return window.alloRegionOfCity?alloRegionOfCity(c):'';}catch(_){return '';}}
+function curRegion(){var r=window._catalogRegion;return(r&&String(r).charAt(0)!=='@')?r:'';}
+function fdate(d){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(d||''));return m?m[3]+'/'+m[2]:String(d||'');}
+function chips(l){
+  var a=l.attrs||{},c=[];
+  if(l.kind==='housing'){if(a.beds)c.push('🛏 '+a.beds);if(a.baths)c.push('🛁 '+a.baths);if(a.furnished==='yes')c.push(T('Meublé','Furnished'));if(a.deposit)c.push(T('Caution ','Deposit ')+a.deposit+T(' mois',' mo'));}
+  else if(l.kind==='ride'){if(a.date)c.push('📅 '+fdate(a.date));if(a.time)c.push('⏰ '+a.time);if(a.seats)c.push('💺 '+a.seats);}
+  else if(l.kind==='course'){if(a.level)c.push(a.level);if(a.mode)c.push(a.mode);if(a.deadline)c.push('⏳ '+fdate(a.deadline));}
+  else if(l.kind==='health_pro'){if(a.speciality)c.push(a.speciality);if(a.hours)c.push('🕒 '+a.hours);}
+  else if(l.kind==='artisan'){if(a.experience)c.push('⭐ '+a.experience+T(' ans',' yrs'));}
+  else if(l.kind==='diaspora'){if(a.country)c.push('🌐 '+a.country);}
+  else if(l.kind==='translation'){if(a.service)c.push(a.service);if(a.langs)c.push('🗣 '+a.langs);}
+  return c.slice(0,4).map(function(x){return '<span>'+esc(x)+'</span>';}).join('');
+}
+function priceHTML(l){
+  var p=Number(l.price)||0,a=l.attrs||{};
+  if(p>0){
+    var suf=l.kind==='housing'&&a.sub==='rent'?T('/ mois','/ mo'):(l.kind==='ride'?T('/ place','/ seat'):'');
+    return '<div class="lfc-price">'+esc(money(p))+(suf?'<small>'+esc(suf)+'</small>':'')+'</div>';
+  }
+  return '<div class="lfc-price q">'+esc(l.kind==='diaspora'?T('Budget à discuter','Budget to discuss'):T('Tarif sur demande','Price on request'))+'</div>';
+}
+function cardHTML(l){
+  var k=K[l.kind];if(!k)return '';
+  var a=l.attrs||{},sub=k.subs[a.sub],u=me(),own=!!(u&&String(l.owner_id)===String(u.id)),id=esc(l.id);
+  var fresh=Date.now()-new Date(l.created_at).getTime()<3*86400000;
+  var title=l.title||(l.kind==='ride'?[a.from,a.to].filter(Boolean).join(' → '):'')||(en()?k.t[1]:k.t[0]);
+  var place=[l.kind==='ride'&&a.from?a.from+' → '+(a.to||''):l.city,l.neighborhood].filter(Boolean).join(' · ');
+  var photo=(l.photos&&l.photos[0])?'<div class="lfc-photo" style="background-image:url(&quot;'+esc(l.photos[0])+'&quot;)"><b>'+k.ico+'</b></div>':'<div class="lfc-ico">'+k.ico+'</div>';
+  return '<div class="lfc" style="--h:'+k.h+'" data-lf="'+id+'" role="button" tabindex="0">'
+    +'<i class="lfc-fx"></i><i class="lfc-glow"></i>'
+    +'<div class="lfc-top"><span class="lfc-tag main">'+k.ico+' '+esc(en()?k.t[1]:k.t[0]).toUpperCase()+'</span>'
+      +(sub?'<span class="lfc-tag">'+esc(en()?sub[1]:sub[0])+'</span>':'')
+      +(l.verified?'<span class="lfc-tag ok">✔ '+esc(T('Vérifié','Verified'))+'</span>':'')
+      +(own?'<span class="lfc-tag own">'+esc(T('Mon annonce','Mine'))+'</span>':(fresh?'<span class="lfc-tag new">'+esc(T('NOUVEAU','NEW'))+'</span>':''))+'</div>'
+    +'<div class="lfc-main">'+photo+'<div class="lfc-txt"><div class="lfc-title">'+esc(title)+'</div>'
+      +(place?'<div class="lfc-meta">📍 '+esc(place)+'</div>':'')+'<div class="lfc-chips">'+chips(l)+'</div></div></div>'
+    +'<div class="lfc-foot">'+priceHTML(l)+'<button type="button" class="lfc-go">'+esc(en()?k.go[1]:k.go[0])+' ›</button></div></div>';
+}
+/* ---------- Données ---------- */
+async function load(){
+  if(!logged())return false;
+  var r=await sb.from('life_listings').select('*').eq('status','active').order('created_at',{ascending:false}).limit(80);
+  if(r.error)throw r.error;
+  var had=LF.list.length;LF.list=(r.data||[]).filter(function(l){return K[l.kind];});LF.loaded=true;LF.at=Date.now();LF._q=null;
+  return !had&&LF.list.length>0;
+}
+window.alloLifePreload=async function(){try{return await load();}catch(e){err(e);return false;}};
+window.alloLifeCard=cardHTML;
+/* file d'attente : types alternés (logement, trajet, santé…), région choisie respectée */
+function queue(){
+  var reg=curRegion(),key=LF.list.length+':'+reg+':'+(typeof lang!=='undefined'?lang:'');
+  if(LF._q&&LF._q.key===key)return LF._q.list;
+  var L=LF.list.filter(function(l){
+    if(!reg)return true;
+    if(regionOf(l.city)===reg)return true;
+    return l.kind==='ride'&&regionOf((l.attrs||{}).from)===reg;
+  });
+  var by={};L.forEach(function(l){(by[l.kind]=by[l.kind]||[]).push(l);});
+  var kinds=Object.keys(by),out=[],guard=0;
+  while(kinds.some(function(k){return by[k].length;})&&guard++<500){kinds.forEach(function(k){if(by[k].length)out.push(by[k].shift());});}
+  LF._q={key:key,list:out};return out;
+}
+window.alloLifeSlot=function(pos){
+  try{
+    if(!LF.list.length||!logged())return '';
+    if(pos%7!==0)return '';
+    var q=queue();if(!q.length)return '';
+    return cardHTML(q[(Math.floor(pos/7)-1)%q.length]);
+  }catch(e){err(e);return '';}
+};
+/* ---------- Clics ---------- */
+function openIt(id){try{alloLife.openListing(id);}catch(e){err(e);}}
+document.addEventListener('click',function(ev){var c=ev.target.closest&&ev.target.closest('.lfc');if(c){ev.preventDefault();openIt(c.getAttribute('data-lf'));}});
+document.addEventListener('keydown',function(ev){if((ev.key==='Enter'||ev.key===' ')&&ev.target&&ev.target.classList&&ev.target.classList.contains('lfc')){ev.preventDefault();openIt(ev.target.getAttribute('data-lf'));}});
 })();
 </script>
 
