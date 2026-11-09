@@ -25547,7 +25547,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     document.body.appendChild(host);
     var frame = host.firstElementChild, node = frame.firstElementChild;
     node.style.cssText += ';animation:none!important;transition:none!important;transform:none!important;opacity:1!important;margin:0!important;width:' + W + 'px;';
-    node.querySelectorAll('.svc-hide,.jcard-hide,.pcm-btn').forEach(function(x){ x.style.display = 'none'; });
+    node.querySelectorAll('.svc-hide,.jcard-hide,.pcm-btn,.itm-btn,.ebk-go,.lfc-go').forEach(function(x){ x.style.display = 'none'; });
     var done = function(){ if (host.parentNode) host.parentNode.removeChild(host); };
     var w = W + 2 * padX;
     return inlineImages(host).then(function(){ return waitImgs(host); }).then(function(){
@@ -25636,6 +25636,20 @@ html body .order-role-badge{color:#ffb3c7!important}
     });
     var ent = { sig: sig, p: run };
     cardCache[key] = ent;
+    run.catch(function(){ if (cardCache[key] === ent) delete cardCache[key]; });
+    return run;
+  };
+  /* Cache générique (mémoire + appareil) : e-books, annonces Allo Vie… */
+  window.alloCachedCardBlob = function(key, sig, producer){
+    var c = cardCache[key]; if (c && c.sig === sig) return c.p;
+    var full = IDB_V + '|' + key + '|' + sig;
+    var run = idbGet(full).then(function(rec){
+      if (rec && rec.blob && rec.blob.size) return rec.blob;
+      var build = cardQueue.then(function(){ return producer(); });
+      cardQueue = build.catch(function(){});
+      return build.then(function(blob){ idbPut({ k: full, t: Date.now(), blob: blob }); return blob; });
+    });
+    var ent = { sig: sig, p: run }; cardCache[key] = ent;
     run.catch(function(){ if (cardCache[key] === ent) delete cardCache[key]; });
     return run;
   };
@@ -26603,6 +26617,8 @@ function cardHTML(l){
     else prim='<button type="button" class="btn btn-accent btn-sm" onclick="alloLife.contact(\''+sid(l.id)+'\',\'info\')">💬 '+T('Contacter','Contact')+'</button>';
   }
   var acts=[];
+  acts.push('<button type="button" class="fx-chip" aria-label="Partager" onclick="alloLifeFeed.share(\''+sid(l.id)+'\')">📤</button>','<button type="button" class="fx-chip" aria-label="Télécharger" onclick="alloLifeFeed.download(\''+sid(l.id)+'\')">⬇</button>');
+  if(mine)acts.push('<button type="button" class="fx-chip" onclick="alloLifeFeed.promo(\''+sid(l.id)+'\')">🏷 '+T('Promo','Promo')+'</button>','<button type="button" class="fx-chip" onclick="alloLifeFeed.ad(\''+sid(l.id)+'\')">📢 '+T('Pub','Ad')+'</button>');
   if(!mine&&l.kind!=='diaspora'&&l.kind!=='ride'||(!mine&&l.kind==='ride'))acts.push('<button type="button" class="fx-chip" onclick="alloLife.contact(\''+sid(l.id)+'\',\'info\')">💬</button>');
   if(l.phone&&!mine)acts.push('<a class="fx-chip" href="tel:'+esc(String(l.phone).replace(/[^\d+]/g,''))+'">📞</a>');
   if(l.kind!=='diaspora')acts.push('<button type="button" class="fx-chip" onclick="alloLife.reviews(\''+sid(l.id)+'\')">'+(rv.n?stars(rv.s/rv.n)+' ('+rv.n+')':'⭐ '+T('Avis','Reviews'))+'</button>');
@@ -26610,7 +26626,7 @@ function cardHTML(l){
   if(mine)acts.push('<button type="button" class="fx-chip" onclick="alloLife.close_(\''+sid(l.id)+'\')">🔒 '+T('Clôturer','Close')+'</button>','<button type="button" class="fx-chip lf-flag" onclick="alloLife.del(\''+sid(l.id)+'\')">🗑</button>');
   if(isAdmin()&&!mine)acts.push('<button type="button" class="fx-chip" onclick="alloLife.verify(\''+sid(l.id)+'\')">'+(l.verified?'✔ '+T('Retirer le badge','Unverify'):'✔ '+T('Vérifier','Verify'))+'</button>','<button type="button" class="fx-chip lf-flag" onclick="alloLife.del(\''+sid(l.id)+'\')">🗑</button>');
   return '<div class="lf-item">'+photo+'<div class="lf-item-b"><div class="lf-item-h"><b>'+esc(l.title)+'</b>'+(l.verified?'<span class="lf-ver">✔ '+T('Vérifié','Verified')+'</span>':'')+'</div>'+
-    (l.price!=null?'<div class="lf-price">'+money(l.price)+'</div>':'')+
+    (l.price!=null?(window.alloLifeFeed?alloLifeFeed.priceHTML(l,money):'<div class="lf-price">'+money(l.price)+'</div>'):'')+
     '<small>'+esc(subLabel(l.kind,a.sub))+(where?' · 📍 '+esc(where):'')+'</small>'+(metaLine(l)?'<small>'+esc(metaLine(l))+'</small>':'')+
     (l.description?'<p>'+esc(l.description.slice(0,220))+(l.description.length>220?'…':'')+'</p>':'')+
     '<small class="lf-by">'+esc(ownerName(l.owner_id))+'</small><div class="lf-acts">'+prim+acts.join('')+'</div></div></div>';
@@ -27711,6 +27727,7 @@ function svcCard(p,o){
   const id=esc(p.id);
   const tools=exp?'':'<div class="svc-tools svc-hide sv2-tools">'
     +'<button type="button" class="svc-ib" aria-label="'+svT('Télécharger la carte','Download the card')+'" onclick="event.stopPropagation();alloJobs.download(\''+id+'\')">⬇</button>'
+    +'<button type="button" class="svc-ib" aria-label="'+svT('Partager','Share')+'" onclick="event.stopPropagation();alloShareProductCard(\''+id+'\')">📤</button>'
     +(!mine?'<button type="button" class="svc-ib" aria-label="'+svT('Signaler','Report')+'" onclick="event.stopPropagation();alloFx.report(\'product\',\''+id+'\')">🚩</button>':'')
     +'</div>';
   const acts=exp?'':'<div class="sv2-acts svc-hide">'
@@ -28201,6 +28218,7 @@ function jobCard(p,o){
        +'<button type="button" class="jcard-ic jcard-like'+(liked?' on':'')+'" aria-label="J’aime" aria-pressed="'+liked+'" onclick="alloJobs.like(\''+pid+'\')"'+off+'>'+ic('heart',17)+'<span class="jcard-ln">'+nl+'</span></button>'
        +'<button type="button" class="jcard-ic" aria-label="Commentaires" onclick="alloJobs.comments(\''+pid+'\')"'+off+'>'+ic('chat',17)+'<span class="jcard-cn">'+nc+'</span></button>'
        +'<button type="button" class="jcard-ic jcard-hide" aria-label="Télécharger la carte" onclick="alloJobs.download(\''+pid+'\')"'+off+'>'+ic('down',18)+'</button>'
+        +'<button type="button" class="jcard-ic jcard-hide" aria-label="Partager" onclick="alloShareProductCard(\''+pid+'\')"'+off+'>📤</button>'
      +'</div></div>'
    +'<div class="jcard-main"><div class="jcard-ava"><i>'+ava+'</i><em>'+(offer?'📢':'🙋')+'</em></div>'
      +'<div class="jcard-tt"><h3 class="jcard-title">'+esc(p.name)+'</h3><div class="jcard-sub">'+sub+'</div></div></div>'
@@ -29162,7 +29180,24 @@ function open(pid,btn){
   };});
   sheet.classList.add('show');
 }
-window.alloCardMenu={open:open,close:close};
+function generic(spec){
+  ensure();
+  var items=spec.items||[],th=spec.thumb||'';
+  var rows=items.map(function(a,i){
+    if(a.sep)return '<div class="pcm-sep"></div>';
+    return '<button type="button" class="pcm-it'+(a.danger?' danger':'')+'" data-i="'+i+'"><span class="pcm-ic">'+a.ic+'</span><span>'+esc(a.t)+(a.s?'<small>'+esc(a.s)+'</small>':'')+'</span></button>';
+  }).join('');
+  sheet.innerHTML='<div class="pcm-box" role="dialog" aria-modal="true"><div class="pcm-grip"></div><div class="pcm-head"><div class="pcm-th" style="--h:'+(spec.hue||260)+(th&&!/^data:/.test(th)?';background-image:url(&quot;'+esc(th)+'&quot;)':'')+'">'+(th?'':esc(spec.ico||'📌'))+'</div>'
+    +'<div class="pcm-nm"><b>'+esc(spec.title||'')+'</b><span>'+esc(spec.sub||'')+'</span></div><button type="button" class="pcm-x" aria-label="'+esc(T('Fermer','Close'))+'">×</button></div><div class="pcm-list">'+rows+'</div></div>';
+  var box=sheet.querySelector('.pcm-box');
+  box.querySelector('.pcm-x').onclick=close;
+  box.querySelectorAll('.pcm-it').forEach(function(b){b.onclick=function(e){
+    e.stopPropagation();var a=items[+b.getAttribute('data-i')];close();
+    if(a&&a.f)setTimeout(function(){try{a.f();}catch(x){err(x);}},60);
+  };});
+  sheet.classList.add('show');
+}
+window.alloCardMenu={open:open,close:close,generic:generic};
 
 /* ---------- Cartes préparées à l'avance (téléchargement / partage instantanés) ---------- */
 (function(){
@@ -29569,7 +29604,7 @@ function item(p){
   var isJob=!!p.attrs.kind,id=esc(p.id),h='';
   try{h=productCardHTML(p,false);}catch(e){err(e);}
   var bar='<button type="button" data-a="edit" data-id="'+id+'">✏️ '+esc(T('Modifier','Edit'))+'</button>'
-    +(isJob?'':'<button type="button" data-a="req">📥 '+esc(T('Demandes','Requests'))+'</button>')
+    +(isJob?'':'<button type="button" data-a="req">📥 '+esc(T('Demandes','Requests'))+'</button><button type="button" data-a="promo" data-id="'+id+'">🏷 '+esc(T('Promo','Promo'))+'</button>')
     +(window.alloAds&&alloAds.open?'<button type="button" data-a="boost" data-id="'+id+'">📢 '+esc(T('Booster','Boost'))+'</button>':'')
     +'<button type="button" class="ma-del" data-a="del" data-id="'+id+'">🗑 '+esc(T('Supprimer','Delete'))+'</button>';
   return '<div class="ma-item"><div class="ma-card">'+h+'</div><div class="ma-bar">'+bar+'</div></div>';
@@ -29603,10 +29638,26 @@ document.addEventListener('click',function(e){
     else if(a==='new-seek')alloJobs.form('seek');
     else if(a==='req')alloSvc.open('requests');
     else if(a==='boost')alloAds.open(id);
+    else if(a==='promo')svcPromo(id);
     else if(a==='del')alloJobs.remove(id);
     else if(a==='edit'){var p=(data.products||[]).find(function(x){return String(x.id)===String(id);});if(p&&p.attrs&&p.attrs.kind)alloJobs.edit(id);else alloSvc.publish(id);}
   }catch(x){err(x);}
 });
+/* promotion d'un service (même mécanisme que les promos produits) */
+function svcPromo(id){
+  var p=(data.products||[]).find(function(x){return String(x.id)===String(id);});if(!p||!window.alloSheets)return;
+  var act=false;try{act=!!isProductPromoActive(p);}catch(_){}
+  alloSheets.promo({price:Number(p.price)||0,pct:p.promo&&p.promo.pct,active:act,
+    onSave:async function(pct,days){
+      var now=new Date(),end=new Date(Date.now()+days*86400000);
+      var r=await sb.from('products').update({promo_pct:pct,promo_starts_at:now.toISOString(),promo_ends_at:end.toISOString()}).eq('id',id);if(r.error)throw r.error;
+      try{await sbLoadAllIntoData();renderAll();}catch(e){err(e);}
+    },
+    onStop:async function(){
+      var r=await sb.from('products').update({promo_pct:null,promo_price:null,promo_starts_at:null,promo_ends_at:null}).eq('id',id);if(r.error)throw r.error;
+      try{await sbLoadAllIntoData();renderAll();}catch(e){err(e);}
+    }});
+}
 /* le profil se redessine quand les annonces changent */
 var _ra=window.renderAccount;
 })();
@@ -29660,6 +29711,10 @@ var _ra=window.renderAccount;
 .ebk-promo .ebk-glow{background:radial-gradient(60% 40% at 50% 100%,rgba(255,255,255,.32),transparent 70%)}
 .ebk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .ebk-tags{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.ebk-acts{display:flex;gap:6px;flex:none;align-items:center}
+.itm-btn{flex:none;width:34px;height:34px;padding:0;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);background:rgba(0,0,0,.35);color:#fff;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.itm-btn:active{transform:scale(.92)}
+.itm-btn svg{pointer-events:none}
 .ebk-tag{font:900 10px/1 system-ui,sans-serif;letter-spacing:.5px;padding:6px 9px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.26);white-space:nowrap}
 .ebk-tag.main{background:linear-gradient(180deg,#ffe27a,#f5b400);color:#2a1a00;border-color:transparent}
 .ebk-tag.promo{background:#ff3d9a;border-color:transparent}.ebk-tag.free{background:#16c34a;border-color:transparent}.ebk-tag.own{background:#2563eb;border-color:transparent}
@@ -29900,7 +29955,7 @@ function ebkHTML(e,variant,endsAt){
   var go=(mine||owned)?'📖 '+T('Lire','Read'):(free?'🎁 '+T('Obtenir','Get'):'🛒 '+T('Acheter','Buy'));
   return '<div class="ebk'+(promoCard?' ebk-promo':'')+'" style="--h:'+(promoCard?330:hue(e.id))+'" data-eb="'+id+'" role="button" tabindex="0">'
     +'<i class="ebk-fx"></i><i class="ebk-glow"></i>'
-    +'<div class="ebk-top"><div class="ebk-tags">'+tags+'</div>'+likeBtn(e)+'</div>'
+    +'<div class="ebk-top"><div class="ebk-tags">'+tags+'</div><div class="ebk-acts">'+likeBtn(e)+itmBtn('eb',e.id)+'</div></div>'
     +'<div class="ebk-main">'+book+'<div class="ebk-txt"><div class="ebk-title">'+esc(e.title)+'</div>'
     +'<div class="ebk-by">'+esc(T('par','by'))+' '+esc(S.names[e.author_id]||T('Auteur','Author'))+'</div><div class="ebk-chips">'+chips+'</div></div></div>'
     +(end?'<div class="ebk-end">'+esc(promoCard||pr?T('La promo se termine dans','The promotion ends in'):T('L’offre se termine dans','The offer ends in'))+' <b class="adb-cd" data-end="'+esc(end)+'">'+esc(remTxt(end))+'</b></div>':'')
@@ -30359,6 +30414,129 @@ async function preload(){
 }
 var _rh=window.renderHome;
 if(typeof _rh==='function')window.renderHome=function(){var r=_rh.apply(this,arguments);try{preload();}catch(e){err(e);}return r;};
+/* ---------- Télécharger / partager n'importe quelle carte (telle qu'affichée) ---------- */
+var DOTS='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+function itmBtn(kind,id){return '<button type="button" class="itm-btn" data-itm="'+kind+'" data-id="'+esc(id)+'" aria-label="'+esc(T('Plus d’options','More options'))+'" aria-haspopup="dialog">'+DOTS+'</button>';}
+function slug(t){return String(t||'carte').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'carte';}
+function saveBlob(b,title){var u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='allo-'+slug(title)+(/jpeg/.test(b.type)?'.jpg':'.png');document.body.appendChild(a);a.click();a.remove();setTimeout(function(){try{URL.revokeObjectURL(u);}catch(_){}},4000);}
+function copyText(t){
+  function ok(){toast(T('Lien copié !','Link copied!'));}
+  function fb(){try{var x=document.createElement('textarea');x.value=t;x.style.cssText='position:fixed;left:-999px';document.body.appendChild(x);x.select();document.execCommand('copy');x.remove();ok();}catch(e){err(e);try{prompt(T('Copiez le lien :','Copy the link:'),t);}catch(_){}}}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,fb);else fb();
+}
+function itemLink(kind,id){return location.origin+location.pathname+'#'+kind+'='+id;}
+function itemBlob(key,sig,html){
+  if(typeof window.alloCachedCardBlob!=='function'||typeof window.alloRenderCardHTML!=='function')return Promise.reject(new Error('no renderer'));
+  return alloCachedCardBlob(key,sig,function(){return alloRenderCardHTML(html,360);});
+}
+async function itemDownload(title,getBlob){
+  var done=false,t=setTimeout(function(){if(!done)toast(T('Préparation de la carte…','Preparing the card…'));},250);
+  try{var b=await getBlob();done=true;clearTimeout(t);saveBlob(b,title);toast(T('Carte téléchargée ⬇','Card downloaded ⬇'));}
+  catch(e){done=true;clearTimeout(t);err(e);toast(T('Impossible de créer l’image. Réessayez.','Could not create the image. Try again.'));}
+}
+async function itemShare(title,text,url,getBlob){
+  var b=null;try{b=await getBlob();}catch(e){err(e);}
+  if(b){
+    var f=null;try{f=new File([b],'allo-'+slug(title)+(/jpeg/.test(b.type)?'.jpg':'.png'),{type:b.type||'image/jpeg'});}catch(_){}
+    if(f&&navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:title,text:text+'\n'+url});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+  }
+  if(navigator.share){try{await navigator.share({title:title,text:text,url:url});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+  copyText(url);if(b)saveBlob(b,title);
+}
+function ebSig(e){return [e.title,e.price,e.promo_pct,e.promo_ends_at,e.cover_url||'',e.language,e.sales_count,e.likes_count,S.ads[e.id]?S.ads[e.id].ends_at:'',(typeof lang!=='undefined'?lang:''),Math.floor(Date.now()/3600000)].join('|');}
+function ebookMenu(e){
+  if(!window.alloCardMenu||!alloCardMenu.generic)return;
+  var getBlob=function(){return itemBlob('eb:'+e.id,ebSig(e),ebkHTML(e));};
+  getBlob().catch(function(){});
+  var mine=isMine(e),owned=!!S.owned[e.id],on=!!S.likes[e.id];
+  var items=[
+    {ic:'⬇️',t:T('Télécharger la carte','Download the card'),s:T('Image de la carte, telle qu’affichée','Image of the card, as displayed'),f:function(){itemDownload(e.title,getBlob);}},
+    {ic:'📤',t:T('Partager','Share'),f:function(){itemShare(e.title,T('Découvrez cet e-book sur Allo : ','Discover this e-book on Allo: ')+e.title,itemLink('ebook',e.id),getBlob);}},
+    {ic:'🔗',t:T('Copier le lien','Copy link'),f:function(){copyText(itemLink('ebook',e.id));}},
+    {ic:on?'💔':'❤️',t:on?T('Retirer des favoris','Unlike'):T('J’aime','Like'),f:function(){toggleLike(e.id);}},
+    {ic:(mine||owned)?'📖':'👁',t:(mine||owned)?T('Lire','Read'):T('Voir le livre','View the book'),f:function(){detail(e.id);}}
+  ];
+  if(mine){
+    items.push({sep:1},
+      {ic:'✏️',t:T('Modifier','Edit'),f:function(){form(e);}},
+      {ic:'🏷',t:T('Promotion','Promotion'),f:function(){promoSheet(e);}},
+      {ic:'📢',t:T('Publicité','Advert'),f:function(){adSheet(e);}},
+      {ic:'🗑',t:T('Supprimer','Delete'),danger:1,f:function(){removeBook(e);}});
+  }
+  alloCardMenu.generic({title:e.title,sub:(S.names[e.author_id]||'')+(Number(e.price)>0?' · '+money(priceNow(e)):' · '+T('Gratuit','Free')),thumb:e.cover_url,hue:hue(e.id),ico:'📚',items:items});
+}
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest&&ev.target.closest('.itm-btn[data-itm]');if(!b)return;
+  ev.stopPropagation();ev.preventDefault();
+  var k=b.getAttribute('data-itm'),id=b.getAttribute('data-id');
+  try{if(k==='eb'){var e=byId(id);if(e)ebookMenu(e);}else if(k==='lf'&&window.alloLifeFeed)alloLifeFeed.menu(id);}catch(x){err(x);}
+},true);
+
+/* ---------- Feuilles génériques promo / pub (réutilisées par Allo Vie et les services) ---------- */
+function promoGeneric(o){
+  var on=!!o.active;
+  sheet(head(T('Promotion','Promotion'))+'<div class="eb-note">'+esc(T('Réduisez le prix pour une durée limitée : la carte passe en rose avec le nouveau prix.','Lower the price for a limited time: the card turns pink with the new price.'))+'</div>'
+   +'<div class="eb-row"><div><label class="eb-fld">'+esc(T('Réduction (%)','Discount (%)'))+'</label><input class="eb-in" id="pgP" type="number" min="1" max="90" value="'+(o.pct||20)+'"></div>'
+   +'<div><label class="eb-fld">'+esc(T('Durée (jours)','Duration (days)'))+'</label><input class="eb-in" id="pgD" type="number" min="1" max="60" value="7"></div></div>'
+   +'<div class="eb-net" id="pgN"></div>'
+   +'<div class="eb-btns">'+(on?'<button type="button" class="eb-danger" id="pgOff">'+esc(T('Arrêter','Stop'))+'</button>':'<button type="button" class="eb-no" id="pgNo">'+esc(T('Annuler','Cancel'))+'</button>')+'<button type="button" class="eb-ok" id="pgOk">'+esc(T('Activer','Start'))+'</button></div>',function(ov){
+    var $=function(i){return ov.querySelector('#'+i);};
+    function n(){var p=Math.min(90,Math.max(1,parseInt($('pgP').value||'0',10)||0));$('pgN').textContent=Number(o.price)>0?T('Nouveau prix : ','New price: ')+money(Math.round(o.price*(100-p)/100)):T('Définissez d’abord un prix.','Set a price first.');}
+    $('pgP').oninput=n;n();
+    var no=$('pgNo');if(no)no.onclick=closeSheet;
+    $('pgOk').onclick=async function(){
+      if(!(Number(o.price)>0))return toast(T('Définissez d’abord un prix.','Set a price first.'));
+      var p=Math.min(90,Math.max(1,parseInt($('pgP').value||'0',10)||0)),d=Math.min(60,Math.max(1,parseInt($('pgD').value||'0',10)||0));
+      try{await o.onSave(p,d);closeSheet();toast(T('Promotion activée 🔥','Promotion started 🔥'));}catch(x){err(x);toast(cleanErr(x));}
+    };
+    var off=$('pgOff');if(off)off.onclick=async function(){try{await o.onStop();closeSheet();toast(T('Promotion arrêtée','Promotion stopped'));}catch(x){err(x);toast(cleanErr(x));}};
+  });
+}
+async function adGeneric(o){
+  try{await loadTiers();}catch(x){err(x);}
+  if(!S.tiers.length)return toast(T('Publicité indisponible pour le moment.','Advertising unavailable right now.'));
+  sheet(head(T('Publicité','Advert'))+'<div class="eb-note">'+esc(T('Votre carte est mise en avant avec la mention « Sponsorisé » sur l’accueil. Même tarif que les produits Allo, débité de votre solde.','Your card is highlighted as “Sponsored” on the home screen. Same rates as Allo products, debited from your balance.'))+'</div>'
+   +'<label class="eb-fld">'+esc(T('Formule','Plan'))+'</label><select class="eb-sel" id="agT">'+S.tiers.map(function(t){return '<option value="'+esc(t.tier)+'">'+esc(en()?t.label_en:t.label_fr)+'</option>';}).join('')+'</select>'
+   +'<label class="eb-fld">'+esc(T('Durée (jours, 1 à 30)','Duration (days, 1-30)'))+'</label><input class="eb-in" id="agD" type="number" min="1" max="30" value="7">'
+   +'<div class="eb-price" id="agP" style="margin:10px 0"></div>'
+   +'<div class="eb-btns"><button type="button" class="eb-no" id="agNo">'+esc(T('Annuler','Cancel'))+'</button><button type="button" class="eb-ok" id="agOk">'+esc(T('Payer et lancer','Pay & start'))+'</button></div>',function(ov){
+    var $=function(i){return ov.querySelector('#'+i);};
+    function p(){var d=Math.min(30,Math.max(1,parseInt($('agD').value||'0',10)||0)),q=quote($('agT').value,d);$('agP').textContent=q==null?'—':money(q);return q;}
+    $('agT').onchange=p;$('agD').oninput=p;p();$('agNo').onclick=closeSheet;
+    $('agOk').onclick=async function(){
+      var d=Math.min(30,Math.max(1,parseInt($('agD').value||'0',10)||0)),q=p();
+      if(q==null)return toast(T('Tarif indisponible.','Rate unavailable.'));
+      if(!confirm(T('Payer '+money(q)+' pour '+d+' jour(s) de publicité ?','Pay '+money(q)+' for '+d+' day(s) of advertising?')))return;
+      var b=$('agOk');b.disabled=true;
+      try{await o.onBuy($('agT').value,d);toast(T('Publicité lancée 📢','Ad started 📢'));closeSheet();try{await sbLoadAllIntoData();renderAll();}catch(_){}}
+      catch(x){err(x);b.disabled=false;var m=cleanErr(x);toast(/insuffisant/i.test(m)?T('Solde insuffisant : rechargez votre portefeuille.','Insufficient balance: top up your wallet.'):m);}
+    };
+  });
+}
+window.alloSheets={promo:promoGeneric,ad:adGeneric};
+window.alloItem={btn:itmBtn,blob:itemBlob,download:itemDownload,share:itemShare,link:itemLink,copy:copyText,uuid:uuid};
+
+/* ---------- Liens partagés : #ebook=… / #life=… ---------- */
+async function fetchOne(id){
+  try{var r=await sb.from('ebooks').select('*').eq('id',id).maybeSingle();if(r.data){S.lib.push(r.data);await names([r.data.author_id]);return r.data;}}catch(e){err(e);}
+  return null;
+}
+function handleHash(){
+  var m=/#(ebook|life)=([0-9a-f-]{36})/i.exec(location.hash||'');if(!m)return;
+  var kind=m[1].toLowerCase(),id=m[2],tries=0;
+  var iv=setInterval(async function(){
+    if(++tries>80){clearInterval(iv);return;}
+    if(!logged())return;
+    clearInterval(iv);
+    try{history.replaceState(null,'',location.pathname+location.search);}catch(_){}
+    try{
+      if(kind==='ebook'){switchView('ebooks');await loadStore();var e=byId(id)||await fetchOne(id);if(e)detail(id);}
+      else if(window.alloLife&&alloLife.openListing)alloLife.openListing(id);
+    }catch(x){err(x);}
+  },500);
+}
+window.addEventListener('hashchange',handleHash);handleHash();
+
 window.alloEbooks={open:function(){switchView('ebooks');},detail:detail,reader:reader,refresh:open_view,publish:function(){S.tab='mine';form();},adPicker:adPicker,home:preload};
 })();
 </script>
@@ -30369,7 +30547,15 @@ window.alloEbooks={open:function(){switchView('ebooks');},detail:detail,reader:r
   box-shadow:0 12px 28px hsla(var(--h),75%,5%,.55),inset 0 0 0 1px hsla(var(--h),90%,75%,.3)}
 .lfc-fx{position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(118deg,rgba(255,255,255,.045) 0 8px,transparent 8px 18px)}
 .lfc-glow{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 55% at 100% 0%,hsla(var(--h),95%,62%,.34),transparent 70%),radial-gradient(60% 45% at 0% 100%,hsla(calc(var(--h) + 50),90%,55%,.2),transparent 70%)}
-.lfc-top{display:flex;flex-wrap:wrap;gap:6px}
+.lfc-top{display:flex;flex-wrap:wrap;gap:6px;padding-right:44px}
+.lfc>.itm-btn{position:absolute;top:12px;right:12px;z-index:3}
+.lfc-promo{background:radial-gradient(120% 90% at 50% 30%,hsl(330 100% 70%) 0%,hsl(328 94% 58%) 52%,hsl(324 86% 42%) 100%);box-shadow:0 12px 28px rgba(190,30,110,.45),inset 0 0 0 1px rgba(255,255,255,.35)}
+.lfc-promo .lfc-fx{background:repeating-linear-gradient(118deg,rgba(255,255,255,.1) 0 8px,transparent 8px 18px)}
+.lfc-promo .lfc-glow{background:radial-gradient(60% 40% at 50% 100%,rgba(255,255,255,.32),transparent 70%)}
+.lfc-tag.ad{background:rgba(0,0,0,.55)}.lfc-tag.promo{background:#ff3d9a;border-color:transparent}
+.lfc-end{margin:2px 0 8px;font-size:11.5px;letter-spacing:.6px;text-transform:uppercase;text-align:center;opacity:.95}
+.lfc-end b{font:900 15px/1 system-ui,sans-serif;margin-left:4px;font-variant-numeric:tabular-nums}
+.lfc-price s{font:700 12px/1 system-ui,sans-serif;opacity:.7}
 .lfc-tag{font:900 10px/1 system-ui,sans-serif;letter-spacing:.5px;padding:6px 9px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.26);white-space:nowrap}
 .lfc-tag.main{background:linear-gradient(180deg,#ffe27a,#f5b400);color:#2a1a00;border-color:transparent}
 .lfc-tag.ok{background:#16a34a;border-color:transparent}.lfc-tag.own{background:#2563eb;border-color:transparent}.lfc-tag.new{background:#ef4444;border-color:transparent}
@@ -30394,7 +30580,7 @@ window.alloEbooks={open:function(){switchView('ebooks');},detail:detail,reader:r
 .jh-mini:active{background:#1d3366}
 </style>
 <script id="alloLifeFeed">
-/* Allo Vie dans le catalogue : cartes soignées mélangées aux produits (annonces logement, trajets, formations, santé, artisans, proches, traduction). */
+/* Allo Vie dans le catalogue : cartes soignées mélangées aux produits, avec promo, publicité, téléchargement et partage. */
 (function(){
 'use strict';
 function err(e){window.__alloErr&&window.__alloErr(e);}
@@ -30404,6 +30590,8 @@ function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){retur
 function money(n){try{return formatMoney(n);}catch(_){return Number(n||0).toLocaleString('fr-FR')+' FCFA';}}
 function me(){try{return currentUser||null;}catch(_){return null;}}
 function logged(){try{return isLoggedIn()&&typeof sb!=='undefined'&&sb;}catch(_){return false;}}
+function toast(m){try{window.alloToast?alloToast(m):alert(m);}catch(_){}}
+function cleanErr(e){var m=(e&&(e.message||e.error_description))||String(e||'');return m.replace(/^.*?(ERROR:\s*)/,'').slice(0,200);}
 var K={
   housing:{ico:'🏠',h:205,t:['Logement','Housing'],go:['Voir le bien','View property'],subs:{rent:['Location','For rent'],sale:['Vente','For sale'],share:['Colocation','Flatshare']}},
   ride:{ico:'🚗',h:28,t:['Trajet','Ride'],go:['Voir le trajet','View ride'],subs:{carpool:['Covoiturage','Carpool'],parcel:['Colis','Parcel']}},
@@ -30413,10 +30601,18 @@ var K={
   diaspora:{ico:'🌍',h:178,t:['Pour un proche','For a loved one'],go:['Proposer mon aide','Offer help'],subs:{delivery:['Livraison','Delivery'],errand:['Course / démarche','Errand'],service:['Service à domicile','Home service'],purchase:['Achat','Purchase']}},
   translation:{ico:'🗣',h:290,t:['Traduction','Translation'],go:['Contacter','Contact'],subs:{offer:['Je propose','I offer'],seek:['Je cherche','I need']}}
 };
-var LF={list:[],loaded:false,at:0,names:{}};
+var LF={list:[],ads:{},loaded:false,at:0,extra:{}};
 function regionOf(c){try{return window.alloRegionOfCity?alloRegionOfCity(c):'';}catch(_){return '';}}
 function curRegion(){var r=window._catalogRegion;return(r&&String(r).charAt(0)!=='@')?r:'';}
 function fdate(d){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(d||''));return m?m[3]+'/'+m[2]:String(d||'');}
+function promoOf(l){var p=(l.attrs||{}).promo;return(p&&p.pct&&p.ends_at&&new Date(p.ends_at).getTime()>Date.now())?p:null;}
+function priceNow(l){var b=Number(l.price)||0,p=promoOf(l);return p?Math.max(Math.round(b*(100-p.pct)/100),0):b;}
+function adOf(l){var a=LF.ads[l.id];return(a&&new Date(a.ends_at).getTime()>Date.now())?a:null;}
+function remTxt(end){
+  var ms=new Date(end).getTime()-Date.now();if(!(ms>0))return T('Terminée','Ended');
+  var m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60,p=function(n){return(n<10?'0':'')+n;};
+  return(d>0?d+(en()?'D ':'J '):'')+p(h)+'H '+p(mi)+'M';
+}
 function chips(l){
   var a=l.attrs||{},c=[];
   if(l.kind==='housing'){if(a.beds)c.push('🛏 '+a.beds);if(a.baths)c.push('🛁 '+a.baths);if(a.furnished==='yes')c.push(T('Meublé','Furnished'));if(a.deposit)c.push(T('Caution ','Deposit ')+a.deposit+T(' mois',' mo'));}
@@ -30429,28 +30625,33 @@ function chips(l){
   return c.slice(0,4).map(function(x){return '<span>'+esc(x)+'</span>';}).join('');
 }
 function priceHTML(l){
-  var p=Number(l.price)||0,a=l.attrs||{};
-  if(p>0){
+  var base=Number(l.price)||0,a=l.attrs||{},pr=promoOf(l);
+  if(base>0){
     var suf=l.kind==='housing'&&a.sub==='rent'?T('/ mois','/ mo'):(l.kind==='ride'?T('/ place','/ seat'):'');
-    return '<div class="lfc-price">'+esc(money(p))+(suf?'<small>'+esc(suf)+'</small>':'')+'</div>';
+    return '<div class="lfc-price">'+esc(money(priceNow(l)))+(suf?'<small>'+esc(suf)+'</small>':'')+(pr?'<s>'+esc(money(base))+'</s>':'')+'</div>';
   }
   return '<div class="lfc-price q">'+esc(l.kind==='diaspora'?T('Budget à discuter','Budget to discuss'):T('Tarif sur demande','Price on request'))+'</div>';
 }
 function cardHTML(l){
   var k=K[l.kind];if(!k)return '';
   var a=l.attrs||{},sub=k.subs[a.sub],u=me(),own=!!(u&&String(l.owner_id)===String(u.id)),id=esc(l.id);
-  var fresh=Date.now()-new Date(l.created_at).getTime()<3*86400000;
+  var pr=promoOf(l),ad=adOf(l),fresh=Date.now()-new Date(l.created_at).getTime()<3*86400000;
   var title=l.title||(l.kind==='ride'?[a.from,a.to].filter(Boolean).join(' → '):'')||(en()?k.t[1]:k.t[0]);
   var place=[l.kind==='ride'&&a.from?a.from+' → '+(a.to||''):l.city,l.neighborhood].filter(Boolean).join(' · ');
   var photo=(l.photos&&l.photos[0])?'<div class="lfc-photo" style="background-image:url(&quot;'+esc(l.photos[0])+'&quot;)"><b>'+k.ico+'</b></div>':'<div class="lfc-ico">'+k.ico+'</div>';
-  return '<div class="lfc" style="--h:'+k.h+'" data-lf="'+id+'" role="button" tabindex="0">'
-    +'<i class="lfc-fx"></i><i class="lfc-glow"></i>'
+  var end=ad?ad.ends_at:(pr?pr.ends_at:'');
+  var itm=(window.alloItem&&alloItem.btn)?alloItem.btn('lf',l.id):'';
+  return '<div class="lfc'+(pr?' lfc-promo':'')+'" style="--h:'+(pr?330:k.h)+'" data-lf="'+id+'" role="button" tabindex="0">'
+    +'<i class="lfc-fx"></i><i class="lfc-glow"></i>'+itm
     +'<div class="lfc-top"><span class="lfc-tag main">'+k.ico+' '+esc(en()?k.t[1]:k.t[0]).toUpperCase()+'</span>'
       +(sub?'<span class="lfc-tag">'+esc(en()?sub[1]:sub[0])+'</span>':'')
+      +(ad?'<span class="lfc-tag ad">📢 '+esc(T('Sponsorisé','Sponsored'))+'</span>':'')
+      +(pr?'<span class="lfc-tag promo">🔥 −'+pr.pct+'%</span>':'')
       +(l.verified?'<span class="lfc-tag ok">✔ '+esc(T('Vérifié','Verified'))+'</span>':'')
-      +(own?'<span class="lfc-tag own">'+esc(T('Mon annonce','Mine'))+'</span>':(fresh?'<span class="lfc-tag new">'+esc(T('NOUVEAU','NEW'))+'</span>':''))+'</div>'
+      +(own?'<span class="lfc-tag own">'+esc(T('Mon annonce','Mine'))+'</span>':(fresh&&!ad&&!pr?'<span class="lfc-tag new">'+esc(T('NOUVEAU','NEW'))+'</span>':''))+'</div>'
     +'<div class="lfc-main">'+photo+'<div class="lfc-txt"><div class="lfc-title">'+esc(title)+'</div>'
       +(place?'<div class="lfc-meta">📍 '+esc(place)+'</div>':'')+'<div class="lfc-chips">'+chips(l)+'</div></div></div>'
+    +(end?'<div class="lfc-end">'+esc(pr&&!ad?T('La promo se termine dans','The promotion ends in'):T('L’offre se termine dans','The offer ends in'))+' <b class="adb-cd" data-end="'+esc(end)+'">'+esc(remTxt(end))+'</b></div>':'')
     +'<div class="lfc-foot">'+priceHTML(l)+'<button type="button" class="lfc-go">'+esc(en()?k.go[1]:k.go[0])+' ›</button></div></div>';
 }
 /* ---------- Données ---------- */
@@ -30458,23 +30659,32 @@ async function load(){
   if(!logged())return false;
   var r=await sb.from('life_listings').select('*').eq('status','active').order('created_at',{ascending:false}).limit(80);
   if(r.error)throw r.error;
+  try{var a=await sb.from('life_ads').select('listing_id,tier,ends_at').gt('ends_at',new Date().toISOString());LF.ads={};(a.data||[]).forEach(function(x){LF.ads[x.listing_id]=x;});}catch(e){err(e);}
   var had=LF.list.length;LF.list=(r.data||[]).filter(function(l){return K[l.kind];});LF.loaded=true;LF.at=Date.now();LF._q=null;
   return !had&&LF.list.length>0;
 }
 window.alloLifePreload=async function(){try{return await load();}catch(e){err(e);return false;}};
 window.alloLifeCard=cardHTML;
-/* file d'attente : types alternés (logement, trajet, santé…), région choisie respectée */
 function queue(){
-  var reg=curRegion(),key=LF.list.length+':'+reg+':'+(typeof lang!=='undefined'?lang:'');
+  var reg=curRegion(),key=LF.list.length+':'+reg+':'+Object.keys(LF.ads).length+':'+(typeof lang!=='undefined'?lang:'');
   if(LF._q&&LF._q.key===key)return LF._q.list;
   var L=LF.list.filter(function(l){
     if(!reg)return true;
     if(regionOf(l.city)===reg)return true;
     return l.kind==='ride'&&regionOf((l.attrs||{}).from)===reg;
   });
-  var by={};L.forEach(function(l){(by[l.kind]=by[l.kind]||[]).push(l);});
-  var kinds=Object.keys(by),out=[],guard=0;
-  while(kinds.some(function(k){return by[k].length;})&&guard++<500){kinds.forEach(function(k){if(by[k].length)out.push(by[k].shift());});}
+  var ads=L.filter(adOf),promos=L.filter(function(l){return promoOf(l)&&!adOf(l);}),rest=L.filter(function(l){return !adOf(l)&&!promoOf(l);});
+  var by={};rest.forEach(function(l){(by[l.kind]=by[l.kind]||[]).push(l);});
+  var kinds=Object.keys(by),mixed=[],guard=0;
+  while(kinds.some(function(k){return by[k].length;})&&guard++<500){kinds.forEach(function(k){if(by[k].length)mixed.push(by[k].shift());});}
+  var out=[],i=0;
+  while(ads.length||promos.length||mixed.length){
+    if(ads.length)out.push(ads.shift());
+    if(promos.length)out.push(promos.shift());
+    if(mixed.length)out.push(mixed.shift());
+    if(mixed.length)out.push(mixed.shift());
+    if(++i>400)break;
+  }
   LF._q={key:key,list:out};return out;
 }
 window.alloLifeSlot=function(pos){
@@ -30485,6 +30695,69 @@ window.alloLifeSlot=function(pos){
     return cardHTML(q[(Math.floor(pos/7)-1)%q.length]);
   }catch(e){err(e);return '';}
 };
+/* ---------- Actions ---------- */
+async function getL(id){
+  var l=LF.list.find(function(x){return String(x.id)===String(id);})||LF.extra[id];
+  if(l)return l;
+  var r=await sb.from('life_listings').select('*').eq('id',id).maybeSingle();
+  if(r.data){LF.extra[id]=r.data;return r.data;}
+  return null;
+}
+function lSig(l){return [l.id,l.title,l.price,JSON.stringify(l.attrs||{}).slice(0,400),l.verified,l.city,l.neighborhood,(l.photos&&l.photos[0])||'',typeof lang!=='undefined'?lang:'',adOf(l)?adOf(l).ends_at:'',Math.floor(Date.now()/3600000)].join('|');}
+function blobOf(l){return alloItem.blob('lf:'+l.id,lSig(l),cardHTML(l));}
+function titleOf(l){var k=K[l.kind]||{t:['Annonce','Listing']};return l.title||(en()?k.t[1]:k.t[0]);}
+async function download(id){var l=await getL(id);if(!l)return toast(T('Annonce introuvable.','Listing not found.'));return alloItem.download(titleOf(l),function(){return blobOf(l);});}
+async function share(id){var l=await getL(id);if(!l)return toast(T('Annonce introuvable.','Listing not found.'));return alloItem.share(titleOf(l),T('Découvrez cette annonce sur Allo Vie : ','Check out this Allo Vie listing: ')+titleOf(l),alloItem.link('life',l.id),function(){return blobOf(l);});}
+async function refresh(){try{await load();}catch(e){err(e);}try{var h=document.getElementById('view-home');if(h&&h.classList.contains('active')&&typeof renderHomeProductsOnly==='function')renderHomeProductsOnly();}catch(e){err(e);}}
+async function promo(id){
+  var l=await getL(id);if(!l)return;
+  if(!window.alloSheets)return;
+  var a=Object.assign({},l.attrs||{});
+  alloSheets.promo({price:Number(l.price)||0,pct:promoOf(l)?promoOf(l).pct:null,active:!!promoOf(l),
+    onSave:async function(pct,days){
+      var attrs=Object.assign({},l.attrs||{},{promo:{pct:pct,ends_at:new Date(Date.now()+days*86400000).toISOString()}});
+      var r=await sb.from('life_listings').update({attrs:attrs}).eq('id',l.id);if(r.error)throw r.error;l.attrs=attrs;await refresh();
+    },
+    onStop:async function(){
+      var attrs=Object.assign({},l.attrs||{});delete attrs.promo;
+      var r=await sb.from('life_listings').update({attrs:attrs}).eq('id',l.id);if(r.error)throw r.error;l.attrs=attrs;await refresh();
+    }});
+}
+async function adBuy(id){
+  var l=await getL(id);if(!l||!window.alloSheets)return;
+  if(adOf(l))return toast(T('Une publicité est déjà active sur cette annonce.','An ad is already running on this listing.'));
+  alloSheets.ad({onBuy:async function(tier,days){
+    var r=await sb.rpc('buy_life_ad',{p_listing_id:l.id,p_tier:tier,p_days:days,p_request_id:alloItem.uuid()});
+    if(r.error)throw r.error;await refresh();
+  }});
+}
+async function menu(id){
+  var l=await getL(id);if(!l||!window.alloCardMenu||!alloCardMenu.generic)return;
+  try{blobOf(l).catch(function(){});}catch(_){}
+  var k=K[l.kind]||{},u=me(),own=!!(u&&String(l.owner_id)===String(u.id));
+  var items=[
+    {ic:'⬇️',t:T('Télécharger la carte','Download the card'),s:T('Image de la carte, telle qu’affichée','Image of the card, as displayed'),f:function(){download(l.id);}},
+    {ic:'📤',t:T('Partager','Share'),f:function(){share(l.id);}},
+    {ic:'🔗',t:T('Copier le lien','Copy link'),f:function(){alloItem.copy(alloItem.link('life',l.id));}},
+    {ic:'👁',t:T('Voir l’annonce','View listing'),f:function(){try{alloLife.openListing(l.id);}catch(e){err(e);}}}
+  ];
+  if(own){
+    items.push({sep:1},
+      {ic:'🏷',t:T('Promotion','Promotion'),s:Number(l.price)>0?'':T('Définissez un prix pour activer une promo','Set a price to run a promotion'),f:function(){promo(l.id);}},
+      {ic:'📢',t:T('Publicité','Advert'),f:function(){adBuy(l.id);}},
+      {ic:'🔒',t:T('Clôturer','Close'),f:function(){try{alloLife.close_(l.id);}catch(e){err(e);}}},
+      {ic:'🗑',t:T('Supprimer','Delete'),danger:1,f:function(){try{alloLife.del(l.id);}catch(e){err(e);}}});
+  }else{
+    items.push({sep:1},{ic:'🚩',t:T('Signaler','Report'),danger:1,f:function(){try{alloLife.report(l.id);}catch(e){err(e);}}});
+  }
+  alloCardMenu.generic({title:titleOf(l),sub:(k.t?(en()?k.t[1]:k.t[0]):'')+(l.city?' · '+l.city:''),thumb:(l.photos&&l.photos[0])||'',hue:(k.h||260),ico:k.ico||'📌',items:items});
+}
+window.alloLifeFeed={menu:menu,share:share,download:download,promo:promo,ad:adBuy,
+  priceHTML:function(l,fmt){
+    var base=Number(l.price)||0,pr=promoOf(l);
+    if(!pr||!(base>0))return '<div class="lf-price">'+fmt(base)+'</div>';
+    return '<div class="lf-price">'+fmt(priceNow(l))+' <s style="opacity:.6;font-size:.8em">'+fmt(base)+'</s> <span style="background:#ff3d9a;color:#fff;border-radius:999px;padding:2px 8px;font-size:.75em">−'+pr.pct+'%</span></div>';
+  }};
 /* ---------- Clics ---------- */
 function openIt(id){try{alloLife.openListing(id);}catch(e){err(e);}}
 document.addEventListener('click',function(ev){var c=ev.target.closest&&ev.target.closest('.lfc');if(c){ev.preventDefault();openIt(c.getAttribute('data-lf'));}});
