@@ -25474,6 +25474,12 @@ html body .order-role-badge{color:#ffb3c7!important}
       if (d0) { im.src = d0; return; }
       jobs.push(toDataURL(im.src).then(function(d){ im.src = d; }).catch(function(){ im.style.visibility = 'hidden'; try { im.removeAttribute('src'); } catch (_) {} }));
     });
+    /* images posées en « background-image » (couverture e-book, photo d'annonce Allo Vie) */
+    root.querySelectorAll('[style*="background-image"]').forEach(function(el){
+      var m = /url\((['"]?)(https?:[^'")]+)\1\)/.exec(el.getAttribute('style') || '');
+      if (!m) return;
+      jobs.push(toDataURL(m[2]).then(function(d){ el.style.backgroundImage = 'url("' + d + '")'; }).catch(function(){ el.style.backgroundImage = 'none'; }));
+    });
     return Promise.all(jobs);
   }
   function waitImgs(root){
@@ -25547,7 +25553,7 @@ html body .order-role-badge{color:#ffb3c7!important}
     document.body.appendChild(host);
     var frame = host.firstElementChild, node = frame.firstElementChild;
     node.style.cssText += ';animation:none!important;transition:none!important;transform:none!important;opacity:1!important;margin:0!important;width:' + W + 'px;';
-    node.querySelectorAll('.svc-hide,.jcard-hide,.pcm-btn,.itm-btn,.ebk-go,.lfc-go').forEach(function(x){ x.style.display = 'none'; });
+    node.querySelectorAll('.svc-hide,.jcard-hide,.pcm-btn,.itm-btn').forEach(function(x){ x.style.display = 'none'; });
     var done = function(){ if (host.parentNode) host.parentNode.removeChild(host); };
     var w = W + 2 * padX;
     return inlineImages(host).then(function(){ return waitImgs(host); }).then(function(){
@@ -25567,7 +25573,9 @@ html body .order-role-badge{color:#ffb3c7!important}
     try { el = document.querySelector('.product-card[data-product-id="' + String(pid).replace(/[^\w-]/g, '') + '"]'); } catch (_) { window.__alloErr && window.__alloErr(_); }
     el = null; /* toujours la carte complète (comme l'aperçu), jamais la version compacte de la liste */
     if (prod.attrs && prod.attrs.type === 'service') { /* service / emploi : carte pleine largeur */
-      var sh = prod.attrs.kind ? (window.alloJobCardHTML ? window.alloJobCardHTML(prod, { exp: true }) : '') : (window.alloSvcCardHTML ? window.alloSvcCardHTML(prod, { exp: true }) : '');
+      var liveOpen = false;
+      try { liveOpen = Array.prototype.some.call(document.querySelectorAll('.svc-card.sv2.open'), function(x){ return x.getAttribute('data-product-id') === String(pid); }); } catch (_) {}
+      var sh = prod.attrs.kind ? (window.alloJobCardHTML ? window.alloJobCardHTML(prod, { exp: true }) : '') : (window.alloSvcCardHTML ? window.alloSvcCardHTML(prod, { exp: true, open: liveOpen }) : '');
       if (sh) return renderCardHTML(sh, 360);
     }
     var prev = state.src;
@@ -25582,13 +25590,13 @@ html body .order-role-badge{color:#ffb3c7!important}
     try {
       var p = (data.products || []).find(function(x){ return String(x.id) === String(pid); });
       if (!p) return '';
-      var sg = [p.name, p.price, p.image || p.img || (p.images && p.images[0]) || '', p.stock, (typeof lang !== 'undefined' ? lang : ''), p.cat || '', (p.promo ? (p.promo.pct + '/' + p.promo.endsAt) : ''), (p.description || '').length + ':' + (p.description || '').slice(0, 40), (p.attrs ? JSON.stringify(p.attrs).slice(0, 200) : '')].join('|');
+      var sg = [p.name, p.price, p.image || p.img || (p.images && p.images[0]) || '', p.stock, (typeof lang !== 'undefined' ? lang : ''), p.cat || '', (p.promo ? (p.promo.pct + '/' + p.promo.endsAt) : ''), (p.description || '').length + ':' + (p.description || '').slice(0, 40), (p.attrs ? JSON.stringify(p.attrs).slice(0, 200) : ''), (Array.prototype.some.call(document.querySelectorAll('.svc-card.sv2.open'), function(x){ return x.getAttribute('data-product-id') === String(pid); }) ? 'open' : 'closed')].join('|');
       if (banner) sg += '|' + banner.kind + '|' + (banner.ends_at || '') + '|h' + Math.floor(Date.now() / 3600000); /* le compte à rebours est dessiné dans l'image : on la refait chaque heure */
       return sg;
     } catch (_) { return ''; }
   }
   /* Cache persistant : la carte déjà générée est gardée sur l'appareil (fonctionne sans connexion) */
-  var IDB_V = 'v2', idbP = null;
+  var IDB_V = 'v3', idbP = null;
   function idb(){
     if (idbP) return idbP;
     idbP = new Promise(function(res){
@@ -27730,11 +27738,11 @@ function svcCard(p,o){
     +'<button type="button" class="svc-ib" aria-label="'+svT('Partager','Share')+'" onclick="event.stopPropagation();alloShareProductCard(\''+id+'\')">📤</button>'
     +(!mine?'<button type="button" class="svc-ib" aria-label="'+svT('Signaler','Report')+'" onclick="event.stopPropagation();alloFx.report(\'product\',\''+id+'\')">🚩</button>':'')
     +'</div>';
-  const acts=exp?'':'<div class="sv2-acts svc-hide">'
+  const acts='<div class="sv2-acts'+(exp?'':' svc-hide')+'">'
     +'<button type="button" class="sv2-more" aria-expanded="false" onclick="event.stopPropagation();alloSvc.toggleDesc(this)"><span>'+svT('Voir la description','View description')+'</span><i>▾</i></button>'
     +(mine?'<div class="sv2-mine">'+svT('Votre service','Your service')+'</div>':'<button type="button" class="sv2-go" onclick="event.stopPropagation();alloSvc.request(\''+id+'\')">'+svT('Demander','Request')+' ›</button>')
     +'</div>';
-  return '<div class="product-card svc-card sv2'+(exp?' open':'')+'" style="--h:'+svHue(p.cat)+'"'+(exp?'':' data-product-id="'+id+'"')+'>'
+  return '<div class="product-card svc-card sv2'+(exp&&o.open?' open':'')+'" style="--h:'+svHue(p.cat)+'"'+(exp?'':' data-product-id="'+id+'"')+'>'
    +'<i class="sv2-fx"></i><i class="sv2-glow"></i>'+tools
    +'<div class="sv2-top"><span class="sv2-badge">🛠 '+svT('SERVICE','SERVICE')+'</span>'+(p.cat?'<span class="sv2-cat">'+esc(p.cat)+'</span>':'')+'</div>'
    +'<div class="sv2-main"><div class="sv2-ico">'+esc(p.icon&&p.icon!=='📦'?p.icon:'🛠')+'</div>'
