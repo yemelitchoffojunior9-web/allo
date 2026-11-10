@@ -27695,7 +27695,10 @@ try { const v = document.getElementById('view-messages'); if (v && v.classList.c
 <script id="allo-services-module">
 (function(){
 'use strict';
-const CATS=['Maçon','Plombier','Électricien','Mécanicien','Répétiteur','Coiffure & beauté','Menuisier','Peintre','Informatique','Ménage','Déménagement','Autre service'];
+const CAT_ICO={'Maçon':'🧱','Plombier':'🔧','Électricien':'💡','Mécanicien':'🔩','Répétiteur':'📚','Coiffure & beauté':'💇','Menuisier':'🪚','Peintre':'🎨','Informatique':'💻','Ménage':'🧹','Déménagement':'🚚','Carreleur':'🧩','Soudeur':'🔥','Climatisation & froid':'❄️','Couture & mode':'🧵','Photo & vidéo':'📷','Traiteur & cuisine':'🍲','Jardinage':'🌿','Transport & chauffeur':'🚗','Réparation téléphone':'📱','Lavage auto':'🚿','Événementiel':'🎉','Sécurité & gardiennage':'🛡️','Santé & bien-être':'💆','Design & graphisme':'🖌️','Comptabilité & juridique':'📑','Cours & formation':'🎓','Autre service':'🛠'};
+const CATS=Object.keys(CAT_ICO);
+const svIcoCat=c=>CAT_ICO[c]||'🛠';
+const svIco=p=>(p&&p.icon&&p.icon!=='📦'&&p.icon!=='🛠')?p.icon:svIcoCat(p&&p.cat);
 const MODES={fixed:'Prix fixe',from:'À partir de',hour:'Par heure',quote:'Sur devis'};
 const ST={demande:'📨 Demande envoyée',devis:'💬 Devis proposé',accepte:'✅ Accepté',en_cours:'🔧 En cours',termine:'🏁 Terminé',annule:'✖ Annulé'};
 const $=s=>document.querySelector(s);
@@ -27724,8 +27727,45 @@ const SV_HUES=[172,200,222,252,278,22,42,140];
 const svHue=c=>{let h=0;for(const ch of String(c||'service'))h=(h*31+ch.charCodeAt(0))%997;return SV_HUES[h%SV_HUES.length]};
 const svEn=()=>typeof lang!=='undefined'&&lang==='en';
 const svT=(f,e)=>svEn()?e:f;
+/* ---------- J'aime (tables product_likes + product_like_stats) ---------- */
+const LK={mine:new Set(),n:{},uid:undefined};
+function svLkPaint(id){
+  const on=LK.mine.has(String(id)),n=LK.n[id]||0;
+  document.querySelectorAll('[data-svlike="'+id+'"]').forEach(b=>{
+    b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');
+    const i=b.querySelector('i'),sp=b.querySelector('span');if(i)i.textContent=on?'♥':'♡';if(sp)sp.textContent=n;
+  });
+}
+async function loadLikes(){
+  try{
+    const u=U();LK.mine=new Set();
+    const r=await sb.from('product_like_stats').select('product_id,likes_count');
+    if(!r.error)(r.data||[]).forEach(x=>{LK.n[x.product_id]=x.likes_count||0});
+    if(u){const m=await sb.from('product_likes').select('product_id').eq('user_id',u.id);if(!m.error)(m.data||[]).forEach(x=>LK.mine.add(String(x.product_id)))}
+    document.querySelectorAll('[data-svlike]').forEach(b=>svLkPaint(b.getAttribute('data-svlike')));
+  }catch(e){window.__alloErr&&window.__alloErr(e)}
+}
+function svLkSync(){const u=U(),k=u?String(u.id):'';if(LK.uid!==k){LK.uid=k;setTimeout(loadLikes,400)}}
+async function toggleLike(pid){
+  const u=U(),id=String(pid);
+  if(!u){try{requireAuth(svT('Connectez-vous pour aimer ce service.','Sign in to like this service.'),'account')}catch(e){alert('Connectez-vous pour continuer.')}return}
+  const on=!LK.mine.has(id);
+  if(on)LK.mine.add(id);else LK.mine.delete(id);
+  LK.n[id]=Math.max(0,(LK.n[id]||0)+(on?1:-1));svLkPaint(id);
+  try{
+    const r=on?await sb.from('product_likes').insert({product_id:id,user_id:u.id}):await sb.from('product_likes').delete().eq('product_id',id).eq('user_id',u.id);
+    if(r.error&&!/duplicate|unique/i.test(r.error.message||''))throw r.error;
+  }catch(e){
+    window.__alloErr&&window.__alloErr(e);
+    if(on)LK.mine.delete(id);else LK.mine.add(id);
+    LK.n[id]=Math.max(0,(LK.n[id]||0)+(on?-1:1));svLkPaint(id);
+    alert('Action impossible : '+(e&&e.message||e));
+  }
+}
+function svPrev(src){const e=$('#sv-ip');if(e){e.src=src;e.style.display='block'}}
+function pickImg(inp){const f=inp&&inp.files&&inp.files[0];if(f)svPrev(URL.createObjectURL(f))}
 function svcCard(p,o){
-  o=o||{};
+  o=o||{};svLkSync();
   const exp=!!o.exp,u=U(),mine=!!(u&&p.ownerId&&String(p.ownerId)===String(u.id));
   const a=p.attrs||{},revs=(D().reviews||[]).filter(r=>String(r.productId)===String(p.id));
   const note=revs.length?(revs.reduce((s,r)=>s+(+r.stars||0),0)/revs.length).toFixed(1)+' ★ ('+revs.length+')':svT('Nouveau','New');
@@ -27733,6 +27773,9 @@ function svcCard(p,o){
   const shop=(typeof getShopName==='function'?getShopName(p.shopId):'')||'';
   const desc=String(p.description||'').trim();
   const id=esc(p.id);
+  const liked=LK.mine.has(String(p.id)),lkn=LK.n[p.id]||0;
+  const likeBtn='<button type="button" class="sv2-like'+(liked?' on':'')+'" data-svlike="'+id+'" aria-pressed="'+(liked?'true':'false')+'" aria-label="'+svT('J’aime','Like')+'" onclick="event.stopPropagation();alloSvc.like(\''+id+'\')"><i>'+(liked?'♥':'♡')+'</i><span>'+lkn+'</span></button>';
+  const cover=p.image?'<div class="sv2-cover"><img src="'+esc(p.image)+'" alt="'+esc(p.name)+'" loading="lazy" decoding="async" onerror="this.parentNode.style.display=\'none\'"></div>':'';
   const tools=exp?'':'<div class="svc-tools svc-hide sv2-tools">'
     +'<button type="button" class="svc-ib" aria-label="'+svT('Télécharger la carte','Download the card')+'" onclick="event.stopPropagation();alloJobs.download(\''+id+'\')">⬇</button>'
     +'<button type="button" class="svc-ib" aria-label="'+svT('Partager','Share')+'" onclick="event.stopPropagation();alloShareProductCard(\''+id+'\')">📤</button>'
@@ -27745,11 +27788,12 @@ function svcCard(p,o){
   return '<div class="product-card svc-card sv2'+(exp&&o.open?' open':'')+'" style="--h:'+svHue(p.cat)+'"'+(exp?'':' data-product-id="'+id+'"')+'>'
    +'<i class="sv2-fx"></i><i class="sv2-glow"></i>'+tools
    +'<div class="sv2-top"><span class="sv2-badge">🛠 '+svT('SERVICE','SERVICE')+'</span>'+(p.cat?'<span class="sv2-cat">'+esc(p.cat)+'</span>':'')+'</div>'
-   +'<div class="sv2-main"><div class="sv2-ico">'+esc(p.icon&&p.icon!=='📦'?p.icon:'🛠')+'</div>'
+   +cover
+   +'<div class="sv2-main"><div class="sv2-ico">'+esc(svIco(p))+'</div>'
      +'<div class="sv2-txt"><div class="sv2-name">'+esc(p.name)+'</div>'
      +'<div class="sv2-chips">'+(a.zone?'<span>📍 '+esc(a.zone)+'</span>':'')+(shop?'<span>🏪 '+esc(shop)+'</span>':'')+'<span>⭐ '+note+'</span></div></div></div>'
    +'<div class="sv2-desc"><div class="sv2-desc-in">'+(desc?esc(desc):'<em>'+svT('Aucune description fournie.','No description provided.')+'</em>')+'</div></div>'
-   +'<div class="sv2-price">'+price+'</div>'
+   +'<div class="sv2-foot"><div class="sv2-price">'+price+'</div>'+likeBtn+'</div>'
    +acts+'</div>';
 }
 function toggleDesc(btn){
@@ -27783,9 +27827,10 @@ function publish(eid){
    +'<label>Prix (FCFA, vide si sur devis)</label><input id="sv-p" type="number" inputmode="numeric">'
    +'<label>Zone d’intervention</label><input id="sv-z" placeholder="Ville / quartier">'
    +'<label>Description</label><textarea id="sv-d" rows="3"></textarea>'
+   +'<label>Photo du service (facultatif)</label><input id="sv-i" type="file" accept="image/*" onchange="alloSvc.pickImg(this)"><img id="sv-ip" alt="" style="display:none;width:100%;max-height:170px;object-fit:cover;border-radius:12px;margin-top:6px">'
    +'<button class="btn btn-accent btn-block" onclick="alloSvc.savePublish('+(orig?'\''+esc(orig.id)+'\'':'')+')">'+(orig?'Enregistrer les modifications':'Publier (gratuit)')+'</button>');
   if(orig){const a=orig.attrs||{},set=(i,v)=>{const e=$('#'+i);if(e&&v!=null)e.value=v};
-    set('sv-n',orig.name);set('sv-c',orig.cat);set('sv-m',a.mode||'fixed');set('sv-p',a.mode==='quote'?'':(orig.price||''));set('sv-z',a.zone||'');set('sv-d',orig.description||'')}
+    set('sv-n',orig.name);set('sv-c',orig.cat);set('sv-m',a.mode||'fixed');set('sv-p',a.mode==='quote'?'':(orig.price||''));set('sv-z',a.zone||'');set('sv-d',orig.description||'');if(orig.image)svPrev(orig.image)}
 }
 async function savePublish(eid){
   try{
@@ -27795,8 +27840,11 @@ async function savePublish(eid){
     if(u.role==='entreprise'){const s=await ensureCompanyCatalogForCurrentUser();shopId=s&&s.id}
     if(!shopId&&typeof getSellerShopIds==='function')shopId=(getSellerShopIds()||[])[0];
     const orig=eid?P(eid):null;if(orig&&orig.shopId)shopId=orig.shopId;
-    const p={name,description:$('#sv-d').value.trim(),price,stock:999,icon:'🛠',cat:$('#sv-c').value,shopId,ownerId:u.id,
-      companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:[],variants:[],attrs:Object.assign({},orig&&orig.attrs,{type:'service',mode,zone:$('#sv-z').value.trim()})};
+    let image=(orig&&orig.image)||'';const fi=$('#sv-i'),fl=fi&&fi.files&&fi.files[0];
+    if(fl){try{image=await compressImageFile(fl,1000,0.78)}catch(e){return alert('Image illisible : essayez une autre photo.')}}
+    const cat=$('#sv-c').value;
+    const p={name,description:$('#sv-d').value.trim(),price,stock:999,icon:svIcoCat(cat),cat,shopId,ownerId:u.id,image,
+      companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:image?[image]:[],variants:[],attrs:Object.assign({},orig&&orig.attrs,{type:'service',mode,zone:$('#sv-z').value.trim()})};
     if(orig){p.id=orig.id;p.hidden=orig.hidden;p.private=orig.private}
     await sbUpsertProduct(p);await sbLoadAllIntoData();renderAll();close();alert(orig?'Service modifié ✔':'Service publié ✔');
   }catch(e){fail(e)}
@@ -28014,7 +28062,7 @@ window.alloSvcMenu=function(items,role){
 };
 const api={open(t){({publish:function(){return (window.alloJobs&&window.alloJobs.hub)?window.alloJobs.hub():publish()},jobs:function(){return window.alloJobs&&window.alloJobs.browse()},requests:viewRequests,offers:viewOffers,drivers:viewDrivers,stats:viewStats,codes:viewCodes}[t]||(()=>{}))()},
   close(){const e=$('#svcPanel');if(e)e.style.display='none'},
-  copy,codeSave,codeToggle,codeDel,publish,savePublish,request,sendRequest,act,offer,offerAct,drvJoin,drvOnline,jobNew,jobTake,jobAct,SVC_CATS:CATS};
+  copy,codeSave,codeToggle,codeDel,publish,savePublish,request,sendRequest,act,offer,offerAct,drvJoin,drvOnline,jobNew,jobTake,jobAct,SVC_CATS:CATS,SVC_CAT_ICO:CAT_ICO,like:toggleLike,pickImg,loadLikes};
 function close(){api.close()}
 api.toggleDesc=toggleDesc;
 window.alloSvc=api;
@@ -29703,7 +29751,16 @@ var _ra=window.renderAccount;
 .sv2-go{border:0;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);background:linear-gradient(180deg,#8be22b,#3f9b0b);box-shadow:0 6px 14px rgba(63,155,11,.45),inset 0 0 0 2px rgba(255,255,255,.28)}
 .sv2-mine{border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.8);font-weight:700}
 .sv2-more:active,.sv2-go:active{transform:scale(.97)}
-@media (prefers-reduced-motion:reduce){.sv2-desc,.sv2-more i{transition:none}}
+.sv2-cover{position:relative;margin:12px 0 0;height:170px;border-radius:16px;overflow:hidden;background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 6px 16px rgba(0,0,0,.35)}
+.sv2-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.sv2-cover::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.45))}
+.sv2-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 12px}
+.sv2-foot .sv2-price{margin:0}
+.sv2-like{flex:none;display:flex;align-items:center;gap:6px;border:1.5px solid rgba(255,255,255,.4);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:9px 14px;font:800 14px/1 system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.sv2-like i{font-style:normal;font-size:19px;line-height:1;transition:transform .2s}
+.sv2-like.on{border-color:#ff4d6d;background:rgba(255,77,109,.22)}.sv2-like.on i{color:#ff4d6d;transform:scale(1.15)}
+.sv2-like:active{transform:scale(.94)}
+@media (prefers-reduced-motion:reduce){.sv2-desc,.sv2-more i,.sv2-like i{transition:none}}
 </style>
 <style id="alloEbooksCss">
 #view-ebooks{padding:12px 12px 90px}
