@@ -27724,40 +27724,114 @@ const SV_HUES=[172,200,222,252,278,22,42,140];
 const svHue=c=>{let h=0;for(const ch of String(c||'service'))h=(h*31+ch.charCodeAt(0))%997;return SV_HUES[h%SV_HUES.length]};
 const svEn=()=>typeof lang!=='undefined'&&lang==='en';
 const svT=(f,e)=>svEn()?e:f;
+const svN=n=>{n=Number(n)||0;return n>=1000?(Math.floor(n/100)/10)+'k':String(n)};
+const svSafe=(f,d)=>{try{const v=f();return v==null?d:v}catch(e){return d}};
 function svcCard(p,o){
   o=o||{};
   const exp=!!o.exp,u=U(),mine=!!(u&&p.ownerId&&String(p.ownerId)===String(u.id));
-  const a=p.attrs||{},revs=(D().reviews||[]).filter(r=>String(r.productId)===String(p.id));
-  const note=revs.length?(revs.reduce((s,r)=>s+(+r.stars||0),0)/revs.length).toFixed(1)+' ★ ('+revs.length+')':svT('Nouveau','New');
+  const a=p.attrs||{},id=esc(p.id);
+  const revs=(D().reviews||[]).filter(r=>String(r.productId)===String(p.id)).slice().sort((x,y)=>new Date(y.date||0)-new Date(x.date||0));
+  const nRev=revs.length;
+  const avg=nRev?revs.reduce((s,r)=>s+(+r.stars||0),0)/nRev:0;
+  const note=nRev?avg.toFixed(1):svT('Nouveau','New');
+  const imgs=svSafe(()=>getProductImages(p),[]);
+  const img=imgs[0]||'';
+  const likes=svSafe(()=>getProductLikeCount(p.id),0);
+  const liked=!!(u&&svSafe(()=>isInWishlist(p.id),false));
+  const views=svSafe(()=>getProductViewCount(p.id),0);
   const price=a.mode==='quote'?'<span class="sv2-q">'+svT('Sur devis','On quote')+'</span>':(a.mode==='from'?'<small>'+svT('dès','from')+'</small>':'')+fc(p.price)+(a.mode==='hour'?'<small>/ h</small>':'');
   const shop=(typeof getShopName==='function'?getShopName(p.shopId):'')||'';
   const desc=String(p.description||'').trim();
-  const id=esc(p.id);
+  const long=desc.length>90||desc.indexOf('\n')>-1;
+  const ico=esc(p.icon&&p.icon!=='📦'?p.icon:'🛠');
+
+  /* --- Zone image (photo du service, sinon visuel de remplacement) --- */
   const tools=exp?'':'<div class="svc-tools svc-hide sv2-tools">'
     +'<button type="button" class="svc-ib" aria-label="'+svT('Télécharger la carte','Download the card')+'" onclick="event.stopPropagation();alloJobs.download(\''+id+'\')">⬇</button>'
     +'<button type="button" class="svc-ib" aria-label="'+svT('Partager','Share')+'" onclick="event.stopPropagation();alloShareProductCard(\''+id+'\')">📤</button>'
     +(!mine?'<button type="button" class="svc-ib" aria-label="'+svT('Signaler','Report')+'" onclick="event.stopPropagation();alloFx.report(\'product\',\''+id+'\')">🚩</button>':'')
     +'</div>';
-  const acts='<div class="sv2-acts'+(exp?'':' svc-hide')+'">'
-    +'<button type="button" class="sv2-more" aria-expanded="false" onclick="event.stopPropagation();alloSvc.toggleDesc(this)"><span>'+svT('Voir la description','View description')+'</span><i>▾</i></button>'
-    +(mine?'<div class="sv2-mine">'+svT('Votre service','Your service')+'</div>':'<button type="button" class="sv2-go" onclick="event.stopPropagation();alloSvc.request(\''+id+'\')">'+svT('Demander','Request')+' ›</button>')
+  const media='<div class="sv2-media'+(img?' has-img':'')+'"'+(img&&!exp?' onclick="event.stopPropagation();openProductGallery(\''+id+'\')"':'')+'>'
+    +(img?'<img src="'+esc(img)+'" alt="'+esc(p.name)+'" loading="lazy" decoding="async">':'<div class="sv2-ph"><span>'+ico+'</span></div>')
+    +'<i class="sv2-shade"></i>'
+    +'<div class="sv2-top"><span class="sv2-badge">🛠 '+svT('SERVICE','SERVICE')+'</span>'+(p.cat?'<span class="sv2-cat">'+esc(p.cat)+'</span>':'')+'</div>'
+    +tools
+    +'<div class="sv2-price">'+price+'</div>'
+    +(imgs.length>1?'<span class="sv2-nimg">📷 '+imgs.length+'</span>':'')
     +'</div>';
+
+  /* --- Dernier commentaire (aperçu) --- */
+  const lastRev=revs.find(r=>String(r.text||'').trim());
+  const last=lastRev?'<div class="sv2-last"'+(exp?'':' onclick="event.stopPropagation();openProductReviews(\''+id+'\')"')+'><b>'+esc(lastRev.userName||svT('Client','Customer'))+'</b>'+esc(String(lastRev.text).trim())+'</div>':'';
+
+  /* --- Barre : j'aime · commentaires · vues · note --- */
+  const heart='<span class="h0">🤍</span><span class="h1">❤️</span>';
+  const stats='<div class="sv2-stats">'
+    +(exp?'<span class="sv2-st'+(liked?' high':'')+'">'+heart+'<b class="sv2-lk">'+svN(likes)+'</b></span>'
+        :'<button type="button" class="sv2-st sv2-like'+(liked?' high':'')+'" aria-pressed="'+(liked?'true':'false')+'" aria-label="'+svT('J’aime','Like')+'" onclick="event.stopPropagation();alloSvc.like(\''+id+'\')">'+heart+'<b class="sv2-lk">'+svN(likes)+'</b></button>')
+    +(exp?'<span class="sv2-st">💬<b>'+svN(nRev)+'</b></span>'
+        :'<button type="button" class="sv2-st" aria-label="'+svT('Commentaires','Comments')+'" onclick="event.stopPropagation();openProductReviews(\''+id+'\')">💬<b class="sv2-cm">'+svN(nRev)+'</b></button>')
+    +'<span class="sv2-st">👁<b class="sv2-vw">'+svN(views)+'</b></span>'
+    +'<span class="sv2-rate">⭐ '+note+'</span></div>';
+
+  /* --- Actions --- */
+  const more=long?'<button type="button" class="sv2-more" aria-expanded="false" onclick="event.stopPropagation();alloSvc.toggleDesc(this)"><span>'+svT('Voir plus','Show more')+'</span><i>▾</i></button>':'';
+  const go=mine?'<div class="sv2-mine">'+svT('Votre service','Your service')+'</div>':'<button type="button" class="sv2-go" onclick="event.stopPropagation();alloSvc.request(\''+id+'\')">'+svT('Demander','Request')+' ›</button>';
+  const acts='<div class="sv2-acts'+(exp?'':' svc-hide')+(long?'':' one')+'">'+more+go+'</div>';
+
   return '<div class="product-card svc-card sv2'+(exp&&o.open?' open':'')+'" style="--h:'+svHue(p.cat)+'"'+(exp?'':' data-product-id="'+id+'"')+'>'
-   +'<i class="sv2-fx"></i><i class="sv2-glow"></i>'+tools
-   +'<div class="sv2-top"><span class="sv2-badge">🛠 '+svT('SERVICE','SERVICE')+'</span>'+(p.cat?'<span class="sv2-cat">'+esc(p.cat)+'</span>':'')+'</div>'
-   +'<div class="sv2-main"><div class="sv2-ico">'+esc(p.icon&&p.icon!=='📦'?p.icon:'🛠')+'</div>'
-     +'<div class="sv2-txt"><div class="sv2-name">'+esc(p.name)+'</div>'
-     +'<div class="sv2-chips">'+(a.zone?'<span>📍 '+esc(a.zone)+'</span>':'')+(shop?'<span>🏪 '+esc(shop)+'</span>':'')+'<span>⭐ '+note+'</span></div></div></div>'
-   +'<div class="sv2-desc"><div class="sv2-desc-in">'+(desc?esc(desc):'<em>'+svT('Aucune description fournie.','No description provided.')+'</em>')+'</div></div>'
-   +'<div class="sv2-price">'+price+'</div>'
-   +acts+'</div>';
+   +'<i class="sv2-fx"></i><i class="sv2-glow"></i>'
+   +media
+   +'<div class="sv2-body">'
+     +'<div class="sv2-name">'+esc(p.name)+'</div>'
+     +'<div class="sv2-chips">'+(a.zone?'<span>📍 '+esc(a.zone)+'</span>':'')+(shop?'<span>🏪 '+esc(shop)+'</span>':'')+'</div>'
+     +'<div class="sv2-desc'+(long?' clamp':'')+'"><div class="sv2-desc-in">'+(desc?esc(desc):'<em>'+svT('Aucune description fournie.','No description provided.')+'</em>')+'</div></div>'
+     +last+stats+acts
+   +'</div></div>';
 }
 function toggleDesc(btn){
   const c=btn&&btn.closest('.sv2');if(!c)return;
   const on=c.classList.toggle('open');
   btn.setAttribute('aria-expanded',on?'true':'false');
-  const sp=btn.querySelector('span');if(sp)sp.textContent=on?svT('Masquer la description','Hide description'):svT('Voir la description','View description');
+  const sp=btn.querySelector('span');if(sp)sp.textContent=on?svT('Voir moins','Show less'):svT('Voir plus','Show more');
 }
+
+/* ---------- J'aime : réutilise les favoris (wishlist) des produits ---------- */
+function like(id){if(typeof toggleWishlist==='function')toggleWishlist(id)}
+function svCards(pid){return [...document.querySelectorAll('.svc-card.sv2[data-product-id]')].filter(c=>c.getAttribute('data-product-id')===String(pid))}
+function svSync(pid){
+  try{
+    const liked=!!(U()&&isInWishlist(pid)),n=getProductLikeCount(pid);
+    svCards(pid).forEach(c=>{
+      const b=c.querySelector('.sv2-like');if(!b)return;
+      b.classList.toggle('high',liked);b.setAttribute('aria-pressed',liked?'true':'false');
+      const v=b.querySelector('.sv2-lk');if(v)v.textContent=svN(n);
+    });
+  }catch(e){}
+}
+function svSyncViews(pid){
+  try{const n=svN(getProductViewCount(pid));svCards(pid).forEach(c=>{const v=c.querySelector('.sv2-vw');if(v)v.textContent=n})}catch(e){}
+}
+const _uw=window.updateWishlistCardUI;
+if(typeof _uw==='function')window.updateWishlistCardUI=function(pid){const r=_uw.apply(this,arguments);svSync(pid);return r};
+const _uv=window.updateProductViewCountUI;
+if(typeof _uv==='function')window.updateProductViewCountUI=function(pid){const r=_uv.apply(this,arguments);svSyncViews(pid);return r};
+
+/* ---------- Photo du service (formulaire de publication) ---------- */
+let SVIMG; /* undefined = inchangée · '' = retirée · data:… = nouvelle photo */
+function svImgPaint(src){
+  const b=$('#sv-ib');if(!b)return;
+  b.innerHTML=src
+    ?'<img src="'+esc(src)+'" alt=""><button type="button" class="sv-ib-x" aria-label="Retirer la photo" onclick="event.stopPropagation();alloSvc.rmImg()">✖</button>'
+    :'<span>📷</span><b>Ajouter une photo</b><small>Facultatif · JPG ou PNG</small>';
+}
+async function pickImg(inp){
+  const f=inp&&inp.files&&inp.files[0];if(!f)return;
+  try{SVIMG=await compressImageFile(f,1000,0.78);svImgPaint(SVIMG)}
+  catch(e){alert('Image illisible : '+(e&&e.message||e))}
+  inp.value='';
+}
+function rmImg(){SVIMG='';svImgPaint('')}
 window.alloSvcCardHTML=svcCard;
 const _pc=window.productCardHTML;
 if(typeof _pc==='function')window.productCardHTML=function(p){
@@ -27776,16 +27850,18 @@ if(typeof _gp==='function')window.getEffectivePriceForBuyer=function(p){
 function publish(eid){
   if(!need())return;
   if(!isSeller())return alert('Un compte boutique ou entreprise est nécessaire pour publier un service.');
-  const orig=eid?P(eid):null;
+  const orig=eid?P(eid):null;SVIMG=undefined;
   panel(orig?'✏️ Modifier le service':'🛠 Publier un service','<label>Titre</label><input id="sv-n" placeholder="Ex : Maçon — murs, dalles, carrelage">'
    +'<label>Catégorie</label><select id="sv-c">'+CATS.map(c=>'<option>'+c+'</option>').join('')+'</select>'
    +'<label>Type de tarif</label><select id="sv-m">'+Object.keys(MODES).map(k=>'<option value="'+k+'">'+MODES[k]+'</option>').join('')+'</select>'
    +'<label>Prix (FCFA, vide si sur devis)</label><input id="sv-p" type="number" inputmode="numeric">'
    +'<label>Zone d’intervention</label><input id="sv-z" placeholder="Ville / quartier">'
    +'<label>Description</label><textarea id="sv-d" rows="3"></textarea>'
+   +'<label>Photo (facultatif)</label><div id="sv-ib" class="sv-ib" onclick="document.getElementById(\'sv-f\').click()"></div><input id="sv-f" type="file" accept="image/*" style="display:none" onchange="alloSvc.pickImg(this)">'
    +'<button class="btn btn-accent btn-block" onclick="alloSvc.savePublish('+(orig?'\''+esc(orig.id)+'\'':'')+')">'+(orig?'Enregistrer les modifications':'Publier (gratuit)')+'</button>');
   if(orig){const a=orig.attrs||{},set=(i,v)=>{const e=$('#'+i);if(e&&v!=null)e.value=v};
     set('sv-n',orig.name);set('sv-c',orig.cat);set('sv-m',a.mode||'fixed');set('sv-p',a.mode==='quote'?'':(orig.price||''));set('sv-z',a.zone||'');set('sv-d',orig.description||'')}
+  svImgPaint(orig?svSafe(()=>getProductImages(orig)[0],''):'');
 }
 async function savePublish(eid){
   try{
@@ -27795,7 +27871,7 @@ async function savePublish(eid){
     if(u.role==='entreprise'){const s=await ensureCompanyCatalogForCurrentUser();shopId=s&&s.id}
     if(!shopId&&typeof getSellerShopIds==='function')shopId=(getSellerShopIds()||[])[0];
     const orig=eid?P(eid):null;if(orig&&orig.shopId)shopId=orig.shopId;
-    const p={name,description:$('#sv-d').value.trim(),price,stock:999,icon:'🛠',cat:$('#sv-c').value,shopId,ownerId:u.id,
+    const p={name,description:$('#sv-d').value.trim(),price,stock:999,icon:'🛠',image:(SVIMG===undefined?((orig&&(orig.image||svSafe(()=>getProductImages(orig)[0],'')))||null):(SVIMG||null)),cat:$('#sv-c').value,shopId,ownerId:u.id,
       companyId:u.role==='entreprise'?u.id:null,available:true,hashtags:[],images:[],variants:[],attrs:Object.assign({},orig&&orig.attrs,{type:'service',mode,zone:$('#sv-z').value.trim()})};
     if(orig){p.id=orig.id;p.hidden=orig.hidden;p.private=orig.private}
     await sbUpsertProduct(p);await sbLoadAllIntoData();renderAll();close();alert(orig?'Service modifié ✔':'Service publié ✔');
@@ -28016,7 +28092,7 @@ const api={open(t){({publish:function(){return (window.alloJobs&&window.alloJobs
   close(){const e=$('#svcPanel');if(e)e.style.display='none'},
   copy,codeSave,codeToggle,codeDel,publish,savePublish,request,sendRequest,act,offer,offerAct,drvJoin,drvOnline,jobNew,jobTake,jobAct,SVC_CATS:CATS};
 function close(){api.close()}
-api.toggleDesc=toggleDesc;
+api.toggleDesc=toggleDesc;api.like=like;api.pickImg=pickImg;api.rmImg=rmImg;
 window.alloSvc=api;
 setTimeout(loadAcc,2500);setInterval(()=>{if(U())loadAcc()},120000);
 })();
@@ -29672,30 +29748,62 @@ var _ra=window.renderAccount;
 </script>
 
 <style id="alloSvcCard2Css">
-.product-card.svc-card.sv2{--h:172;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;display:block!important;height:auto!important;padding:16px 14px 14px!important;cursor:default;border-radius:22px!important;color:#fff;border:0!important;
+.product-card.svc-card.sv2{--h:172;grid-column:1/-1;position:relative;isolation:isolate;overflow:hidden;display:block!important;height:auto!important;padding:0!important;cursor:default;border-radius:22px!important;color:#fff;border:0!important;
   background:linear-gradient(150deg,hsl(var(--h) 62% 28%),hsl(var(--h) 72% 12%))!important;
   box-shadow:0 12px 30px hsla(var(--h),80%,5%,.55),inset 0 0 0 1px hsla(var(--h),90%,72%,.32)!important}
 .sv2-fx{position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(120deg,rgba(255,255,255,.045) 0 8px,transparent 8px 18px)}
 .sv2-glow{position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 55% at 100% 0%,hsla(var(--h),95%,62%,.38),transparent 70%),radial-gradient(60% 40% at 0% 100%,hsla(calc(var(--h) + 40),90%,55%,.22),transparent 70%)}
-.sv2-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:3}
-.sv2-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-right:84px}
+
+/* Zone image */
+.sv2-media{position:relative;aspect-ratio:16/10;max-height:340px;overflow:hidden;cursor:pointer;background:linear-gradient(145deg,hsl(var(--h) 80% 46%),hsl(calc(var(--h) + 35) 75% 28%))}
+.sv2-media:not(.has-img){cursor:default}
+.sv2-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.sv2-ph{position:absolute;inset:0;display:grid;place-items:center;font-size:76px;background:repeating-linear-gradient(120deg,rgba(255,255,255,.07) 0 10px,transparent 10px 22px)}
+.sv2-ph span{filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+.sv2-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,transparent 34%,transparent 56%,rgba(0,0,0,.62) 100%)}
+.sv2-top{position:absolute;top:10px;left:10px;right:110px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;z-index:2}
 .sv2-badge{font:900 10.5px/1 system-ui,sans-serif;letter-spacing:.6px;padding:6px 10px;border-radius:999px;background:linear-gradient(180deg,#ffe27a,#f5b400);color:#2a1a00}
-.sv2-cat{font:800 10.5px/1 system-ui,sans-serif;letter-spacing:.5px;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22)}
-.sv2-main{display:flex;gap:14px;align-items:center;margin:14px 0 10px}
-.sv2-ico{flex:none;width:68px;height:68px;border-radius:20px;display:grid;place-items:center;font-size:36px;background:linear-gradient(145deg,hsl(var(--h) 92% 64%),hsl(calc(var(--h) + 35) 85% 44%));box-shadow:0 8px 22px hsla(var(--h),90%,50%,.5),inset 0 0 0 2px rgba(255,255,255,.4)}
-.sv2-txt{min-width:0;flex:1}
-.sv2-name{font:900 22px/1.15 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 10px rgba(0,0,0,.35);overflow-wrap:anywhere}
-.sv2-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.sv2-chips span{font-size:11.5px;padding:4px 9px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.16);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sv2-desc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
-.sv2.open .sv2-desc{grid-template-rows:1fr}
-.sv2-desc-in{overflow:hidden;min-height:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.9);white-space:pre-wrap;overflow-wrap:anywhere}
-.sv2.open .sv2-desc-in{padding:10px 12px;margin:4px 0 8px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.12)}
-.sv2-desc-in em{opacity:.7}
-.sv2-price{display:inline-flex;align-items:baseline;gap:6px;margin:8px 0 12px;padding:8px 16px;border-radius:999px;font:900 20px/1.1 "Arial Black",system-ui,sans-serif;color:#2a1a00;background:linear-gradient(180deg,#ffe98a,#f5b400);box-shadow:0 6px 16px rgba(245,180,0,.35),inset 0 0 0 2px rgba(255,255,255,.5)}
+.sv2-cat{font:800 10.5px/1 system-ui,sans-serif;letter-spacing:.5px;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.28)}
+.sv2-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:3}
+.sv2-price{position:absolute;left:10px;bottom:10px;z-index:2;display:inline-flex;align-items:baseline;gap:6px;padding:7px 14px;border-radius:999px;font:900 17px/1.1 "Arial Black",system-ui,sans-serif;color:#2a1a00;background:linear-gradient(180deg,#ffe98a,#f5b400);box-shadow:0 6px 16px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.35)}
 .sv2-price small{font:800 11px/1 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.4px;opacity:.75}
-.sv2-q{font-size:17px}
+.sv2-q{font-size:15px}
+.sv2-nimg{position:absolute;right:10px;bottom:10px;z-index:2;font:800 11.5px/1 system-ui,sans-serif;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25)}
+
+/* Corps */
+.sv2-body{padding:14px}
+.sv2-name{font:900 20px/1.2 "Arial Black",system-ui,sans-serif;text-shadow:0 2px 10px rgba(0,0,0,.35);overflow-wrap:anywhere}
+.sv2-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sv2-chips:empty{display:none}
+.sv2-chips span{font-size:11.5px;padding:4px 9px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.16);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Description (2 lignes, dépliable) */
+.sv2-desc{margin-top:10px}
+.sv2-desc-in{font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.9);white-space:pre-wrap;overflow-wrap:anywhere}
+.sv2-desc.clamp .sv2-desc-in{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sv2.open .sv2-desc.clamp .sv2-desc-in{display:block;-webkit-line-clamp:unset;overflow:visible}
+.sv2-desc-in em{opacity:.7}
+
+/* Aperçu du dernier commentaire */
+.sv2-last{margin-top:10px;padding:8px 10px;border-radius:12px;font-size:12.5px;line-height:1.4;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.12);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.sv2-last::before{content:"💬 "}
+.sv2-last b{margin-right:6px}
+
+/* Barre j'aime · commentaires · vues · note */
+.sv2-stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.sv2-st{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:999px;font:700 13px/1 system-ui,sans-serif;color:#fff;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.18);-webkit-tap-highlight-color:transparent}
+button.sv2-st{cursor:pointer}
+button.sv2-st:active{transform:scale(.95)}
+.sv2-st b{font-weight:800}
+.sv2-st .h1{display:none}
+.sv2-st.high .h0{display:none}
+.sv2-st.high .h1{display:inline}
+.sv2-st.high{background:rgba(255,70,110,.25);border-color:rgba(255,120,150,.6)}
+.sv2-rate{margin-left:auto;font:800 12.5px/1 system-ui,sans-serif;opacity:.9}
+
+/* Actions */
 .sv2-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sv2-acts.one{grid-template-columns:1fr}
 .sv2-more,.sv2-go,.sv2-mine{min-height:46px;border-radius:14px;font:800 14px/1.1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .sv2-more{border:1.5px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);color:#fff}
 .sv2-more i{font-style:normal;transition:transform .25s}
@@ -29703,7 +29811,14 @@ var _ra=window.renderAccount;
 .sv2-go{border:0;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);background:linear-gradient(180deg,#8be22b,#3f9b0b);box-shadow:0 6px 14px rgba(63,155,11,.45),inset 0 0 0 2px rgba(255,255,255,.28)}
 .sv2-mine{border:1px dashed rgba(255,255,255,.35);color:rgba(255,255,255,.8);font-weight:700}
 .sv2-more:active,.sv2-go:active{transform:scale(.97)}
-@media (prefers-reduced-motion:reduce){.sv2-desc,.sv2-more i{transition:none}}
+@media (prefers-reduced-motion:reduce){.sv2-more i{transition:none}}
+
+/* Photo dans le formulaire de publication */
+.sv-ib{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:140px;border:2px dashed rgba(255,255,255,.35);border-radius:16px;background:rgba(255,255,255,.06);cursor:pointer;overflow:hidden;text-align:center}
+.sv-ib span{font-size:34px}
+.sv-ib small{opacity:.65;font-size:11px}
+.sv-ib img{width:100%;max-height:240px;object-fit:cover;display:block}
+.sv-ib-x{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:15px;padding:0}
 </style>
 <style id="alloEbooksCss">
 #view-ebooks{padding:12px 12px 90px}
@@ -31014,6 +31129,136 @@ if(typeof _setLang==='function'){
   };
 }
 try{translateGlobalDOM();}catch(e){err(e);}
+})();
+</script>
+
+<style id="alloTourCss">
+#alloTour{position:fixed;inset:0;z-index:2147483000;font-family:system-ui,-apple-system,sans-serif;touch-action:manipulation}
+#alloTour .at-dim{position:absolute;inset:0;background:rgba(3,10,30,.78)}
+#alloTour .at-spot{position:absolute;border-radius:16px;box-shadow:0 0 0 9999px rgba(3,10,30,.78),0 0 0 3px #ffd84a,0 0 22px 4px rgba(255,216,74,.7);transition:all .35s ease;pointer-events:none}
+#alloTour .at-spot::after{content:"";position:absolute;inset:-6px;border-radius:20px;border:2px solid rgba(255,216,74,.9);animation:atPulse 1.4s ease-out infinite}
+#alloTour .at-hand{position:absolute;font-size:46px;line-height:1;z-index:2;pointer-events:none;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));transition:all .35s ease}
+#alloTour .at-hand i{display:block;font-style:normal;animation:atTap 1s ease-in-out infinite}
+#alloTour .at-hand.down i{animation-name:atTapDown}
+#alloTour .at-card{position:absolute;box-sizing:border-box;width:min(320px,calc(100vw - 24px));padding:16px 16px 14px;border-radius:20px;color:#fff;background:linear-gradient(160deg,#123a7a,#0a1f4d);border:1px solid rgba(255,255,255,.25);box-shadow:0 16px 40px rgba(0,0,0,.55);z-index:3}
+#alloTour .at-card.center{left:50%;top:50%;transform:translate(-50%,-50%)}
+#alloTour .at-dots{display:flex;gap:5px;margin-bottom:10px}
+#alloTour .at-dots b{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.28)}
+#alloTour .at-dots b.on{background:#ffd84a;width:18px;border-radius:6px}
+#alloTour .at-t{font:900 18px/1.2 system-ui,sans-serif;margin-bottom:6px}
+#alloTour .at-d{font-size:14px;line-height:1.5;opacity:.93}
+#alloTour .at-btns{display:flex;gap:8px;margin-top:14px;align-items:center}
+#alloTour .at-btns button{min-height:42px;border-radius:12px;font:800 14px/1 system-ui,sans-serif;cursor:pointer;border:0;padding:0 14px;-webkit-tap-highlight-color:transparent}
+#alloTour .at-skip{background:none;color:rgba(255,255,255,.7);padding:0 6px!important;margin-right:auto;text-decoration:underline}
+#alloTour .at-prev{background:rgba(255,255,255,.14);color:#fff}
+#alloTour .at-next{background:linear-gradient(180deg,#8be22b,#3f9b0b);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);box-shadow:0 5px 12px rgba(63,155,11,.45)}
+#alloTourHelp{position:fixed;left:10px;bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:900;width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.55);background:linear-gradient(180deg,#3a7be0,#143f93);color:#fff;font:900 18px/1 system-ui,sans-serif;display:none;place-items:center;padding:0;box-shadow:0 4px 12px rgba(0,0,0,.4);cursor:pointer}
+@keyframes atPulse{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.18)}}
+@keyframes atTap{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes atTapDown{0%,100%{transform:translateY(0)}50%{transform:translateY(10px)}}
+@media (prefers-reduced-motion:reduce){#alloTour .at-spot::after,#alloTour .at-hand i{animation:none}#alloTour *{transition:none!important}}
+</style>
+<button type="button" id="alloTourHelp" aria-label="Guide" title="Guide">?</button>
+<script id="allo-tour">
+(function(){
+'use strict';
+var KEY='allo_tour_v1_',root=null,steps=[],idx=0,active=false,helpBtn=document.getElementById('alloTourHelp');
+function en(){try{return lang==='en'}catch(e){return false}}
+function L(a){return en()?a[1]:a[0]}
+function who(){try{return (currentUser&&currentUser.id)?String(currentUser.id):'guest'}catch(e){return 'guest'}}
+function seen(){try{return localStorage.getItem(KEY+who())==='1'}catch(e){return false}}
+function mark(){try{localStorage.setItem(KEY+who(),'1')}catch(e){}}
+function vis(el){if(!el)return false;var r=el.getBoundingClientRect();if(r.width<4||r.height<4)return false;var cs=getComputedStyle(el);return cs.display!=='none'&&cs.visibility!=='hidden'&&r.bottom>0&&r.top<innerHeight}
+function q(s){return document.querySelector(s)}
+var DEF=[
+ {t:['Bienvenue sur Allo 👋','Welcome to Allo 👋'],d:['Ce petit guide vous montre où toucher pour acheter, publier un produit ou un service, et discuter. Ça prend 30 secondes.','This quick guide shows you where to tap to buy, publish a product or a service, and chat. It takes 30 seconds.']},
+ {s:'#searchHeaderBtn',t:['🔍 Rechercher','🔍 Search'],d:['Touchez ici pour trouver un produit, un service ou une boutique.','Tap here to find a product, a service or a shop.']},
+ {s:'#catHeaderBtn',t:['📑 Catégories','📑 Categories'],d:['Parcourez tout par catégorie : maçon, plombier, mode, high-tech…','Browse everything by category: builders, plumbers, fashion, tech…']},
+ {s:'#shopsHeaderBtn',t:['🏪 Boutiques','🏪 Shops'],d:['Découvrez les boutiques, abonnez-vous et écrivez au vendeur.','Discover shops, follow them and message the seller.']},
+ {s:'#companiesHeaderBtn',t:['🏢 Entreprises','🏢 Companies'],d:['Les entreprises vendent en gros : faites une demande pour voir leurs prix.','Companies sell wholesale: send a request to see their prices.']},
+ {s:'.product-card',scroll:1,t:['❤️ Les cartes','❤️ Cards'],d:['Touchez ❤️ pour aimer, 💬 pour lire ou laisser un avis, 🛒 pour ajouter au panier. Sur un service, touchez « Demander ».','Tap ❤️ to like, 💬 to read or leave a review, 🛒 to add to cart. On a service, tap “Request”.']},
+ {s:'#msgHeaderBtn',t:['💬 Messages','💬 Messages'],d:['Discutez directement avec les vendeurs et prestataires.','Chat directly with sellers and providers.']},
+ {s:'#walletChip',t:['💰 Votre portefeuille','💰 Your wallet'],d:['Votre solde Allo : rechargez-le et suivez vos paiements ici.','Your Allo balance: top up and follow your payments here.']},
+ {s:'#bottomNav .nav-btn[data-view="cart"]',t:['🛒 Panier','🛒 Cart'],d:['Retrouvez ici les produits que vous voulez acheter.','Find the products you want to buy here.']},
+ {s:'#bottomNav .nav-center-btn',t:['➕ Publier','➕ Publish'],d:['Le bouton vert : publiez un produit, un service, un emploi, un e-book ou une pub.','The green button: publish a product, service, job, e-book or ad.']},
+ {s:'#bottomNav .nav-btn[data-view="orders"]',t:['📦 Commandes','📦 Orders'],d:['Suivez vos commandes et vos demandes de service.','Track your orders and service requests.']},
+ {s:'#bottomNav .nav-btn[data-view="account"]',t:['👤 Votre profil','👤 Your profile'],d:['Connectez-vous, gérez votre compte, la langue et votre boutique.','Sign in, manage your account, language and your shop.']}
+];
+function build(){return DEF.filter(function(s){return !s.s||vis(q(s.s))})}
+function ensureRoot(){
+  if(root)return;
+  root=document.createElement('div');root.id='alloTour';
+  root.innerHTML='<div class="at-dim"></div><div class="at-spot" style="display:none"></div><div class="at-hand" style="display:none"><i>👆</i></div><div class="at-card"></div>';
+  document.body.appendChild(root);
+}
+function show(i){
+  idx=i;var s=steps[i];if(!s)return finish();
+  var el=s.s?q(s.s):null,dim=root.querySelector('.at-dim'),spot=root.querySelector('.at-spot'),hand=root.querySelector('.at-hand'),card=root.querySelector('.at-card');
+  var last=i===steps.length-1,fr=!en();
+  card.innerHTML='<div class="at-dots">'+steps.map(function(_,k){return '<b'+(k===i?' class="on"':'')+'></b>'}).join('')+'</div>'
+    +'<div class="at-t">'+L(s.t)+'</div><div class="at-d">'+L(s.d)+'</div>'
+    +'<div class="at-btns"><button type="button" class="at-skip">'+(fr?'Passer':'Skip')+'</button>'
+    +(i>0?'<button type="button" class="at-prev">'+(fr?'Retour':'Back')+'</button>':'')
+    +'<button type="button" class="at-next">'+(last?(fr?'Terminer ✔':'Done ✔'):(fr?'Suivant ›':'Next ›'))+'</button></div>';
+  card.querySelector('.at-skip').onclick=finish;
+  var pv=card.querySelector('.at-prev');if(pv)pv.onclick=function(){show(i-1)};
+  card.querySelector('.at-next').onclick=function(){last?finish():show(i+1)};
+  if(!el){dim.style.display='block';spot.style.display='none';hand.style.display='none';card.classList.add('center');card.style.left=card.style.top='';return}
+  card.classList.remove('center');dim.style.display='none';
+  if(s.scroll){try{el.scrollIntoView({block:'center'})}catch(e){}}
+  setTimeout(function(){place(el,spot,hand,card)},s.scroll?320:30);
+}
+function place(el,spot,hand,card){
+  if(!active)return;
+  var r=el.getBoundingClientRect(),pad=6,vw=innerWidth,vh=innerHeight;
+  var maxH=Math.min(r.height,vh*0.5);
+  spot.style.display='block';
+  spot.style.left=(r.left-pad)+'px';spot.style.top=(r.top-pad)+'px';spot.style.width=(r.width+pad*2)+'px';spot.style.height=(maxH+pad*2)+'px';
+  var cx=r.left+r.width/2,cy=r.top+maxH/2,below=cy<vh/2;
+  hand.style.display='block';hand.classList.toggle('down',!below);
+  hand.firstChild.textContent=below?'👆':'👇';
+  hand.style.left=Math.max(4,Math.min(vw-50,cx-23))+'px';
+  var ch=card.offsetHeight||160,cw=card.offsetWidth||300;
+  var left=Math.max(12,Math.min(vw-cw-12,cx-cw/2));
+  card.style.left=left+'px';
+  if(below){hand.style.top=(r.top+maxH+pad-2)+'px';card.style.top=Math.min(vh-ch-12,r.top+maxH+pad+50)+'px'}
+  else{hand.style.top=(r.top-pad-50)+'px';card.style.top=Math.max(12,r.top-pad-50-ch-6)+'px'}
+}
+function relayout(){if(!active)return;var s=steps[idx];if(s&&s.s){var el=q(s.s);if(el)place(el,root.querySelector('.at-spot'),root.querySelector('.at-hand'),root.querySelector('.at-card'))}}
+window.addEventListener('resize',relayout);
+document.addEventListener('keydown',function(e){if(active&&e.key==='Escape')finish()});
+function start(force){
+  if(active)return;
+  if(!force&&seen())return;
+  steps=build();if(steps.length<2)return;
+  ensureRoot();root.style.display='block';active=true;if(helpBtn)helpBtn.style.display='none';
+  try{window.scrollTo(0,0)}catch(e){}
+  show(0);
+}
+function finish(){
+  active=false;mark();if(root)root.style.display='none';
+  if(helpBtn)helpBtn.style.display='grid';
+}
+function ready(){
+  try{
+    if(active)return false;
+    if(typeof currentUser!=='undefined'&&currentUser&&currentUser.role==='admin')return false;
+    var m=document.getElementById('modalOverlay');if(m&&m.classList.contains('show'))return false;
+    var sp=document.getElementById('svcPanel');if(sp&&sp.style.display==='flex')return false;
+    return vis(q('#searchHeaderBtn'))&&vis(q('#bottomNav .nav-btn'));
+  }catch(e){return false}
+}
+var okSince=0;
+setInterval(function(){
+  if(active)return;
+  if(!ready()){okSince=0;if(helpBtn)helpBtn.style.display='none';return}
+  if(helpBtn&&helpBtn.style.display!=='grid')helpBtn.style.display='grid';
+  if(seen())return;
+  if(!okSince){okSince=Date.now();return}
+  if(Date.now()-okSince>1500)start(false);
+},1000);
+if(helpBtn)helpBtn.onclick=function(){start(true)};
+window.alloTour={start:function(){start(true)},reset:function(){try{localStorage.removeItem(KEY+who())}catch(e){}}};
 })();
 </script>
 
