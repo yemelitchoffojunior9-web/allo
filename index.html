@@ -31098,91 +31098,179 @@ try{translateGlobalDOM();}catch(e){err(e);}
 })();
 </script>
 
-<style id="alloCompCss">#view-admin-competitions .field input[type=datetime-local]{min-width:0;max-width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none}#view-admin-competitions .fx-two>*{min-width:0}</style>
+<style id="alloCompCss">
+.cp{padding:2px 0 90px;color:#fff}
+.cp *{box-sizing:border-box}
+.cp-hero{display:flex;align-items:center;gap:14px;padding:18px;border-radius:24px;margin-bottom:12px;background:linear-gradient(135deg,rgba(25,208,255,.28),rgba(124,92,255,.32));border:1px solid rgba(255,255,255,.22);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.cp-trophy{font-size:38px;filter:drop-shadow(0 4px 10px rgba(255,200,0,.5))}
+.cp-hero h2{margin:0;font-size:24px;font-weight:900;letter-spacing:-.3px}
+.cp-hero p{margin:2px 0 0;font-size:12.5px;opacity:.8}
+.cp-tabs{display:flex;gap:4px;padding:5px;margin-bottom:14px;border-radius:18px;background:rgba(6,18,60,.55);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(10px);overflow-x:auto;scrollbar-width:none}
+.cp-tabs::-webkit-scrollbar{display:none}
+.cp-tabs button{flex:1 0 auto;appearance:none;border:0;font:inherit;font-size:13px;font-weight:800;padding:10px 14px;border-radius:13px;background:transparent;color:#bcd4ff;white-space:nowrap;transition:.2s}
+.cp-tabs button.on{background:linear-gradient(135deg,#19d0ff,#4f7cff);color:#fff;box-shadow:0 6px 16px rgba(25,208,255,.35)}
+.cp-card{border-radius:24px;margin-bottom:16px;overflow:hidden;background:rgba(8,22,72,.62);border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 32px rgba(0,0,0,.28);backdrop-filter:blur(12px)}
+.cp-cover{position:relative;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;padding:14px;background:linear-gradient(135deg,#1d4ed8,#7c3aed) center/cover}
+.cp-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(5,12,45,.88))}
+.cp-top,.cp-cover h3{position:relative}
+.cp-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cp-cover h3{margin:36px 0 0;font-size:22px;font-weight:900;line-height:1.15;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.cp-chip{display:inline-flex;align-items:center;padding:6px 11px;border-radius:999px;font-size:12px;font-weight:800;background:rgba(0,0,0,.45);backdrop-filter:blur(6px)}
+.cp-cd{display:flex;gap:5px}
+.cp-t{display:inline-flex;align-items:baseline;gap:2px;padding:5px 8px;border-radius:10px;font-size:10.5px;font-weight:700;background:rgba(255,255,255,.16);backdrop-filter:blur(6px)}
+.cp-t b{font-size:15px;font-weight:900}
+.cp-body{padding:14px 16px 16px}
+.cp-prizes{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+.cp-prizes::-webkit-scrollbar{display:none}
+.cp-prize{flex:0 0 112px;padding:8px;border-radius:16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}
+.cp-pi{height:66px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:26px;background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.04)) center/cover}
+.cp-prize small{display:block;margin:6px 0 1px;font-size:12px}
+.cp-prize b{display:block;font-size:12.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cp-me{display:flex;align-items:center;gap:14px}
+.cp-ring{width:84px;height:84px;flex:none}
+.cp-big{font-size:26px;font-weight:900;line-height:1}
+.cp-big small{font-size:14px;font-weight:700;opacity:.65}
+.cp-sub{font-size:12px;opacity:.7;margin:2px 0 6px}
+.cp-msg{font-size:13px;font-weight:700;color:#a6f0c0}
+.cp-link,.cp-btn{appearance:none;border:0;font:inherit;cursor:pointer}
+.cp-link{margin-top:14px;width:100%;padding:12px;border-radius:14px;font-size:13px;font-weight:800;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18)}
+.cp-btn{padding:11px 16px;border-radius:13px;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(135deg,#19d0ff,#4f7cff)}
+.cp-btn.ghost{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}
+.cp-row{display:flex;gap:8px;margin-top:12px}
+.cp-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.cp-kpi div{padding:10px 6px;border-radius:14px;text-align:center;background:rgba(255,255,255,.08)}
+.cp-kpi b{display:block;font-size:18px;font-weight:900}
+.cp-kpi span{font-size:10.5px;opacity:.7}
+.cp-pills{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;scrollbar-width:none}
+.cp-pills button{flex:0 0 auto;appearance:none;border:1px solid rgba(255,255,255,.2);font:inherit;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.07);color:#dbe8ff}
+.cp-pills button.on{background:#fff;color:#0b2a8a}
+.cp-pod{display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:18px 12px 0}
+.cp-pc{flex:1;text-align:center;min-width:0}
+.cp-av{width:46px;height:46px;margin:0 auto 6px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;background:linear-gradient(135deg,#ffd76a,#ff9a3c);color:#3b2300}
+.cp-pc.p1 .cp-av{width:58px;height:58px;font-size:22px;box-shadow:0 0 0 3px rgba(255,215,106,.5)}
+.cp-pc.p2 .cp-av{background:linear-gradient(135deg,#e6edf7,#a9b8cf)}
+.cp-pc.p3 .cp-av{background:linear-gradient(135deg,#f0b48a,#c8793f)}
+.cp-pc small{display:block;font-size:11.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-pc em{font-style:normal;font-size:12px;opacity:.75}
+.cp-bar{margin-top:8px;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;font-size:20px;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.06))}
+.p1 .cp-bar{height:92px}.p2 .cp-bar{height:66px}.p3 .cp-bar{height:48px}
+.cp-li{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:13.5px}
+.cp-li.me{background:rgba(25,208,255,.16)}
+.cp-li .n{width:26px;font-weight:900;opacity:.7}
+.cp-li .w{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.cp-li .s{font-size:11px;padding:3px 8px;border-radius:99px;background:rgba(124,242,154,.2);color:#a6f0c0;font-weight:800}
+.cp-gal{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.cp-gal div{flex:0 0 78%;height:190px;border-radius:16px;background:center/cover}
+.cp-lot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08)}
+.cp-lot h4{margin:0 0 8px;font-size:15px;font-weight:800}
+.cp-empty{text-align:center;padding:44px 20px;opacity:.85}
+.cp-empty i{display:block;font-style:normal;font-size:44px;margin-bottom:8px}
+.cp-pz{padding:14px;border-radius:18px;margin-bottom:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.cp-pzh{margin-bottom:10px;font-size:14px}
+.cp-seg{display:flex;gap:4px;padding:4px;border-radius:14px;background:rgba(0,0,0,.25);margin-bottom:12px}
+.cp-seg button{flex:1;appearance:none;border:0;font:inherit;font-size:13px;font-weight:800;padding:10px;border-radius:11px;background:transparent;color:#bcd4ff}
+.cp-seg button.on{background:linear-gradient(135deg,#19d0ff,#4f7cff);color:#fff}
+.cp-ph{display:flex;gap:8px;flex-wrap:wrap}
+.cp-th,.cp-add{position:relative;width:76px;height:76px;border-radius:14px;background:rgba(255,255,255,.08) center/cover}
+.cp-th i{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#ef4444;color:#fff;font-style:normal;font-weight:900;text-align:center;line-height:22px;cursor:pointer}
+.cp-add{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;border:2px dashed rgba(255,255,255,.35);cursor:pointer}
+.cp-add small{font-size:10px;font-weight:700}
+.cp-ld{animation:cpP 1s ease-in-out infinite}
+@keyframes cpP{50%{opacity:.35}}
+.cp-step{display:flex;align-items:center;gap:10px}
+.cp-step button{width:46px;height:46px;flex:none;appearance:none;border:0;border-radius:14px;font-size:22px;font-weight:900;color:#fff;background:linear-gradient(135deg,#19d0ff,#4f7cff)}
+.cp-step input{text-align:center;font-size:18px;font-weight:900}
+</style>
 <script id="alloCompetitions">
 (function(){
-var C=[],LB={},busy=false;
-function fr(){try{return lang!=='en';}catch(e){return true;}}
-function T(a,b){return fr()?a:b;}
-function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-function nf(n){return Number(n||0).toLocaleString('fr-FR');}
-function U(){try{return currentUser;}catch(e){return null;}}
-function toast(m){try{alert(m);}catch(e){}}
-async function load(){
-  try{var r=await sb.from('competitions').select('*').order('starts_at',{ascending:false});C=r.data||[];
-    for(var i=0;i<C.length;i++){var c=C[i];
-      if(c.status==='closed'&&c.result){LB[c.id]=c.result;continue;}
-      var q=await sb.rpc('competition_leaderboard',{p_id:c.id});LB[c.id]=q.data||[];}
-  }catch(e){window.__alloErr&&window.__alloErr(e);}
-}
-function left(c){var ms=new Date(c.ends_at)-Date.now();if(ms<=0)return T('Terminée','Ended');var d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5);return d+T(' j ',' d ')+h+' h';}
-function winners(c){var n=(c.prizes||[]).length;return (LB[c.id]||[]).filter(function(r){return r.qualified;}).slice(0,n);}
-function total(c){return (LB[c.id]||[]).reduce(function(s,r){return s+Number(r.orders);},0);}
-function seller(){
-  var u=U(),h='<div class="card"><h2>🏆 '+T('Compétitions','Competitions')+'</h2></div>';
-  var act=C.filter(function(c){return c.status==='active'&&new Date(c.ends_at)>Date.now();});
-  if(!act.length)h+='<div class="empty">'+T('Aucune compétition en cours','No active competition')+'</div>';
-  act.forEach(function(c){
-    var rows=LB[c.id]||[],me=rows.find(function(r){return u&&String(r.user_id)===String(u.id);}),n=me?Number(me.orders):0,
-        pc=Math.min(100,Math.round(n*100/c.goal)),N=(c.prizes||[]).length,q=rows.filter(function(r){return r.qualified;});
-    var pos=me&&me.qualified?q.findIndex(function(r){return r.user_id===me.user_id;})+1:0;
-    h+='<div class="card"><b style="font-size:16px">'+esc(c.title)+'</b><div style="font-size:12px;opacity:.8">⏳ '+left(c)+' · '+N+' '+T('gagnant(s)','winner(s)')+'</div>'
-     +'<ol style="margin:8px 0;padding-left:18px;font-size:13px">'+c.prizes.map(function(p){return '<li>'+esc(p)+'</li>';}).join('')+'</ol>'
-     +'<div style="font-size:13px">'+nf(n)+' / '+nf(c.goal)+' '+T('commandes reçues','orders received')+'</div>'
-     +'<div style="height:8px;background:rgba(255,255,255,.12);border-radius:8px;margin:6px 0"><i style="display:block;height:8px;width:'+pc+'%;background:#22c55e;border-radius:8px"></i></div>'
-     +'<div style="font-size:13px;margin-bottom:8px">'+(pos?(pos<=N?'✅ '+T('Tu es ','You are ')+'#'+pos+T(' sur ',' of ')+N+T(' places',' spots'):'⚠️ '+T('Qualifié, mais #'+pos+' : il faut dépasser le n°'+N,'Qualified but #'+pos+': pass #'+N)):T('Il te manque ','You need ')+nf(Math.max(0,c.goal-n))+T(' commandes pour te qualifier',' more orders to qualify'))+'</div>'
-     +'<div style="font-size:12px;font-weight:700;margin-top:6px">Top 10</div>'
-     +rows.slice(0,10).map(function(r,i){return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span>'+(i+1)+'. '+esc(r.name||'—')+(r.qualified?' ✅':'')+'</span><b>'+nf(r.orders)+'</b></div>';}).join('')
-     +'<button class="btn btn-accent btn-block" style="margin-top:10px" onclick="switchView(\'company-activation\')">🔑 '+T('Acheter des quotas','Buy quotas')+'</button></div>';
-  });
-  return h;
-}
-function dl(t){var d=new Date(t-new Date().getTimezoneOffset()*6e4);return d.toISOString().slice(0,16);}
-function fld(label,inner,hint){return '<div class="field"><label>'+label+'</label>'+inner+(hint?'<p style="font-size:10.5px;color:var(--text-muted);margin-top:4px">'+hint+'</p>':'')+'</div>';}
-function adminForm(){
-  return '<div class="card"><h2 style="margin-bottom:14px">🏆 '+T('Nouvelle compétition','New competition')+'</h2>'
-   +fld(T('Nom','Name'),'<input type="text" id="cpT" placeholder="'+T('Ex : Gagne une moto','e.g. Win a motorbike')+'">')
-   +fld(T('Lots','Prizes'),'<textarea id="cpP" rows="4" placeholder="'+T('Voiture&#10;Moto&#10;Téléphone','Car&#10;Motorbike&#10;Phone')+'"></textarea>',T('Un lot par ligne, du 1er au dernier. Nombre de lignes = nombre de gagnants.','One prize per line, 1st to last. Number of lines = number of winners.'))
-   +'<div class="fx-two">'
-   +fld(T('Objectif','Goal'),'<input type="number" id="cpG" inputmode="numeric" placeholder="10000">',T('Commandes pour se qualifier','Orders to qualify'))
-   +fld(T('Seuil de sécurité','Safety threshold'),'<input type="number" id="cpM" inputmode="numeric" placeholder="0">',T('Commandes totales minimum','Min total orders'))
-   +'</div>'
-   +fld(T('Début','Start'),'<input type="datetime-local" id="cpS" value="'+dl(Date.now())+'">')
-   +fld(T('Fin','End'),'<input type="datetime-local" id="cpE" value="'+dl(Date.now()+30*864e5)+'">')
-   +'<button class="btn btn-accent btn-block" onclick="alloComp.create()">'+T('Créer la compétition','Create competition')+'</button></div>';
-}
-function adminList(){var h='';
-  C.forEach(function(c){var q=winners(c),rows=LB[c.id]||[],t=total(c),ok=t>=c.min_quotas_sold;
-    h+='<div class="card"><b>'+esc(c.title)+'</b> · '+(c.status==='closed'?'🔒':'🟢')+'<div style="font-size:12px;margin:4px 0">'+new Date(c.starts_at).toLocaleDateString()+' → '+new Date(c.ends_at).toLocaleDateString()+' · '+left(c)+'</div>'
-     +'<div style="font-size:13px">'+rows.length+' '+T('participants','participants')+' · '+rows.filter(function(r){return r.qualified;}).length+' '+T('qualifiés','qualified')+' · '+nf(t)+' / '+nf(c.min_quotas_sold)+' '+T('commandes (seuil)','orders (threshold)')+' '+(ok?'✅':'⛔')+'</div>'
-     +'<div style="font-size:12px;font-weight:700;margin-top:6px">'+T('Gagnants actuels','Current winners')+'</div>'
-     +(c.prizes||[]).map(function(p,i){var w=q[i];return '<div style="font-size:13px;padding:2px 0">'+(i+1)+'. '+esc(p)+' → <b>'+(w?esc(w.name||w.user_id)+' ('+nf(w.orders)+')':'—')+'</b></div>';}).join('')
-     +'<div style="display:flex;gap:8px;margin-top:8px">'+(c.status==='active'?'<button class="btn btn-sm btn-accent" onclick="alloComp.close(\''+c.id+'\')">'+T('Clôturer','Close')+'</button>':'')+'<button class="btn btn-sm btn-ghost" onclick="alloComp.del(\''+c.id+'\')">'+T('Supprimer','Delete')+'</button></div></div>';});
-  return h;
-}
-function paint(){
-  var a=document.getElementById('view-competitions'),b=document.getElementById('view-admin-competitions');
-  if(a&&a.classList.contains('active'))a.innerHTML=seller();
-  if(b&&b.classList.contains('active')){if(!document.getElementById('cpT'))b.innerHTML=adminForm()+'<div id="cpList"></div>';document.getElementById('cpList').innerHTML=adminList();}
-}
+const fr=()=>{try{return lang!=='en'}catch(e){return true}},T=(a,b)=>fr()?a:b;
+const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nf=n=>Number(n||0).toLocaleString('fr-FR');
+const fm=n=>typeof formatMoney==='function'?formatMoney(Number(n)||0):nf(n)+' FCFA';
+const me=()=>{try{return currentUser}catch(e){return null}};
+const toast=m=>{try{alert(m)}catch(e){}};
+const dl=t=>new Date(t-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16);
+const mk=()=>({type:'item',label:'',amount:'',photos:[],up:0});
+const fresh=()=>({title:'',goal:'',min:'',start:dl(Date.now()),end:dl(Date.now()+30*864e5),prizes:[mk()]});
+let C=[],LB={},D=fresh(),at=0;const S={tab:'live',sel:null},A={tab:'new',sel:null};
+const norm=p=>typeof p==='string'?{type:'item',label:p,amount:0,photos:[]}:{type:p.type==='money'?'money':'item',label:p.label||'',amount:Number(p.amount)||0,photos:p.photos||[]};
+const prizes=c=>(c.prizes||[]).map(norm),pName=p=>p.type==='money'?fm(p.amount):(p.label||'—');
+const medal=i=>['🥇','🥈','🥉'][i]||'#'+(i+1),rows=c=>LB[c.id]||[],isLive=c=>c.status==='active'&&new Date(c.ends_at)>Date.now();
+const winners=c=>rows(c).filter(r=>r.qualified).slice(0,prizes(c).length),nm=r=>r.name||('Vendeur '+String(r.user_id).slice(0,4));
+const cover=c=>{const p=prizes(c).find(x=>x.photos[0]);return p?p.photos[0]:''},total=c=>rows(c).reduce((s,r)=>s+Number(r.orders),0);
+const empty=(t,i)=>`<div class="cp-empty"><i>${i}</i>${t}</div>`;
+async function load(){try{const r=await sb.from('competitions').select('*').order('starts_at',{ascending:false});C=r.data||[];
+ for(const c of C){if(c.status==='closed'&&c.result){LB[c.id]=c.result;continue}const q=await sb.rpc('competition_leaderboard',{p_id:c.id});LB[c.id]=q.data||[]}}catch(e){window.__alloErr&&window.__alloErr(e)}}
+function cdHTML(c){const ms=new Date(c.ends_at)-Date.now();if(ms<=0)return`<span class="cp-chip">${T('Terminée','Ended')}</span>`;
+ return[[Math.floor(ms/864e5),T('j','d')],[Math.floor(ms%864e5/36e5),'h'],[Math.floor(ms%36e5/6e4),'min']].map(x=>`<span class="cp-t"><b>${x[0]}</b>${x[1]}</span>`).join('')}
+const prizeRow=c=>`<div class="cp-prizes">${prizes(c).map((p,i)=>`<div class="cp-prize"><div class="cp-pi" ${p.photos[0]?`style="background-image:url('${esc(p.photos[0])}')"`:''}>${p.photos[0]?'':p.type==='money'?'💰':'🎁'}</div><small>${medal(i)}</small><b>${esc(pName(p))}</b></div>`).join('')}</div>`;
+const ring=(n,g)=>{const pc=Math.min(100,Math.round(n*100/Math.max(1,g)));return`<svg class="cp-ring" viewBox="0 0 80 80"><defs><linearGradient id="cpg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#19d0ff"/><stop offset="1" stop-color="#7cf29a"/></linearGradient></defs><circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="8"/><circle cx="40" cy="40" r="34" fill="none" stroke="url(#cpg)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${pc*2.136} 213.6" transform="rotate(-90 40 40)"/><text x="40" y="45" text-anchor="middle" fill="#fff" font-size="15" font-weight="800">${pc}%</text></svg>`};
+const head=(c,right)=>`<div class="cp-cover" style="${cover(c)?`background-image:url('${esc(cover(c))}')`:''}"><div class="cp-ov"></div><div class="cp-top"><span class="cp-chip">🏆 ${prizes(c).length} ${T('gagnant','winner')}${prizes(c).length>1?'s':''}</span>${right}</div><h3>${esc(c.title)}</h3></div>`;
+function admBlock(c){const r=rows(c),t=total(c),ok=t>=c.min_quotas_sold,w=winners(c);
+ return`<div class="cp-kpi"><div><b>${r.length}</b><span>${T('participants','participants')}</span></div><div><b>${r.filter(x=>x.qualified).length}</b><span>${T('qualifiés','qualified')}</span></div><div><b>${ok?'✅':'⛔'}</b><span>${nf(t)} / ${nf(c.min_quotas_sold)}</span></div></div>`
+ +prizes(c).map((p,i)=>`<div class="cp-li" style="padding-left:0;padding-right:0"><span class="n">${medal(i)}</span><span class="w">${esc(pName(p))}</span><span>${w[i]?esc(nm(w[i]))+' · '+nf(w[i].orders):'—'}</span></div>`).join('')
+ +`<div class="cp-row">${c.status==='active'?`<button class="cp-btn" onclick="alloComp.close('${c.id}')">${T('Clôturer','Close')}</button>`:''}<button class="cp-btn ghost" onclick="alloComp.del('${c.id}')">${T('Supprimer','Delete')}</button><button class="cp-btn ghost" onclick="alloComp.rank('${c.id}','a')">${T('Classement','Ranking')}</button></div>`}
+function liveCard(c,adm){const r=rows(c),u=me(),mine=!adm&&u?r.find(x=>String(x.user_id)===String(u.id)):null,n=mine?+mine.orders:0,N=prizes(c).length,q=r.filter(x=>x.qualified),pos=mine&&mine.qualified?q.findIndex(x=>x.user_id===mine.user_id)+1:0;
+ const msg=pos?(pos<=N?`✅ ${T('Tu es','You are')} #${pos} ${T('sur','of')} ${N} ${T('places','spots')}`:`⚠️ ${T('Qualifié mais #','Qualified but #')}${pos} · ${T('dépasse le n°','pass #')}${N}`):`${T('Encore','Still')} ${nf(Math.max(0,c.goal-n))} ${T('commandes pour te qualifier','orders to qualify')}`;
+ return`<div class="cp-card">${head(c,`<div class="cp-cd" data-end="${c.ends_at}">${cdHTML(c)}</div>`)}<div class="cp-body">${prizeRow(c)}${adm?admBlock(c):`<div class="cp-me">${ring(n,c.goal)}<div><div class="cp-big">${nf(n)}<small> / ${nf(c.goal)}</small></div><div class="cp-sub">${T('commandes reçues','orders received')}</div><div class="cp-msg">${msg}</div></div></div><button class="cp-link" onclick="alloComp.rank('${c.id}','s')">${T('Voir le classement','View ranking')} →</button>`}</div></div>`}
+function rankView(c,m){const r=rows(c),N=prizes(c).length,pz=prizes(c),u=me(),isMe=x=>u&&String(x.user_id)===String(u.id),top=r.slice(0,10),pod=[1,0,2].map(i=>top[i]?{x:top[i],i}:null).filter(Boolean);
+ const mine=r.find(isMe),own=mine&&!top.includes(mine)?`<div class="cp-li me"><span class="n">${mine.rank}</span><span class="w">${T('Moi','Me')}</span><b>${nf(mine.orders)}</b></div>`:'';
+ return`<div class="cp-card"><div class="cp-body"><b style="font-size:16px">${esc(c.title)}</b><div class="cp-sub">${T('Objectif','Goal')} ${nf(c.goal)} · ${N} ${T('place','spot')}${N>1?'s':''} · ${r.filter(x=>x.qualified).length} ${T('qualifié(s)','qualified')}</div></div>`
+ +(pod.length?`<div class="cp-pod">${pod.map(o=>`<div class="cp-pc p${o.i+1}"><div class="cp-av">${esc(nm(o.x).charAt(0).toUpperCase())}</div><small>${esc(nm(o.x))}</small><em>${nf(o.x.orders)}</em><div class="cp-bar">${medal(o.i)}</div></div>`).join('')}</div>`:`<div class="cp-empty"><i>🏁</i>${T('Personne n’a encore reçu de commande','No orders yet')}</div>`)
+ +top.slice(3).map((x,k)=>`<div class="cp-li ${isMe(x)?'me':''}"><span class="n">${k+4}</span><span class="w">${esc(nm(x))}${isMe(x)?' ('+T('moi','me')+')':''}</span>${x.qualified&&k+4<=N?`<span class="s">${esc(pName(pz[k+3]))}</span>`:x.qualified?`<span class="s">✓</span>`:''}<b>${nf(x.orders)}</b></div>`).join('')+own+`</div>`}
+function lotsView(c){return`<div class="cp-card">${head(c,`<div class="cp-cd" data-end="${c.ends_at}">${cdHTML(c)}</div>`)}${prizes(c).map((p,i)=>`<div class="cp-lot"><h4>${medal(i)} ${p.type==='money'?'💰 ':'🎁 '}${esc(pName(p))}</h4>${p.photos.length?`<div class="cp-gal">${p.photos.map(u=>`<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`:`<div class="cp-sub">${p.type==='money'?T('Prix en argent','Cash prize'):T('Pas de photo','No photo')}</div>`}</div>`).join('')}</div>`}
+function doneCard(c,adm){const w=winners(c),pz=prizes(c),closed=c.status==='closed';
+ return`<div class="cp-card">${head(c,`<span class="cp-chip">${closed?'🔒 '+T('Clôturée','Closed'):'⏱ '+T('En attente de clôture','Awaiting close')}</span>`)}<div class="cp-body">`
+ +pz.map((p,i)=>`<div class="cp-li" style="padding-left:0;padding-right:0"><span class="n">${medal(i)}</span><span class="w">${esc(pName(p))}</span><span>${w[i]?esc(nm(w[i]))+' · '+nf(w[i].orders):T('Non attribué','Not awarded')}</span></div>`).join('')
+ +(adm?`<div class="cp-row">${closed?'':`<button class="cp-btn" onclick="alloComp.close('${c.id}')">${T('Clôturer et figer','Close & freeze')}</button>`}<button class="cp-btn ghost" onclick="alloComp.del('${c.id}')">${T('Supprimer','Delete')}</button></div>`:'')+`</div></div>`}
+const pills=(all,id,m)=>`<div class="cp-pills">${all.map(c=>`<button class="${c.id===id?'on':''}" onclick="alloComp.rank('${c.id}','${m}')">${esc(c.title)}</button>`).join('')}</div>`;
+function prizesHTML(){return D.prizes.map((p,i)=>`<div class="cp-pz"><div class="cp-pzh"><b>${medal(i)} ${i+1}${T(i?'e':'er',i?'th':'st')} ${T('gagnant','winner')}</b></div><div class="cp-seg"><button type="button" class="${p.type==='money'?'on':''}" onclick="alloComp.type(${i},'money')">💰 ${T('Argent','Cash')}</button><button type="button" class="${p.type==='item'?'on':''}" onclick="alloComp.type(${i},'item')">🎁 ${T('Bien matériel','Item')}</button></div>`
+ +(p.type==='money'?`<div class="field"><label>${T('Montant à gagner','Amount')}</label><input type="number" inputmode="numeric" value="${esc(p.amount)}" placeholder="50000" oninput="alloComp.pf(${i},'amount',this.value)"></div>`:`<div class="field"><label>${T('Nom du lot','Prize')}</label><input type="text" value="${esc(p.label)}" placeholder="${T('Ex : Smart TV 55 pouces','e.g. 55-inch TV')}" oninput="alloComp.pf(${i},'label',this.value)"></div>`)
+ +`<div class="field"><label>${T('Photos (optionnel)','Photos (optional)')}</label><div class="cp-ph">${p.photos.map((u,j)=>`<div class="cp-th" style="background-image:url('${esc(u)}')"><i onclick="alloComp.rm(${i},${j})">×</i></div>`).join('')}${p.up>0?'<div class="cp-th cp-ld"></div>':''}<label class="cp-add">＋<small>${T('Ajouter','Add')}</small><input type="file" accept="image/*" multiple hidden onchange="alloComp.up(${i},this)"></label></div></div></div>`).join('')}
+function formHTML(){const f=(l,i,h)=>`<div class="field"><label>${l}</label>${i}${h?`<p style="font-size:10.5px;color:var(--text-muted);margin-top:4px">${h}</p>`:''}</div>`;
+ return`<div class="cp-card"><div class="cp-body">`+f(T('Nom de la compétition','Name'),`<input type="text" value="${esc(D.title)}" placeholder="${T('Ex : Novembre cadeau','e.g. November gifts')}" oninput="alloComp.set('title',this.value)">`)
+ +`<div class="fx-two">`+f(T('Objectif','Goal'),`<input type="number" inputmode="numeric" value="${esc(D.goal)}" placeholder="10000" oninput="alloComp.set('goal',this.value)">`,T('Commandes pour se qualifier','Orders to qualify'))+f(T('Seuil de sécurité','Safety threshold'),`<input type="number" inputmode="numeric" value="${esc(D.min)}" placeholder="0" oninput="alloComp.set('min',this.value)">`,T('Commandes totales minimum','Min total orders'))+`</div>`
+ +f(T('Début','Start'),`<input type="datetime-local" value="${D.start}" oninput="alloComp.set('start',this.value)">`)+f(T('Fin','End'),`<input type="datetime-local" value="${D.end}" oninput="alloComp.set('end',this.value)">`)
+ +f(T('Nombre de gagnants','Number of winners'),`<div class="cp-step"><button type="button" onclick="alloComp.n(-1)">−</button><input type="number" inputmode="numeric" id="cpN" value="${D.prizes.length}" onchange="alloComp.n(0,this.value)"><button type="button" onclick="alloComp.n(1)">+</button></div>`,T('Un lot à définir pour chaque gagnant, du 1er au dernier.','Define a prize for each winner, 1st to last.'))
+ +`<div id="cpPrizes">${prizesHTML()}</div><button class="btn btn-accent btn-block" onclick="alloComp.create()">${T('Créer la compétition','Create competition')}</button></div></div>`}
+function content(m){const st=m==='s'?S:A,adm=m==='a',live=C.filter(isLive),done=C.filter(c=>!isLive(c));
+ if(st.tab==='live')return live.length?live.map(c=>liveCard(c,adm)).join(''):empty(T('Aucune compétition en cours','No active competition'),'🏁');
+ if(st.tab==='rank'){if(!C.length)return empty(T('Aucun classement pour le moment','No ranking yet'),'📊');const c=C.find(x=>x.id===st.sel)||live[0]||C[0];return pills(C,c.id,m)+rankView(c,m)}
+ if(st.tab==='lots')return live.length?live.map(lotsView).join(''):empty(T('Aucun lot à gagner pour le moment','No prizes right now'),'🎁');
+ return done.length?done.map(c=>doneCard(c,adm)).join(''):empty(T('Aucune compétition terminée','No finished competition'),'📭')}
+const TABS={s:[['live',T('En cours','Live')],['rank',T('Classement','Ranking')],['lots',T('Lots','Prizes')],['done',T('Terminées','Ended')]],a:[['new',T('Créer','Create')],['live',T('En cours','Live')],['rank',T('Classement','Ranking')],['done',T('Terminées','Ended')]]};
+function paint(){[['view-competitions','s'],['view-admin-competitions','a']].forEach(([id,m])=>{const el=document.getElementById(id);if(!el||!el.classList.contains('active'))return;const st=m==='s'?S:A;
+ if(!el.querySelector('.cp')){el.__h=null;el.innerHTML=`<div class="cp"><div class="cp-hero"><div class="cp-trophy">🏆</div><div><h2>${T('Compétitions','Competitions')}</h2><p>${m==='s'?T('Reçois des commandes, grimpe au classement, gagne des lots.','Get orders, climb the ranking, win prizes.'):T('Créez et pilotez vos compétitions.','Create and manage competitions.')}</p></div></div><div class="cp-tabs">${TABS[m].map(t=>`<button class="${t[0]===st.tab?'on':''}" onclick="alloComp.tab('${m}','${t[0]}')">${t[1]}</button>`).join('')}</div><div class="cp-c"></div></div>`}
+ const c=el.querySelector('.cp-c');if(m==='a'&&st.tab==='new'){if(el.__h!=='form'){c.innerHTML=formHTML();el.__h='form'}return}
+ const h=content(m);if(el.__h!==h){c.innerHTML=h;el.__h=h}})}
+function rebuild(id){const el=document.getElementById(id);if(el){el.innerHTML='';el.__h=null}paint()}
+const redraw=()=>{const e=document.getElementById('cpPrizes');if(e)e.innerHTML=prizesHTML()};
+function shrink(f){return new Promise((ok,ko)=>{const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const s=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?ok(b):ko(new Error('image')),'image/jpeg',.82)};im.onerror=()=>ko(new Error('image'));im.src=u})}
 window.alloComp={
-  async create(){var g=function(i){return document.getElementById(i).value;},pr=g('cpP').split('\n').map(function(x){return x.trim();}).filter(Boolean);
-    if(!g('cpT')||!pr.length||!(+g('cpG')>0)||!g('cpS')||!g('cpE'))return toast(T('Remplissez nom, lots, objectif et dates.','Fill name, prizes, goal and dates.'));
-    var r=await sb.from('competitions').insert({title:g('cpT'),prizes:pr,goal:+g('cpG'),min_quotas_sold:+g('cpM')||0,starts_at:new Date(g('cpS')).toISOString(),ends_at:new Date(g('cpE')).toISOString()});
-    if(r.error)return toast(r.error.message);await load();document.getElementById('view-admin-competitions').innerHTML='';paint();},
-  async close(id){var c=C.find(function(x){return x.id===id;});
-    if(total(c)<c.min_quotas_sold&&!confirm(T('Seuil de sécurité non atteint. Clôturer quand même ?','Safety threshold not reached. Close anyway?')))return;
-    if(!confirm(T('Clôturer et figer le classement ?','Close and freeze ranking?')))return;
-    var r=await sb.from('competitions').update({status:'closed',result:LB[id]}).eq('id',id);if(r.error)return toast(r.error.message);await load();paint();},
-  async del(id){if(!confirm(T('Supprimer ?','Delete?')))return;await sb.from('competitions').delete().eq('id',id);await load();paint();}
+ tab(m,t){(m==='s'?S:A).tab=t;rebuild(m==='s'?'view-competitions':'view-admin-competitions')},
+ rank(id,m){const st=m==='s'?S:A;st.sel=id;st.tab='rank';rebuild(m==='s'?'view-competitions':'view-admin-competitions')},
+ set(k,v){D[k]=v},pf(i,k,v){D.prizes[i][k]=v},
+ type(i,t){D.prizes[i].type=t;redraw()},
+ n(d,v){let n=v!=null&&v!==''?parseInt(v):D.prizes.length+d;n=Math.max(1,Math.min(50,n||1));while(D.prizes.length<n)D.prizes.push(mk());D.prizes.length=n;const e=document.getElementById('cpN');if(e)e.value=n;redraw()},
+ rm(i,j){D.prizes[i].photos.splice(j,1);redraw()},
+ async up(i,inp){const fs=[...inp.files];inp.value='';const p=D.prizes[i];for(const f of fs){if(p.photos.length+p.up>=6)break;p.up++;redraw();
+  try{const b=await shrink(f),path='c/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.jpg',r=await sb.storage.from('competitions').upload(path,b,{contentType:'image/jpeg'});if(r.error)throw r.error;p.photos.push(sb.storage.from('competitions').getPublicUrl(path).data.publicUrl)}catch(e){toast(T('Photo non envoyée : ','Upload failed: ')+(e.message||e))}p.up--;redraw()}},
+ async create(){const pr=D.prizes.map(p=>({type:p.type,label:p.type==='item'?String(p.label||'').trim():'',amount:p.type==='money'?+p.amount||0:0,photos:p.photos}));
+  if(!D.title.trim()||!(+D.goal>0))return toast(T('Indiquez le nom et l’objectif.','Enter a name and a goal.'));
+  if(D.prizes.some(p=>p.up>0))return toast(T('Attendez la fin de l’envoi des photos.','Wait for photos to finish uploading.'));
+  if(pr.some(p=>p.type==='item'?!p.label:!(p.amount>0)))return toast(T('Complétez chaque lot (nom du bien ou montant).','Complete each prize (item name or amount).'));
+  const s=new Date(D.start),e=new Date(D.end);if(!(e>s))return toast(T('La date de fin doit être après le début.','End must be after start.'));
+  const r=await sb.from('competitions').insert({title:D.title.trim(),prizes:pr,goal:+D.goal,min_quotas_sold:+D.min||0,starts_at:s.toISOString(),ends_at:e.toISOString()});
+  if(r.error)return toast(r.error.message);D=fresh();await load();A.tab='live';rebuild('view-admin-competitions')},
+ async close(id){const c=C.find(x=>x.id===id);if(total(c)<c.min_quotas_sold&&!confirm(T('Seuil de sécurité non atteint. Clôturer quand même ?','Safety threshold not reached. Close anyway?')))return;
+  if(!confirm(T('Clôturer et figer le classement ?','Close and freeze the ranking?')))return;const r=await sb.from('competitions').update({status:'closed',result:LB[id]}).eq('id',id);if(r.error)return toast(r.error.message);await load();rebuild('view-admin-competitions')},
+ async del(id){if(!confirm(T('Supprimer cette compétition ?','Delete this competition?')))return;await sb.from('competitions').delete().eq('id',id);await load();rebuild('view-admin-competitions')}
 };
-function ensure(){var h=document.getElementById('view-home');if(!h||!h.parentNode)return;
-  ['competitions','admin-competitions'].forEach(function(v){if(document.getElementById('view-'+v))return;var d=document.createElement('div');d.className='view';d.id='view-'+v;h.parentNode.appendChild(d);});}
-var _ra=window.renderAll,at=0;
-if(typeof _ra==='function')window.renderAll=function(){var r=_ra.apply(this,arguments);try{ensure();
-  var a=document.getElementById('view-competitions'),b=document.getElementById('view-admin-competitions');
-  if((a&&a.classList.contains('active'))||(b&&b.classList.contains('active'))){paint();if(Date.now()-at>20000){at=Date.now();load().then(paint);}}
-  }catch(e){window.__alloErr&&window.__alloErr(e);}return r;};
+function ensure(){const h=document.getElementById('view-home');if(!h||!h.parentNode)return;['competitions','admin-competitions'].forEach(v=>{if(document.getElementById('view-'+v))return;const d=document.createElement('div');d.className='view';d.id='view-'+v;h.parentNode.appendChild(d)})}
+setInterval(()=>document.querySelectorAll('.cp-cd[data-end]').forEach(e=>{e.innerHTML=cdHTML({ends_at:e.dataset.end})}),30000);
+const _ra=window.renderAll;
+if(typeof _ra==='function')window.renderAll=function(){const r=_ra.apply(this,arguments);try{ensure();const a=document.getElementById('view-competitions'),b=document.getElementById('view-admin-competitions');
+ if((a&&a.classList.contains('active'))||(b&&b.classList.contains('active'))){paint();if(Date.now()-at>20000){at=Date.now();load().then(paint)}}}catch(e){window.__alloErr&&window.__alloErr(e)}return r};
 })();
 </script>
 <style id="alloPubCss">
