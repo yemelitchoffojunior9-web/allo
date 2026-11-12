@@ -10975,23 +10975,10 @@ function renderHome() {
   updateSectionHeads();
 }
 
-function renderCatalogToolbar(role) {
+function renderCatalogToolbar() {
+  // La saisie n'est plus au-dessus du catalogue : la loupe 🔍 du header ouvre l'onglet Recherche.
   const toolbar = document.getElementById('catalogToolbar');
-  if (!toolbar) return;
-  // Ne JAMAIS réinitialiser _catalogCat ici — conserve le filtre catégorie choisi
-  const needSearch = (role === 'client' || role === 'boutique' || role === 'entreprise');
-  const existing = document.getElementById('catalogSearchInput');
-  if (existing && document.activeElement === existing) return;
-  let html = '';
-  if (needSearch) {
-    const ph = lang === 'en'
-      ? 'Search products, shops, #categories…'
-      : 'Rechercher produits, boutiques, #catégories…';
-    html += `<input class="catalog-search" id="catalogSearchInput" type="search" autocomplete="off"
-      placeholder="${ph}" value="${(window._catalogQ || '').replace(/"/g,'&quot;')}"
-      oninput="onCatalogSearchInput(this)">`;
-  }
-  toolbar.innerHTML = html;
+  if (toolbar) toolbar.innerHTML = '';
 }
 
 function onCatalogSearchInput(el) {
@@ -31317,6 +31304,24 @@ document.addEventListener('click',function(e){
   b.classList.add('pub-busy');b.setAttribute('aria-busy','true');
   busy.push({b:b,t:Date.now(),net:false});setTimeout(check,300);
 },true);
+})();
+</script>
+<style id="alloKbSearchCss">
+html.kb-open #bottomNav,html.kb-open nav.bottom{display:none!important}
+#catalogToolbar:empty{display:none}
+#view-search #searchInput{height:56px;border-radius:18px!important;padding:0 48px 0 48px!important;font-size:15.5px!important;font-weight:600;color:#fff!important;border:1.5px solid rgba(255,255,255,.24)!important;box-shadow:0 10px 26px rgba(0,0,0,.3);transition:border-color .2s,box-shadow .2s;background:rgba(8,22,72,.72) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cfe3ff' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") 17px center/20px no-repeat!important;backdrop-filter:blur(10px)}
+#view-search #searchInput:focus{border-color:#19d0ff!important;box-shadow:0 0 0 4px rgba(25,208,255,.22),0 10px 26px rgba(0,0,0,.34)}
+#view-search #searchInput::placeholder{color:rgba(207,227,255,.6);font-weight:500}
+#view-search .field{margin-bottom:14px!important}
+</style>
+<script id="alloKbNav">
+(function(){
+var d=document.documentElement,t,maxH=window.innerHeight;
+function isTxt(e){return !!(e&&e.tagName&&((e.tagName==='INPUT'&&!/^(checkbox|radio|button|submit|file|range|color|image|reset)$/i.test(e.type))||e.tagName==='TEXTAREA'||e.isContentEditable));}
+document.addEventListener('focusin',function(e){if(isTxt(e.target)){clearTimeout(t);d.classList.add('kb-open');}});
+document.addEventListener('focusout',function(){clearTimeout(t);t=setTimeout(function(){if(!isTxt(document.activeElement))d.classList.remove('kb-open');},120);});
+window.addEventListener('resize',function(){var h=window.innerHeight;if(h>maxH)maxH=h;
+  if(h<maxH-150&&isTxt(document.activeElement))d.classList.add('kb-open');else if(h>=maxH-80)d.classList.remove('kb-open');});
 })();
 </script>
 </body>
