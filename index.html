@@ -4542,6 +4542,7 @@ html body input:focus::placeholder, html body textarea:focus::placeholder { opac
           <button class="link" id="notifsMarkAll" onclick="markAllNotifsRead()">Tout lu</button>
         </div>
         <div id="alloPushCard"></div>
+        <div id="alloNotifPrefs"></div>
         <div id="notifsList"></div>
       </div>
 
@@ -10268,6 +10269,7 @@ function buildSidebarNav() {
       { view: 'promos', label: 'Mes promotions', ico: '🔥' },
       { view: 'ads', label: lang==='en'?'Advertising':'Publicités', ico: '📢' },
       { view: 'competitions', label: lang==='en'?'Competitions':'Compétitions', ico: '🏆' },
+      { view: 'pos', label: lang==='en'?'POS & invoices':'Caisse & factures', ico: '🧾' },
       { view: 'wallet', label: 'Solde / Portefeuille', ico: '💰' },
       { view: 'topups', label: 'Recharges', ico: '➕' },
       { view: 'withdraws', label: 'Retraits', ico: '📤' },
@@ -10287,6 +10289,7 @@ function buildSidebarNav() {
       { view: 'promos', label: 'Mes promotions', ico: '🔥' },
       { view: 'ads', label: lang==='en'?'Advertising':'Publicités', ico: '📢' },
       { view: 'competitions', label: lang==='en'?'Competitions':'Compétitions', ico: '🏆' },
+      { view: 'pos', label: lang==='en'?'POS & invoices':'Caisse & factures', ico: '🧾' },
       { view: 'wallet', label: 'Solde / Portefeuille', ico: '💰' },
       { view: 'topups', label: 'Recharges', ico: '➕' },
       { view: 'withdraws', label: 'Retraits', ico: '📤' },
@@ -31273,7 +31276,7 @@ if(typeof _ra==='function')window.renderAll=function(){const r=_ra.apply(this,ar
 if(window.__alloPubBusy)return;window.__alloPubBusy=1;
 var inflight=0,busy=[];
 var RX=/^\s*(🚀\s*)?(publier|publish|post)\b/i,
-    ON=/addProduct\(|submitProductReview\(|alloLife\.publish\(|alloSvc\.savePublish\(|alloJobs\.save\(|alloComp\.create\(/,
+    ON=/addProduct\(|submitProductReview\(|alloLife\.publish\(|alloSvc\.savePublish\(|alloJobs\.save\(|alloComp\.create\(|alloPos\.(pay|addPay)\(/,
     IDS={lfPub:1,'jf-go':1,efOk:1};
 function isPub(b){
   if(!b)return false;var on=b.getAttribute('onclick')||'';
@@ -31322,6 +31325,249 @@ document.addEventListener('focusin',function(e){if(isTxt(e.target)){clearTimeout
 document.addEventListener('focusout',function(){clearTimeout(t);t=setTimeout(function(){if(!isTxt(document.activeElement))d.classList.remove('kb-open');},120);});
 window.addEventListener('resize',function(){var h=window.innerHeight;if(h>maxH)maxH=h;
   if(h<maxH-150&&isTxt(document.activeElement))d.classList.add('kb-open');else if(h>=maxH-80)d.classList.remove('kb-open');});
+})();
+</script>
+<style id="alloPosCss">
+.ps-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid rgba(255,255,255,.08)}
+.ps-row[onclick]{cursor:pointer}
+.ps-img{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.1) center/cover;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+.ps-n{flex:1;min-width:0}.ps-n b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ps-n small{font-size:12px;opacity:.7}
+.ps-q{display:flex;align-items:center;gap:6px}.ps-q button{width:36px;height:36px;border:0;border-radius:11px;font-size:20px;font-weight:900;color:#fff;background:linear-gradient(135deg,#19d0ff,#4f7cff)}.ps-q button.z{background:rgba(255,255,255,.14)}
+.ps-qi{width:62px;height:36px;border-radius:11px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:#fff;text-align:center;font-weight:900;font-size:15px}
+.ps-bar{position:fixed;left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom,0px));max-width:536px;margin:0 auto;z-index:900;display:none;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;background:rgba(8,22,72,.96);border:1px solid rgba(255,255,255,.22);box-shadow:0 12px 30px rgba(0,0,0,.45);backdrop-filter:blur(14px);color:#fff}
+html.kb-open .ps-bar{bottom:12px}
+.ps-bar div{flex:1}.ps-bar b{font-size:18px;display:block}.ps-bar small{opacity:.7;font-size:12px}
+.ps-ov{position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(2,8,30,.72);backdrop-filter:blur(6px)}
+.ps-sh{width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:26px 26px 0 0;background:#0b1a4d;border:1px solid rgba(255,255,255,.18);padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));color:#fff}
+.ps-sh h3{margin:0 0 10px;font-size:20px;font-weight:900}
+.ps-paper{background:#fff;color:#111;border-radius:18px;padding:18px;margin-bottom:12px}
+.ps-paper table th{padding-bottom:5px}
+.ps-cu{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:12px;border-radius:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18)}
+.ps-cu[onclick]{cursor:pointer}.ps-cu div{flex:1;min-width:0}.ps-cu b{display:block;font-size:14px}.ps-cu small{font-size:12px;opacity:.7}.ps-cu span{font-size:12px;font-weight:800;color:#7fd8ff;cursor:pointer}
+.ps-ln{padding:12px 0;border-top:1px solid rgba(255,255,255,.1)}
+.ps-lh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.ps-lh b{flex:1;font-size:14px}.ps-x{border:0;background:transparent;font-size:18px;color:#fff}
+.ps-lr{display:flex;gap:8px}.ps-f{flex:1;min-width:0}.ps-f label{display:block;font-size:10.5px;opacity:.7;margin-bottom:3px}
+.ps-f input{width:100%;padding:9px 10px;border-radius:11px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.25);color:#fff;font-size:15px;font-weight:700}
+.ps-f.t b{display:block;padding-top:9px;font-size:14px}
+.ps-sum{margin:12px 0;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.08)}
+.ps-sum div{display:flex;justify-content:space-between;padding:3px 0;font-size:14px}.ps-sum .g{font-size:18px;font-weight:900}
+</style>
+<script id="alloPos">
+(function(){
+const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fm=n=>typeof formatMoney==='function'?formatMoney(Number(n)||0):Number(n||0).toLocaleString('fr-FR')+' FCFA';
+const toast=m=>{try{alert(m)}catch(e){}};
+const P={tab:'sale',shop:null,q:'',cart:{},cust:null,order:null,pay:{mode:'paid',method:'cash',adv:'',due:''},busy:false,sales:null,custs:null,prices:{},cur:null,ck:null,cq:'',cs:'',cf:null,cfr:null,pr:null,pid:null,pm:'cash',pa:null,spc:null,spp:null,sppv:'',sq:''};
+const shops=()=>{let ids=[];try{ids=getSellerShopIds().map(String)}catch(e){}return(data.shops||[]).filter(s=>ids.includes(String(s.id)))};
+const shopOf=id=>(data.shops||[]).find(s=>String(s.id)===String(id));
+const cur=()=>{const l=shops();if(!l.length)return null;if(!l.some(s=>String(s.id)===String(P.shop)))P.shop=l[0].id;return P.shop};
+const pname=p=>typeof displayProductName==='function'?displayProductName(p.name):p.name;
+const price=p=>{try{const v=Number(getEffectivePrice(p));if(v>=0&&!isNaN(v))return v}catch(e){}return Number(p.price)||0};
+const hasVar=p=>Array.isArray(p.variants)&&p.variants.length>0;
+const find=id=>(data.products||[]).find(x=>String(x.id)===String(id));
+const shopProds=()=>(data.products||[]).filter(p=>String(p.shopId)===String(cur()));
+const digits=x=>String(x||'').replace(/\D/g,''),rest=s=>Math.max(0,Number(s.total)-Number(s.paid_amount||0));
+const wnum=ph=>{let d=digits(ph);if(d.length===9&&d[0]==='6')d='237'+d;return d.length>=11?d:''},waTo=(ph,t)=>'https://wa.me/'+wnum(ph)+'?text='+encodeURIComponent(t);
+const link=id=>location.origin+location.pathname+'?shop='+encodeURIComponent(id);
+const empty=(t,i)=>`<div class="cp-empty"><i>${i}</i>${t}</div>`;
+const custList=()=>(P.custs||[]).filter(c=>String(c.shop_id)===String(cur())),cust=()=>custList().find(c=>c.id===P.cust)||null;
+const vsales=()=>(P.sales||[]).filter(s=>s.status==='valid'&&String(s.shop_id)===String(cur()));
+const csales=c=>vsales().filter(s=>s.customer_id===c.id),debtOf=c=>csales(c).reduce((t,s)=>t+rest(s),0);
+const dstr=d=>new Date(d).toLocaleDateString('fr-FR');
+function unit(p){const l=P.cart[p.id];if(l&&l.ov!=null)return l.ov;const c=cust();if(c){const sp=(P.prices[c.id]||{})[p.id];if(sp!=null)return sp;if(Number(c.discount_pct)>0)return Math.round(price(p)*(100-Number(c.discount_pct))/100)}return price(p)}
+const lines=()=>Object.keys(P.cart).map(id=>{const p=find(id);return p?{p,q:P.cart[id].q,u:unit(p)}:null}).filter(Boolean);
+const total=()=>lines().reduce((t,l)=>t+l.u*l.q,0);
+async function loadAll(){const ids=shops().map(s=>s.id);if(!ids.length){P.sales=[];P.custs=[];P.prices={};return}
+ const [a,b]=await Promise.all([sb.from('pos_sales').select('*').in('shop_id',ids).order('created_at',{ascending:false}).limit(1000),sb.from('pos_customers').select('*').in('shop_id',ids).order('name')]);
+ if(a.error)throw a.error;if(b.error)throw b.error;P.sales=a.data||[];P.custs=b.data||[];P.prices={};const cids=P.custs.map(c=>c.id);
+ if(cids.length){const r=await sb.from('pos_customer_prices').select('*').in('customer_id',cids);(r.data||[]).forEach(x=>{(P.prices[x.customer_id]=P.prices[x.customer_id]||{})[x.product_id]=Number(x.price)})}}
+/* ---------- Caisse ---------- */
+function rowHTML(p){const q=(P.cart[p.id]||{}).q||0,st=Number(p.stock)||0,u=unit(p),b=price(p),id=esc(p.id);
+ const ctl=hasVar(p)?'<small style="opacity:.7">Variantes : via commande</small>':(st<=0&&!P.order)?'<small style="color:#ff9b9b;font-weight:800">Épuisé</small>':`<div class="ps-q"><button class="z" onclick="alloPos.add('${id}',-1)">−</button><input class="ps-qi" type="number" inputmode="numeric" min="0" placeholder="0" value="${q||''}" onchange="alloPos.setq('${id}',this.value)"><button onclick="alloPos.add('${id}',1)">+</button></div>`;
+ return`<div class="ps-row" id="ps-${id}"><div class="ps-img" style="${p.image?`background-image:url('${esc(p.image)}')`:''}">${p.image?'':esc(p.icon||'📦')}</div><div class="ps-n"><b>${esc(pname(p))}</b><small>${fm(u)}${u!==b?` <s style="opacity:.6">${fm(b)}</s>`:''} · ${st} en stock</small></div>${ctl}</div>`}
+const listHTML=()=>{const q=P.q.toLowerCase(),l=shopProds().filter(p=>!q||String(pname(p)).toLowerCase().includes(q)).sort((a,b)=>String(pname(a)).localeCompare(String(pname(b))));return l.length?l.map(rowHTML).join(''):empty('Aucun produit trouvé','📦')};
+function headHTML(){const c=cust();return`<div class="ps-cu" onclick="alloPos.pickCust()"><span style="font-size:22px">👤</span><div><b>${c?esc(c.name):'Choisir le client'}</b><small>${c?esc([c.phone,Number(c.discount_pct)>0?'remise '+c.discount_pct+'%':''].filter(Boolean).join(' · ')||'Prix normaux'):'Obligatoire pour facturer'}</small></div><span>${c?'Changer':'Choisir'}</span></div>`
+ +(P.order?`<div class="ps-cu" style="background:rgba(124,242,154,.14)"><div><b>📥 Commande en ligne importée</b><small>Le stock a déjà été retiré à la commande</small></div><span onclick="alloPos.clear()">Retirer</span></div>`:`<button class="cp-link" style="margin:0 0 12px" onclick="alloPos.pickOrder()">📥 Facturer une commande en ligne</button>`)}
+function pills(){const l=shops();return l.length>1?`<div class="cp-pills">${l.map(s=>`<button class="${String(s.id)===String(cur())?'on':''}" onclick="alloPos.shop('${esc(s.id)}')">${esc(s.name)}</button>`).join('')}</div>`:''}
+function saleHTML(){if(!shops().length)return empty('Aucune boutique à gérer avec ce compte','🏪');return pills()+`<div id="posH">${headHTML()}</div><div class="field"><input id="posQ" type="search" value="${esc(P.q)}" placeholder="Rechercher un produit…" oninput="alloPos.q(this.value)"></div><div class="cp-card" id="posL">${listHTML()}</div><div style="height:90px"></div>`}
+function bar(){let b=document.getElementById('posBar');const v=document.getElementById('view-pos'),L=lines(),show=v&&v.classList.contains('active')&&P.tab==='sale'&&L.length&&!document.getElementById('psOv');
+ if(!show){if(b)b.style.display='none';return}
+ if(!b){b=document.createElement('div');b.id='posBar';b.className='ps-bar';document.body.appendChild(b)}
+ const n=L.reduce((t,l)=>t+l.q,0),c=cust();b.style.display='flex';b.innerHTML=`<div><b>${fm(total())}</b><small>${n} article${n>1?'s':''}${c?' · '+esc(c.name):''}</small></div><button class="cp-btn" onclick="alloPos.checkout()">Valider →</button>`}
+function repaint(){const l=document.getElementById('posL'),h=document.getElementById('posH');if(l)l.innerHTML=listHTML();if(h)h.innerHTML=headHTML();bar()}
+/* ---------- feuilles ---------- */
+function ov(html){close(true);const d=document.createElement('div');d.className='ps-ov';d.id='psOv';d.innerHTML=`<div class="ps-sh">${html}</div>`;d.addEventListener('click',e=>{if(e.target===d)close()});document.body.appendChild(d);bar()}
+function close(keep){const o=document.getElementById('psOv');if(o)o.remove();if(!keep)bar()}
+const sheet=h=>{const s=document.querySelector('.ps-sh');if(s)s.innerHTML=h};
+const seg=(items,cur,fn)=>`<div class="cp-seg">${items.map(m=>`<button type="button" class="${cur===m[0]?'on':''}" onclick="alloPos.${fn}('${m[0]}')">${m[1]}</button>`).join('')}</div>`;
+function sumHTML(){const t=total(),y=P.pay,pd=y.mode==='paid'?t:y.mode==='adv'?Math.max(0,Number(y.adv)||0):0;return`<div><span>Total</span><b>${fm(t)}</b></div><div><span>Payé maintenant</span><b>${fm(pd)}</b></div><div class="g"><span>Reste à crédit</span><b>${fm(Math.max(0,t-pd))}</b></div>`}
+function coHTML(){const L=lines(),c=cust(),y=P.pay;
+ return`<h3>Facture</h3><div class="ps-cu" onclick="alloPos.pickCust('co')"><span style="font-size:22px">👤</span><div><b>${esc(c.name)}</b><small>${esc([c.phone,Number(c.discount_pct)>0?'remise '+c.discount_pct+'%':''].filter(Boolean).join(' · ')||'Prix normaux')}</small></div><span>Changer</span></div>`
+ +(P.order?'<div class="cp-sub">📥 Commande en ligne : le stock est déjà retiré.</div>':'')
+ +L.map(l=>{const id=esc(l.p.id);return`<div class="ps-ln"><div class="ps-lh"><b>${esc(pname(l.p))}</b><button class="ps-x" onclick="alloPos.del('${id}')">🗑</button></div><div class="ps-lr"><div class="ps-f"><label>Quantité</label><input type="number" inputmode="numeric" value="${l.q}" onchange="alloPos.setq('${id}',this.value,1)"></div><div class="ps-f"><label>Prix unitaire</label><input type="number" inputmode="numeric" value="${l.u}" onchange="alloPos.lp('${id}',this.value)"></div><div class="ps-f t"><label>Total</label><b>${fm(l.u*l.q)}</b></div></div></div>`}).join('')
+ +`<div style="margin-top:14px"><b style="font-size:13px">Paiement</b></div>`+seg([['paid','✅ Payé'],['adv','💰 Avance'],['credit','📒 Crédit']],y.mode,'mode')
+ +(y.mode==='adv'?`<div class="field"><label>Montant de l’avance</label><input type="number" inputmode="numeric" value="${esc(y.adv)}" oninput="alloPos.py('adv',this.value)"></div>`:'')
+ +(y.mode!=='credit'?seg([['cash','💵 Espèces'],['momo','📱 Mobile Money']],y.method,'pmeth'):'')
+ +(y.mode!=='paid'?`<div class="field"><label>Échéance du reste (optionnel)</label><input type="date" value="${esc(y.due)}" oninput="alloPos.py('due',this.value)"></div>`:'')
+ +`<div class="ps-sum" id="psSum">${sumHTML()}</div><button class="btn btn-accent btn-block" onclick="alloPos.pay()">✅ Valider la facture</button><button class="cp-link" onclick="alloPos.close()">Retour</button>`}
+function pickList(){const q=(P.cq||'').toLowerCase(),l=custList().filter(c=>!q||(c.name+' '+(c.phone||'')).toLowerCase().includes(q));
+ return l.length?l.map(c=>`<div class="ps-row" style="padding-left:0;padding-right:0" onclick="alloPos.selCust('${c.id}')"><div class="ps-n"><b>${esc(c.name)}</b><small>${esc(c.phone||'')}${Number(c.discount_pct)>0?' · remise '+c.discount_pct+'%':''}</small></div>${debtOf(c)>0?`<b style="color:#ffb4b4;font-size:12px">${fm(debtOf(c))}</b>`:''}</div>`).join(''):'<div class="cp-sub" style="padding:12px 0">Aucun client trouvé. Créez-le avec le bouton ci-dessus.</div>'}
+const pickHTML=()=>`<h3>Choisir le client</h3><button class="btn btn-accent btn-block" style="margin-bottom:12px" onclick="alloPos.newCust('pick')">➕ Nouveau client</button><div class="field"><input type="search" placeholder="Rechercher un client…" oninput="alloPos.pq(this.value)"></div><div id="psPL">${pickList()}</div><button class="cp-link" onclick="alloPos.back()">Fermer</button>`;
+function cfHTML(){const f=P.cf,fl=(l,k,v,t,ph)=>`<div class="field"><label>${l}</label><input type="${t||'text'}" ${t==='tel'?'inputmode="tel"':''} value="${esc(v)}" placeholder="${ph||''}" oninput="alloPos.cf('${k}',this.value)"></div>`;
+ return`<h3>${f.id?'Modifier le client':'Nouveau client'}</h3>${fl('Nom *','name',f.name)}${fl('Téléphone','phone',f.phone,'tel','6 XX XX XX XX')}${fl('Adresse','address',f.address)}${fl('Remise habituelle (%)','disc',f.disc,'number','0')}<p style="font-size:11px;opacity:.7;margin:-6px 0 12px">La remise s’applique à tous les prix. Vous pouvez aussi fixer un prix spécial par produit sur sa fiche.</p><button class="btn btn-accent btn-block" onclick="alloPos.saveCust()">Enregistrer</button><button class="cp-link" onclick="alloPos.back()">Annuler</button>`}
+function ordList(){const used=new Set((P.sales||[]).filter(s=>s.status==='valid'&&s.order_id).map(s=>String(s.order_id)));return(data.orders||[]).filter(o=>(String(o.shopId)===String(cur())||(o.items||[]).some(i=>String(i.shopId)===String(cur())))&&!used.has(String(o.id))&&!/annul/i.test(o.status||'')).sort((a,b)=>String(b.date).localeCompare(String(a.date)))}
+function ordHTML(){const l=ordList();return`<h3>Commandes en ligne</h3><div class="cp-sub">Choisissez la commande à facturer : avance ou crédit possibles.</div>`+(l.length?l.map(o=>`<div class="ps-row" style="padding-left:0;padding-right:0" onclick="alloPos.imp('${esc(o.id)}')"><div class="ps-n"><b>${esc(o.buyerName||'Client en ligne')} · ${fm(o.total)}</b><small>#${esc(String(o.id).slice(0,6))} · ${dstr(o.date)} · ${esc(o.status||'')}</small></div></div>`).join(''):empty('Aucune commande à facturer','📭'))+`<button class="cp-link" onclick="alloPos.close()">Fermer</button>`}
+/* ---------- facture ---------- */
+const METH={cash:'Espèces',momo:'Mobile Money',credit:'À crédit'};
+function qr(u){try{const c=document.createElement('canvas');AlloQR.draw(c,u,6,0);return c.toDataURL()}catch(e){return''}}
+function inv(s){const sh=shopOf(s.shop_id),u=link(s.shop_id),n=esc(sh?sh.name:'Boutique'),cu=(P.custs||[]).find(c=>c.id===s.customer_id),r=rest(s),can=s.status==='cancelled';
+ const st=can?'<div style="margin:8px 0;padding:6px;border:2px solid #c00;color:#c00;text-align:center;font-weight:900">FACTURE ANNULÉE</div>':r===0?'<div style="color:#0a7a2f;font-weight:900;margin-top:6px">✓ PAYÉE</div>':`<div style="margin-top:6px;font-size:13px">Déjà payé : <b>${fm(s.paid_amount)}</b><br><b style="color:#b00020">Reste à payer : ${fm(r)}</b>${s.due_date?'<br>Échéance : '+dstr(s.due_date):''}</div>`;
+ return`<div style="text-align:center;margin-bottom:10px"><div style="font-size:22px;font-weight:900">${n}</div><div style="font-size:12px;color:#555">FACTURE N° ${esc(s.number)}</div></div><div style="font-size:12px;color:#444;margin-bottom:10px">${new Date(s.created_at).toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'})}<br>Client : <b>${esc(s.customer_name||'')}</b>${s.customer_phone?' · '+esc(s.customer_phone):''}${cu&&cu.address?'<br>'+esc(cu.address):''}</div>
+ <table style="width:100%;border-collapse:collapse;font-size:13px"><tr style="border-bottom:1px solid #ccc;text-align:left"><th>Article</th><th>Qté</th><th style="text-align:right">Total</th></tr>${(s.items||[]).map(i=>`<tr><td style="padding:5px 0">${esc(i.name)}<br><small style="color:#666">${fm(i.price)}</small></td><td>${i.qty}</td><td style="text-align:right">${fm(i.price*i.qty)}</td></tr>`).join('')}</table>
+ <div style="display:flex;justify-content:space-between;border-top:2px solid #111;margin-top:8px;padding-top:8px;font-size:17px;font-weight:900"><span>TOTAL</span><span>${fm(s.total)}</span></div>${st}
+ <div style="display:flex;align-items:center;gap:12px;margin-top:16px;padding-top:12px;border-top:1px dashed #bbb"><img src="${qr(u)}" width="86" height="86" alt="QR"><div style="font-size:11.5px;color:#333"><b>Facture générée avec Allo</b><br>Scannez pour voir ${n} et commander en ligne.<br><span style="word-break:break-all;color:#666">${esc(u)}</span></div></div>`}
+function showInv(s){P.cur=s;const r=rest(s),ok=s.status==='valid';ov(`<div class="ps-paper">${inv(s)}</div><div class="cp-row" style="flex-wrap:wrap">${ok&&r>0?`<button class="cp-btn" onclick="alloPos.payFor('${esc(s.id)}')">💰 Encaisser</button>`:''}<button class="cp-btn" onclick="alloPos.print()">🖨 Imprimer / PDF</button><button class="cp-btn" onclick="alloPos.wa()">💬 WhatsApp</button><button class="cp-btn ghost" onclick="alloPos.share()">📤 Partager</button>${ok?`<button class="cp-btn ghost" onclick="alloPos.cancel('${esc(s.id)}')">🚫 Annuler la facture</button>`:''}</div><button class="cp-link" onclick="alloPos.close()">Fermer</button>`)}
+function text(s){const sh=shopOf(s.shop_id),r=rest(s);return`🧾 ${sh?sh.name:'Boutique'} — Facture ${s.number}\nClient : ${s.customer_name||''}\n`+(s.items||[]).map(i=>`• ${i.qty} × ${i.name} = ${fm(i.price*i.qty)}`).join('\n')+`\nTOTAL : ${fm(s.total)}`+(r>0?`\nDéjà payé : ${fm(s.paid_amount)}\nReste à payer : ${fm(r)}${s.due_date?' (avant le '+dstr(s.due_date)+')':''}`:'\nPAYÉE ✓')+`\n\nFacture générée avec Allo — voir la boutique : ${link(s.shop_id)}`}
+/* ---------- onglets ---------- */
+function histHTML(){const al=(P.sales||[]).filter(s=>String(s.shop_id)===String(cur()));if(!al.length)return pills()+empty('Aucune vente pour le moment','🧾');
+ const sl=al.filter(s=>s.status==='valid'),now=new Date(),sd=d=>new Date(d).toDateString(),td=sl.filter(s=>sd(s.created_at)===sd(now)),mo=sl.filter(s=>{const d=new Date(s.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()}),sum=a=>a.reduce((t,s)=>t+Number(s.total),0);
+ const top={};sl.forEach(s=>(s.items||[]).forEach(i=>{top[i.name]=(top[i.name]||0)+i.qty}));const tp=Object.entries(top).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ return pills()+`<div class="cp-kpi" style="grid-template-columns:1fr 1fr"><div><b>${fm(sum(td))}</b><span>Aujourd’hui · ${td.length} vente${td.length>1?'s':''}</span></div><div><b>${fm(sum(mo))}</b><span>Ce mois · ${mo.length} vente${mo.length>1?'s':''}</span></div></div>`
+ +(tp.length?`<div class="cp-card"><div class="cp-body"><b>🔥 Les plus vendus</b>${tp.map((t,i)=>`<div class="cp-li" style="padding-left:0;padding-right:0"><span class="n">${i+1}</span><span class="w">${esc(t[0])}</span><b>× ${t[1]}</b></div>`).join('')}</div></div>`:'')
+ +`<div class="cp-card">${al.slice(0,100).map(s=>`<div class="ps-row" style="${s.status==='cancelled'?'opacity:.5':''}" onclick="alloPos.open('${esc(s.id)}')"><div class="ps-n"><b>${esc(s.number)} · ${esc(s.customer_name||'')}${s.status==='cancelled'?' · Annulée':rest(s)>0?' · reste '+fm(rest(s)):''}</b><small>${new Date(s.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></div><b>${fm(s.total)}</b></div>`).join('')}</div>`}
+function custRows(){const q=(P.cs||'').toLowerCase();return custList().filter(c=>!q||(c.name+' '+(c.phone||'')).toLowerCase().includes(q)).map(c=>{const d=debtOf(c),n=csales(c).length;return`<div class="ps-row" onclick="alloPos.cust('${c.id}')"><div class="ps-img" style="border-radius:50%;font-weight:900;font-size:18px">${esc(c.name.charAt(0).toUpperCase())}</div><div class="ps-n"><b>${esc(c.name)}</b><small>${n} facture${n>1?'s':''}${Number(c.discount_pct)>0?' · remise '+c.discount_pct+'%':''}</small></div>${d>0?`<b style="color:#ffb4b4;font-size:13px">${fm(d)}</b>`:''}</div>`}).join('')}
+const custHTML=()=>pills()+`<button class="btn btn-accent btn-block" style="margin-bottom:12px" onclick="alloPos.newCust('list')">➕ Nouveau client</button>`+(custList().length?`<div class="field"><input type="search" placeholder="Rechercher un client…" oninput="alloPos.cs(this.value)"></div><div class="cp-card" id="psCLst">${custRows()}</div>`:empty('Créez votre premier client pour pouvoir facturer','👥'));
+function debtHTML(){const d=custList().filter(c=>debtOf(c)>0).sort((a,b)=>debtOf(b)-debtOf(a));if(!d.length)return pills()+empty('Aucune dette : tout le monde a payé','✅');
+ const today=new Date().toISOString().slice(0,10),due=c=>csales(c).filter(s=>rest(s)>0&&s.due_date).map(s=>s.due_date).sort()[0];
+ return pills()+`<div class="cp-kpi" style="grid-template-columns:1fr 1fr"><div><b style="color:#ffb4b4">${fm(d.reduce((t,c)=>t+debtOf(c),0))}</b><span>À récupérer</span></div><div><b>${d.length}</b><span>client${d.length>1?'s':''} concerné${d.length>1?'s':''}</span></div></div><div class="cp-card">${d.map(c=>{const e=due(c);return`<div class="ps-row" onclick="alloPos.cust('${c.id}')"><div class="ps-n"><b>${esc(c.name)}</b><small>${csales(c).filter(s=>rest(s)>0).length} facture(s) impayée(s)${e?(e<today?' · ⚠️ échéance dépassée':' · échéance '+dstr(e)):''}</small></div><div style="text-align:right"><b style="color:#ffb4b4">${fm(debtOf(c))}</b><br><button class="cp-btn" style="padding:6px 10px;margin-top:4px" onclick="event.stopPropagation();alloPos.dun('${c.id}')">💬 Relancer</button></div></div>`}).join('')}</div>`}
+function dunText(c){const sh=shopOf(cur()),L=csales(c).filter(s=>rest(s)>0);return`Bonjour ${c.name}, c’est ${sh?sh.name:'la boutique'}. Petit rappel : il vous reste ${fm(debtOf(c))} à régler (${L.map(s=>s.number+' : '+fm(rest(s))).join(', ')}).\nMerci d’avance !\n\nFacture générée avec Allo — ${link(cur())}`}
+function custSheet(c){const d=debtOf(c),sp=P.prices[c.id]||{},all=(P.sales||[]).filter(s=>s.customer_id===c.id),spent=csales(c).reduce((t,s)=>t+Number(s.total),0);
+ return`<h3 style="margin:0">${esc(c.name)}</h3><div class="cp-sub">${esc([c.phone,c.address].filter(Boolean).join(' · ')||'Pas de coordonnées')}${Number(c.discount_pct)>0?' · remise '+c.discount_pct+'%':''}</div>
+ <div class="cp-kpi" style="grid-template-columns:1fr 1fr"><div><b>${fm(spent)}</b><span>${csales(c).length} facture${csales(c).length>1?'s':''}</span></div><div><b style="${d>0?'color:#ffb4b4':''}">${fm(d)}</b><span>Dette</span></div></div>
+ <div class="cp-row" style="flex-wrap:wrap;margin:0 0 12px"><button class="cp-btn" onclick="alloPos.billFor('${c.id}')">🧾 Facturer</button>${c.phone?`<a class="cp-btn ghost" style="text-decoration:none" href="tel:${esc(digits(c.phone))}">📞 Appeler</a>`:''}<button class="cp-btn ghost" onclick="alloPos.dun('${c.id}')">${d>0?'💬 Relancer':'💬 Écrire'}</button><button class="cp-btn ghost" onclick="alloPos.editCust('${c.id}')">✏️ Modifier</button></div>
+ <div class="cp-sub"><b>Prix spéciaux</b></div>${Object.keys(sp).map(pid=>{const p=find(pid);return`<div class="cp-li" style="padding-left:0;padding-right:0"><span class="w">${esc(p?pname(p):'Produit supprimé')}</span><b>${fm(sp[pid])}</b><span onclick="alloPos.rmSp('${c.id}','${esc(pid)}')" style="cursor:pointer;padding:0 6px">✕</span></div>`}).join('')}<button class="cp-link" style="margin:6px 0 14px" onclick="alloPos.addSp('${c.id}')">➕ Ajouter un prix spécial</button>
+ <div class="cp-sub"><b>Factures</b></div>${all.length?all.map(s=>`<div class="ps-row" style="padding-left:0;padding-right:0;${s.status==='cancelled'?'opacity:.5':''}" onclick="alloPos.open('${esc(s.id)}')"><div class="ps-n"><b>${esc(s.number)} · ${fm(s.total)}</b><small>${dstr(s.created_at)}${s.status==='cancelled'?' · Annulée':s.paid?' · ✓ Payé':' · reste '+fm(rest(s))}</small></div>${s.status==='valid'&&!s.paid?`<button class="cp-btn" onclick="event.stopPropagation();alloPos.payFor('${esc(s.id)}')">Encaisser</button>`:''}</div>`).join(''):'<div class="cp-sub">Aucune facture.</div>'}<button class="cp-link" onclick="alloPos.close()">Fermer</button>`}
+function payHTML(id){const s=(P.sales||[]).find(x=>x.id===id);if(!s)return'';return`<h3>Encaisser un paiement</h3><div class="cp-sub">${esc(s.number)} · ${esc(s.customer_name||'')} · reste ${fm(rest(s))}</div><div class="field" style="margin-top:10px"><label>Montant reçu</label><input type="number" inputmode="numeric" value="${P.pa!=null?esc(P.pa):rest(s)}" oninput="alloPos.pa(this.value)"></div>${seg([['cash','💵 Espèces'],['momo','📱 Mobile Money']],P.pm,'pm')}<button class="btn btn-accent btn-block" onclick="alloPos.addPay()">✅ Enregistrer le paiement</button><button class="cp-link" onclick="alloPos.back()">Retour</button>`}
+const spList=()=>{const q=(P.sq||'').toLowerCase(),l=shopProds().filter(p=>!q||String(pname(p)).toLowerCase().includes(q));return l.map(p=>`<div class="ps-row" style="padding-left:0;padding-right:0" onclick="alloPos.selSp('${esc(p.id)}')"><div class="ps-n"><b>${esc(pname(p))}</b><small>Prix normal ${fm(price(p))}</small></div></div>`).join('')};
+function spHTML(){const c=custList().find(x=>x.id===P.spc);if(!P.spp)return`<h3>Prix spécial · ${esc(c.name)}</h3><div class="field"><input type="search" placeholder="Rechercher un produit…" oninput="alloPos.spq(this.value)"></div><div id="psSP">${spList()}</div><button class="cp-link" onclick="alloPos.back()">Retour</button>`;
+ const p=find(P.spp);return`<h3>${esc(pname(p))}</h3><div class="cp-sub">Prix normal : ${fm(price(p))}</div><div class="field" style="margin-top:10px"><label>Prix pour ${esc(c.name)}</label><input type="number" inputmode="numeric" value="${esc(P.sppv)}" oninput="alloPos.spv(this.value)"></div><button class="btn btn-accent btn-block" onclick="alloPos.saveSp()">Enregistrer</button><button class="cp-link" onclick="alloPos.addSp('${c.id}')">Retour</button>`}
+const body=t=>t==='sale'?saleHTML():t==='hist'?histHTML():t==='cust'?custHTML():debtHTML();
+function tab(t){P.tab=t;document.querySelectorAll('#view-pos .cp-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));const c=document.getElementById('posC');if(!c)return;bar();
+ c.innerHTML=empty('Chargement…','⏳');loadAll().then(()=>{if(P.tab===t){c.innerHTML=body(t);bar()}}).catch(e=>{c.innerHTML=empty(esc(e.message||'Erreur'),'⚠️')})}
+function renderTab(){const c=document.getElementById('posC');if(c&&P.tab!=='sale')c.innerHTML=body(P.tab);repaint()}
+const reopen=()=>{const c=P.ck?custList().find(x=>x.id===P.ck):null;if(c)ov(custSheet(c));else close()};
+function setQty(id,n,co){const p=find(id);if(!p)return;const max=P.order?1e9:(Number(p.stock)||0);n=Math.max(0,Math.floor(Number(n))||0);if(n>max){toast('Stock disponible : '+max);n=max}
+ if(n)(P.cart[id]=P.cart[id]||{q:0,ov:null}).q=n;else delete P.cart[id];
+ if(co){if(!lines().length)return close();sheet(coHTML());return}
+ const r=document.getElementById('ps-'+id);if(r)r.outerHTML=rowHTML(p);bar()}
+window.alloPos={
+ tab,close,bar,
+ q(v){P.q=v;const l=document.getElementById('posL');if(l)l.innerHTML=listHTML()},
+ shop(id){P.shop=id;P.cart={};P.cust=null;P.order=null;P.q='';tab(P.tab)},
+ add(id,d){setQty(id,((P.cart[id]||{}).q||0)+d)},
+ setq(id,v,co){setQty(id,v,co)},
+ del(id){delete P.cart[id];if(!lines().length)return close();sheet(coHTML())},
+ lp(id,v){const n=Number(v);if(!(n>=0)||!P.cart[id])return;P.cart[id].ov=n;sheet(coHTML())},
+ clear(){P.cart={};P.order=null;repaint()},
+ pickCust(r){P.pr=r||null;P.cq='';ov(pickHTML())},
+ pq(v){P.cq=v;const e=document.getElementById('psPL');if(e)e.innerHTML=pickList()},
+ selCust(id){P.cust=id;if(P.pr==='co'){P.pr=null;ov(coHTML())}else{close(true);repaint()}},
+ newCust(r){P.cf={id:null,name:'',phone:'',address:'',disc:''};P.cfr=r;ov(cfHTML())},
+ editCust(id){const c=custList().find(x=>x.id===id);if(!c)return;P.ck=id;P.cf={id,name:c.name,phone:c.phone||'',address:c.address||'',disc:c.discount_pct||''};P.cfr='edit';ov(cfHTML())},
+ cf(k,v){P.cf[k]=v},
+ async saveCust(){const f=P.cf,name=String(f.name).trim();if(!name)return toast('Le nom du client est obligatoire.');const d=Number(f.disc)||0;if(d<0||d>100)return toast('La remise doit être entre 0 et 100 %.');
+  const row={name,phone:String(f.phone).trim()||null,address:String(f.address).trim()||null,discount_pct:d};
+  try{let r;if(f.id)r=await sb.from('pos_customers').update(row).eq('id',f.id).select().single();else r=await sb.from('pos_customers').insert({...row,shop_id:cur()}).select().single();
+   if(r.error)throw r.error;const c=r.data;const i=(P.custs||[]).findIndex(x=>x.id===c.id);if(i>=0)P.custs[i]=c;else(P.custs=P.custs||[]).push(c);
+   if(P.cfr==='pick'){P.cust=c.id;if(P.pr==='co'){P.pr=null;ov(coHTML())}else{close(true);repaint()}}else{P.ck=c.id;renderTab();ov(custSheet(c))}}
+  catch(e){toast((e&&e.message)||'Erreur')}},
+ back(){if(P.cf&&P.cfr==='pick'){P.cf=null;return P.pr==='co'&&cust()?ov(coHTML()):close()}reopen()},
+ pickOrder(){ov(ordHTML())},
+ async imp(id){const o=(data.orders||[]).find(x=>String(x.id)===String(id));if(!o)return;const items=(o.items||[]).filter(i=>!i.shopId||String(i.shopId)===String(cur()));
+  if(!items.length||items.some(i=>!find(i.productId)))return toast('Certains produits de cette commande n’existent plus dans votre catalogue.');
+  try{let c=custList().find(x=>wnum(x.phone)&&wnum(x.phone)===wnum(o.buyerPhone))||custList().find(x=>x.name.trim().toLowerCase()===String(o.buyerName||'').trim().toLowerCase());
+   if(!c){const r=await sb.from('pos_customers').insert({shop_id:cur(),name:o.buyerName||'Client en ligne',phone:o.buyerPhone||null,address:o.deliveryAddress||null}).select().single();if(r.error)throw r.error;c=r.data;(P.custs=P.custs||[]).push(c)}
+   P.cart={};items.forEach(i=>{const k=String(i.productId),e=P.cart[k]||(P.cart[k]={q:0,ov:Number(i.price)||0});e.q+=Number(i.qty)||1});P.cust=c.id;P.order=o.id;close(true);
+   if(P.tab!=='sale')tab('sale');else repaint()}catch(e){toast((e&&e.message)||'Erreur')}},
+ checkout(){if(!lines().length)return;if(!cust())return alloPos.pickCust('co');ov(coHTML())},
+ mode(m){P.pay.mode=m;sheet(coHTML())},pmeth(m){P.pay.method=m;sheet(coHTML())},
+ py(k,v){P.pay[k]=v;if(k==='adv'){const e=document.getElementById('psSum');if(e)e.innerHTML=sumHTML()}},
+ async pay(){if(P.busy)return;const L=lines(),c=cust();if(!L.length)return;if(!c)return toast('Choisissez le client.');const t=total(),y=P.pay,paid=y.mode==='paid'?t:y.mode==='adv'?Number(y.adv)||0:0;
+  if(y.mode==='adv'&&!(paid>0&&paid<t))return toast('L’avance doit être supérieure à 0 et inférieure au total.');P.busy=true;
+  try{const r=await sb.rpc('pos_create_sale',{p_shop:cur(),p_customer:c.id,p_items:L.map(l=>({product_id:l.p.id,name:pname(l.p),price:l.u,qty:l.q})),p_paid:paid,p_method:paid>0?y.method:null,p_due:(y.mode!=='paid'&&y.due)?y.due:null,p_order:P.order||null});
+   if(r.error)throw r.error;const s=Array.isArray(r.data)?r.data[0]:r.data;if(!P.order)L.forEach(l=>{l.p.stock=Math.max(0,(Number(l.p.stock)||0)-l.q)});
+   (P.sales=P.sales||[]).unshift(s);P.cart={};P.cust=null;P.order=null;P.pay={mode:'paid',method:'cash',adv:'',due:''};close(true);repaint();showInv(s)}
+  catch(e){toast((e&&e.message)||'Erreur lors de la facturation')}finally{P.busy=false}},
+ cs(v){P.cs=v;const e=document.getElementById('psCLst');if(e)e.innerHTML=custRows()},
+ cust(id){const c=custList().find(x=>x.id===id);if(!c)return;P.ck=id;ov(custSheet(c))},
+ billFor(id){P.cust=id;P.order=null;P.cart={};close(true);tab('sale')},
+ open(id){const s=(P.sales||[]).find(x=>x.id===id);if(s)showInv(s)},
+ dun(id){const c=custList().find(x=>x.id===id);if(!c)return;const sh=(shopOf(cur())||{}).name||'la boutique';window.open(waTo(c.phone,debtOf(c)>0?dunText(c):`Bonjour ${c.name}, c’est ${sh}. Merci pour votre confiance ! Retrouvez-nous sur Allo : ${link(cur())}`),'_blank')},
+ payFor(id){P.pid=id;P.pm='cash';P.pa=null;ov(payHTML(id))},
+ pa(v){P.pa=v},pm(x){P.pm=x;sheet(payHTML(P.pid))},
+ async addPay(){if(P.busy)return;const s=(P.sales||[]).find(x=>x.id===P.pid);if(!s)return;const amt=Number(P.pa!=null&&P.pa!==''?P.pa:rest(s));
+  if(!(amt>0))return toast('Montant invalide.');if(amt>rest(s))return toast('Le montant dépasse le reste à payer ('+fm(rest(s))+').');P.busy=true;
+  try{const r=await sb.rpc('pos_add_payment',{p_sale:s.id,p_amount:amt,p_method:P.pm});if(r.error)throw r.error;Object.assign(s,Array.isArray(r.data)?r.data[0]:r.data);renderTab();if(P.ck&&custList().some(x=>x.id===P.ck))reopen();else showInv(s)}
+  catch(e){toast((e&&e.message)||'Erreur')}finally{P.busy=false}},
+ async cancel(id){const s=(P.sales||[]).find(x=>x.id===id);if(!s||!confirm('Annuler la facture '+s.number+' ?'+(Number(s.paid_amount)>0?'\nVous devrez rembourser '+fm(s.paid_amount)+' au client.':'')))return;const had=s.order_id;
+  try{const r=await sb.rpc('pos_cancel_sale',{p_sale:id});if(r.error)throw r.error;if(!had)(s.items||[]).forEach(i=>{const p=find(i.product_id);if(p)p.stock=(Number(p.stock)||0)+i.qty});Object.assign(s,Array.isArray(r.data)?r.data[0]:r.data);renderTab();showInv(s)}
+  catch(e){toast((e&&e.message)||'Erreur')}},
+ addSp(id){P.spc=id;P.spp=null;P.sq='';ov(spHTML())},
+ spq(v){P.sq=v;const e=document.getElementById('psSP');if(e)e.innerHTML=spList()},
+ selSp(pid){P.spp=pid;const c=(P.prices[P.spc]||{})[pid];P.sppv=c!=null?c:price(find(pid));sheet(spHTML())},
+ spv(v){P.sppv=v},
+ async saveSp(){const n=Number(P.sppv);if(!(n>=0)||P.sppv==='')return toast('Prix invalide.');
+  try{const r=await sb.from('pos_customer_prices').upsert({customer_id:P.spc,product_id:P.spp,price:n},{onConflict:'customer_id,product_id'});if(r.error)throw r.error;(P.prices[P.spc]=P.prices[P.spc]||{})[P.spp]=n;P.ck=P.spc;repaint();reopen()}catch(e){toast((e&&e.message)||'Erreur')}},
+ async rmSp(cid,pid){try{const r=await sb.from('pos_customer_prices').delete().eq('customer_id',cid).eq('product_id',pid);if(r.error)throw r.error;if(P.prices[cid])delete P.prices[cid][pid];P.ck=cid;reopen()}catch(e){toast((e&&e.message)||'Erreur')}},
+ print(){const s=P.cur;if(!s)return;const w=window.open('','_blank');if(!w)return toast('Autorisez les fenêtres pop-up pour imprimer.');
+  w.document.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc(s.number)+'</title><body style="font-family:Arial,sans-serif;max-width:420px;margin:0 auto;padding:18px">'+inv(s)+'</body>');w.document.close();setTimeout(()=>{w.focus();w.print()},450)},
+ wa(){if(P.cur)window.open(waTo(P.cur.customer_phone,text(P.cur)),'_blank')},
+ share(){const s=P.cur;if(!s)return;if(navigator.share)navigator.share({title:'Facture '+s.number,text:text(s)}).catch(()=>{});else window.open(waTo(s.customer_phone,text(s)),'_blank')}
+};
+function ensure(){const h=document.getElementById('view-home');if(!h||!h.parentNode||document.getElementById('view-pos'))return;const d=document.createElement('div');d.className='view';d.id='view-pos';h.parentNode.appendChild(d)}
+function shell(el){el.innerHTML='<div class="cp"><div class="cp-hero"><div class="cp-trophy">🧾</div><div><h2>Caisse</h2><p>Facturez vos clients, suivez les avances et les dettes.</p></div></div><div class="cp-tabs">'+[['sale','Caisse'],['hist','Ventes'],['cust','Clients'],['debt','Dettes']].map(t=>`<button data-t="${t[0]}" class="${t[0]===P.tab?'on':''}" onclick="alloPos.tab('${t[0]}')">${t[1]}</button>`).join('')+'</div><div id="posC"></div></div>'}
+setInterval(bar,400);
+const _ra=window.renderAll;
+if(typeof _ra==='function')window.renderAll=function(){const r=_ra.apply(this,arguments);try{ensure();const el=document.getElementById('view-pos');if(el&&el.classList.contains('active')&&!el.querySelector('.cp')){shell(el);tab(P.tab)}}catch(e){window.__alloErr&&window.__alloErr(e)}return r};
+})();
+</script>
+<style id="alloNotifPrefsCss">
+.anp{margin:12px 0;border-radius:18px;background:var(--surface-3,rgba(255,255,255,.08));border:1px solid rgba(255,255,255,.14);overflow:hidden}
+.anp>button{width:100%;display:flex;align-items:center;gap:10px;padding:14px 16px;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;font-size:14px;text-align:left}
+.anp>button span{flex:1}.anp-b{padding:0 16px 8px}
+.anp-r{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.1)}
+.anp-r div{flex:1;min-width:0}.anp-r b{display:block;font-size:14px}.anp-r small{font-size:12px;opacity:.7}
+.anp-s{position:relative;width:46px;height:26px;flex:none;border:0;border-radius:99px;background:rgba(255,255,255,.22);transition:.2s}
+.anp-s::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.anp-s.on{background:linear-gradient(135deg,#19d0ff,#4f7cff)}.anp-s.on::after{left:23px}
+</style>
+<script id="alloNotifPrefs">
+(function(){
+const CATS={order:['📦','Mes commandes','Confirmée, expédiée, livrée…'],money:['💸','Argent','Retraits traités ou refusés'],quota:['🔑','Quota','Quota presque épuisé ou épuisé'],sales:['📊','Ventes et rappels','Résumé du soir, commandes en attente, dettes'],compet:['🏆','Compétitions','Lancement, classement, résultats'],engage:['✨','Nouveautés et conseils','Favoris en promo, nouveautés, petits rappels']};
+const logged=()=>{try{return !!(currentUser&&currentUser.id&&typeof sb!=='undefined')}catch(e){return false}};
+const mine=()=>{try{return currentUser.role==='client'?['order','engage']:Object.keys(CATS)}catch(e){return Object.keys(CATS)}};
+let uid=null,prefs=null,open=false;
+function draw(el){const l=mine();el.innerHTML=`<div class="anp"><button type="button" data-o="1"><span>⚙️ Choisir mes notifications</span><span style="flex:none;opacity:.7">${open?'▲':'▼'}</span></button>${open?`<div class="anp-b">${l.map(k=>`<div class="anp-r"><div><b>${CATS[k][0]} ${CATS[k][1]}</b><small>${CATS[k][2]}</small></div><button type="button" class="anp-s ${prefs[k]!==false?'on':''}" data-k="${k}" aria-label="${CATS[k][1]}"></button></div>`).join('')}<div class="anp-r"><small>Au maximum 3 rappels par jour, jamais entre 22 h et 7 h.</small></div></div>`:''}</div>`}
+async function tick(){
+  const el=document.getElementById('alloNotifPrefs');
+  if(!el||!el.offsetParent||!logged())return;
+  if(uid!==currentUser.id){uid=currentUser.id;prefs=null;open=false;el.innerHTML=''}
+  if(!prefs){prefs={};try{const r=await sb.rpc('get_notif_prefs');(r.data||[]).forEach(x=>{prefs[x.category]=x.enabled})}catch(e){prefs=null;return}draw(el)}
+  else if(!el.firstChild)draw(el);
+}
+document.addEventListener('click',async e=>{
+  const el=document.getElementById('alloNotifPrefs');if(!el||!e.target.closest)return;
+  const o=e.target.closest('#alloNotifPrefs [data-o]');if(o){open=!open;draw(el);return}
+  const b=e.target.closest('#alloNotifPrefs [data-k]');if(!b||!prefs)return;
+  const k=b.getAttribute('data-k'),v=!(prefs[k]!==false);prefs[k]=v;draw(el);
+  try{const r=await sb.rpc('set_notif_pref',{p_cat:k,p_enabled:v});if(r.error)throw r.error}catch(err){prefs[k]=!v;draw(el);try{alert('Impossible d’enregistrer ce réglage.')}catch(x){}}
+});
+/* dernière visite : sert aux rappels « vous nous manquez » */
+let seen=0;
+async function touch(){if(!logged()||document.hidden||Date.now()-seen<10*60*1000)return;seen=Date.now();try{await sb.rpc('touch_last_seen')}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)touch()});
+setInterval(()=>{touch();tick()},1500);
+window.alloNotifPrefs={tick,touch};
 })();
 </script>
 </body>
