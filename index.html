@@ -23649,11 +23649,33 @@ window.addEventListener('appinstalled', () => {
   try { if (typeof showToast === 'function') showToast(lang === 'en' ? 'Allodirect installed ✓' : 'Allodirect installé ✓'); } catch (_) { window.__alloErr && window.__alloErr(_); }
 });
 
+// L'APK est hébergé avec le site (fichier Allodirect.apk à la racine du dépôt)
+function alloCheckApk() {
+  return fetch('./Allodirect.apk', { method: 'HEAD', cache: 'no-store' }).then((r) => r.ok).catch(() => false);
+}
+
 function installPWA() {
   if (isAlloRunningAsApp()) {
     alert(lang === 'en' ? 'Allodirect is already installed.' : 'Allodirect est déjà installé.');
     return;
   }
+  const env = alloInstallEnv();
+  if (env.isAndroid && !env.inApp) {
+    // Android : on propose l'APK s'il est en ligne, sinon l'installation classique depuis Chrome
+    alloCheckApk().then((ok) => { if (ok) openInstallGuide(true); else installPWAClassic(); });
+    return;
+  }
+  installPWAClassic();
+}
+
+function alloInstallFromChrome() {
+  if (!deferredInstallPrompt) return;
+  const dp = deferredInstallPrompt;
+  deferredInstallPrompt = null;
+  try { dp.prompt(); } catch (_) { window.__alloErr && window.__alloErr(_); }
+}
+
+function installPWAClassic() {
   if (deferredInstallPrompt) {
     const dp = deferredInstallPrompt;
     deferredInstallPrompt = null;            // un événement ne sert qu'une fois
@@ -23674,7 +23696,7 @@ function closeInstallGuide() {
   if (g) g.classList.remove('show');
 }
 
-function openInstallGuide() {
+function openInstallGuide(withApk) {
   const fr = lang !== 'en';
   const env = alloInstallEnv();
   let g = document.getElementById('installGuide');
@@ -23705,6 +23727,13 @@ function openInstallGuide() {
     steps = fr
       ? ['Touchez le bouton Partager ' + shareSvg + ' en bas de Safari.', 'Faites défiler puis touchez <b>« Sur l’écran d’accueil »</b>.', 'Touchez <b>Ajouter</b> : l’icône Allodirect apparaît sur votre écran.']
       : ['Tap the Share button ' + shareSvg + ' at the bottom of Safari.', 'Scroll and tap <b>“Add to Home Screen”</b>.', 'Tap <b>Add</b>: the Allodirect icon appears on your screen.'];
+  } else if (env.isAndroid && withApk) {
+    title = fr ? 'Télécharger Allodirect' : 'Download Allodirect';
+    steps = fr
+      ? ['Touchez le bouton <b>Télécharger l’application</b> ci-dessous.', 'Ouvrez le fichier <b>Allodirect.apk</b> (notification de téléchargement ou dossier Téléchargements).', 'Si Android le demande, autorisez l’installation depuis ce navigateur (<b>Paramètres → Autoriser</b>), puis touchez <b>Installer</b>.', 'Si Play Protect affiche un avertissement, touchez <b>Installer quand même</b>.']
+      : ['Tap the <b>Download the app</b> button below.', 'Open the downloaded <b>Allodirect.apk</b> file (download notification or Downloads folder).', 'If Android asks, allow installs from this browser (<b>Settings → Allow</b>), then tap <b>Install</b>.', 'If Play Protect shows a warning, tap <b>Install anyway</b>.'];
+    extra = '<a class="btn btn-accent btn-block" style="margin-top:12px;text-decoration:none;text-align:center" href="./Allodirect.apk" download="Allodirect.apk">⬇️ ' + (fr ? 'Télécharger l’application' : 'Download the app') + '</a>' +
+      (deferredInstallPrompt ? '<button type="button" class="btn btn-ghost btn-block" style="margin-top:10px" onclick="alloInstallFromChrome();closeInstallGuide()">' + (fr ? 'Ou installer directement depuis Chrome' : 'Or install directly from Chrome') + '</button>' : '');
   } else if (env.isAndroid) {
     steps = fr
       ? ['Touchez le menu ' + dots + ' en haut à droite de Chrome.', 'Choisissez <b>« Installer l’application »</b> (ou « Ajouter à l’écran d’accueil »).', 'Confirmez : l’icône Allodirect apparaît sur votre écran.']
