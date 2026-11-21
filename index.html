@@ -31905,5 +31905,155 @@ setInterval(()=>{touch();tick()},1500);
 window.alloNotifPrefs={tick,touch};
 })();
 </script>
+
+<style id="allo-legal-style">
+.alp-ov{position:fixed;inset:0;z-index:100050;background:linear-gradient(180deg,#0f2f6b,#0b2556);display:none;flex-direction:column}
+.alp-ov.open{display:flex}
+.alp-top{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.alp-back{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.1);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.alp-ttl{font-weight:800;font-size:16px}
+.alp-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 18px calc(40px + env(safe-area-inset-bottom,0px));font-size:14px;line-height:1.6;color:var(--text)}
+.alp-body h3{font-size:15px;font-weight:800;margin:20px 0 6px;color:var(--accent-bright)}
+.alp-body p,.alp-body li{color:var(--text)}
+.alp-body ul{margin:6px 0 6px 18px;padding:0}
+.alp-body .alp-date{font-size:12px;color:var(--text-muted)}
+.alp-soc{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.alp-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.1);color:#fff;font-size:12.5px;font-weight:700;text-decoration:none}
+.alp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.alp-foot{margin-top:16px;padding-top:12px;border-top:1px solid var(--border);text-align:center}
+.alp-link{background:none;border:0;color:var(--accent-bright);font-weight:700;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:4px}
+.alp-foot .alp-soc{justify-content:center}
+.alp-consent{font-size:11.5px;color:var(--text-muted);text-align:center;margin:10px 0 0;line-height:1.45}
+.alp-side{padding:6px 14px 10px;border-top:1px solid var(--border);margin-top:6px}
+.alp-side .alp-soc{gap:6px}
+.alp-side .alp-pill{padding:6px 10px;font-size:11.5px}
+</style>
+<script>
+(function(){
+'use strict';
+var LINKS=[
+ {n:'Facebook',u:'https://www.facebook.com/share/1FjZWH13GT/',c:'#1877f2'},
+ {n:'Telegram',u:'https://telegram.org/dl',c:'#27a7e7'},
+ {n:'WhatsApp',u:'https://whatsapp.com/channel/0029Vb8wwda4CrfZbhJ33C38',c:'#25d366'},
+ {n:'TikTok',u:'https://www.tiktok.com/@allodirect?_r=1&_t=ZS-9BZqOIlXKGz',c:'#ff2d55'}
+];
+function en(){try{return lang==='en';}catch(e){return false;}}
+function L(fr,e){return en()?e:fr;}
+function social(){
+  return '<div class="alp-soc">'+LINKS.map(function(a){
+    return '<a class="alp-pill" href="'+a.u+'" target="_blank" rel="noopener noreferrer"><span class="alp-dot" style="background:'+a.c+'"></span>'+a.n+'</a>';
+  }).join('')+'</div>';
+}
+function policy(){
+  var fr=!en();
+  function h(a,b){return '<h3>'+(fr?a:b)+'</h3>';}
+  function p(a,b){return '<p>'+(fr?a:b)+'</p>';}
+  function ul(a,b){return '<ul>'+(fr?a:b).map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';}
+  return ''
+  +'<p class="alp-date">'+L('Dernière mise à jour : 21 novembre 2026','Last updated: November 21, 2026')+'</p>'
+  +p('Allo (Allodirect) est une plateforme qui met en relation des acheteurs, des vendeurs, des boutiques et des entreprises. Cette politique explique quelles informations sont utilisées quand vous utilisez le site ou l’application, pourquoi, et quels sont vos choix.',
+     'Allo (Allodirect) is a platform that connects buyers, sellers, shops and companies. This policy explains what information is used when you use the website or the app, why, and what choices you have.')
+  +h('1. Informations que nous traitons','1. Information we process')
+  +ul(['<b>Compte :</b> nom ou nom de l’activité, numéro de téléphone (utilisé comme identifiant), mot de passe (géré par le service d’authentification, nous ne pouvons pas le lire), pays, ville, quartier, photo de profil facultative et type de compte.',
+       '<b>Activité :</b> panier, commandes et livraisons, favoris, avis, retours, abonnements aux boutiques, produits consultés, messages et messages vocaux échangés dans l’application.',
+       '<b>Portefeuille et quotas :</b> historique des recharges, retraits, achats de quotas et codes promo.',
+       '<b>Notifications :</b> si vous les activez, un identifiant technique de votre appareil ou navigateur (adresse du service de notification, clés, type d’appareil, langue), et la date de votre dernière visite pour vous envoyer des rappels.',
+       '<b>Contenus de vendeurs :</b> produits, photos, descriptions et prix publiés par les boutiques et entreprises.',
+       '<b>Préférences :</b> langue, mode économie de données.'],
+      ['<b>Account:</b> name or business name, phone number (used as your login), password (handled by the authentication service, we cannot read it), country, city, neighborhood, optional profile photo and account type.',
+       '<b>Activity:</b> cart, orders and deliveries, favorites, reviews, returns, shop subscriptions, viewed products, messages and voice messages exchanged in the app.',
+       '<b>Wallet and quotas:</b> history of top-ups, withdrawals, quota purchases and promo codes.',
+       '<b>Notifications:</b> if you turn them on, a technical identifier of your device or browser (notification service address, keys, device type, language), and the date of your last visit to send you reminders.',
+       '<b>Seller content:</b> products, photos, descriptions and prices published by shops and companies.',
+       '<b>Preferences:</b> language, data-saver mode.'])
+  +h('2. Pourquoi nous les utilisons','2. Why we use it')
+  +ul(['Créer et sécuriser votre compte, et vous connecter.','Traiter les commandes, la livraison, les paiements via le portefeuille et les retours.','Permettre la messagerie entre acheteurs et vendeurs.','Vous envoyer les notifications que vous avez autorisées (commandes, messages, nouveaux produits, rappels).','Prévenir la fraude et les abus, et assurer le bon fonctionnement du service.','Répondre à vos demandes d’assistance et améliorer Allo.'],
+      ['Create and secure your account, and sign you in.','Process orders, delivery, wallet payments and returns.','Enable messaging between buyers and sellers.','Send you the notifications you allowed (orders, messages, new products, reminders).','Prevent fraud and abuse, and keep the service running properly.','Answer your support requests and improve Allo.'])
+  +h('3. Qui voit quoi','3. Who sees what')
+  +p('Les boutiques, produits, photos et avis publiés sont visibles par les visiteurs. Lorsque vous passez une commande, le vendeur concerné reçoit les informations nécessaires pour la traiter et la livrer (nom, téléphone, adresse de livraison). Vos messages ne sont visibles que par les personnes avec qui vous échangez. Nous ne vendons pas vos données personnelles.',
+     'Published shops, products, photos and reviews are visible to visitors. When you place an order, the seller concerned receives the information needed to process and deliver it (name, phone, delivery address). Your messages are only visible to the people you talk with. We do not sell your personal data.')
+  +h('4. Prestataires techniques','4. Service providers')
+  +p('Pour fonctionner, Allo s’appuie sur : Supabase (base de données, authentification et stockage des images), Vercel (hébergement du site), le service de notifications de votre navigateur ou appareil (par exemple Google, Apple ou Mozilla), jsDelivr (bibliothèques) et Google Fonts (police de caractères). Ces services peuvent traiter des données techniques (comme l’adresse IP) pour assurer leur fonctionnement. Nous pouvons aussi communiquer des informations si la loi l’exige.',
+     'To work, Allo relies on: Supabase (database, authentication and image storage), Vercel (website hosting), your browser or device notification service (for example Google, Apple or Mozilla), jsDelivr (libraries) and Google Fonts (typeface). These services may process technical data (such as IP address) to operate. We may also disclose information if required by law.')
+  +h('5. Données gardées sur votre appareil','5. Data kept on your device')
+  +p('Votre appareil garde votre session de connexion, vos préférences et une copie du dernier catalogue public pour afficher les produits sans connexion. Si vous avez un compte boutique ou entreprise, une copie de vos données de compte est aussi gardée pour les consulter hors ligne ; elle est supprimée quand vous vous déconnectez. Vous pouvez aussi tout effacer en vidant les données du site dans votre navigateur ou en désinstallant l’application.',
+     'Your device keeps your sign-in session, your preferences and a copy of the latest public catalog so products can be shown without a connection. If you have a shop or company account, a copy of your account data is also kept so you can view it offline; it is deleted when you sign out. You can also erase everything by clearing the site data in your browser or uninstalling the app.')
+  +h('6. Durée de conservation','6. Retention')
+  +p('Nous gardons vos informations tant que votre compte est actif. Si vous demandez la suppression de votre compte, vos données personnelles sont supprimées, sauf celles que nous devons conserver pour des raisons légales, comptables ou pour régler un litige (par exemple l’historique de commandes et d’opérations du portefeuille).',
+     'We keep your information while your account is active. If you ask us to delete your account, your personal data is deleted, except what we must keep for legal or accounting reasons or to settle a dispute (for example order and wallet history).')
+  +h('7. Sécurité','7. Security')
+  +p('Les échanges avec Allo sont chiffrés (HTTPS) et l’accès aux données est limité par des règles d’accès côté serveur. Aucun système n’est infaillible : choisissez un mot de passe solide et ne le partagez pas.',
+     'Communication with Allo is encrypted (HTTPS) and access to data is restricted by server-side access rules. No system is perfectly secure: choose a strong password and do not share it.')
+  +h('8. Vos choix et vos droits','8. Your choices and rights')
+  +ul(['Consulter et modifier les informations de votre profil depuis votre compte.','Activer ou désactiver les notifications à tout moment (profil ou réglages de votre navigateur).','Demander l’accès à vos données, leur correction ou la suppression de votre compte en nous contactant.'],
+      ['View and edit your profile information from your account.','Turn notifications on or off at any time (profile or browser settings).','Ask for access to your data, its correction or the deletion of your account by contacting us.'])
+  +h('9. Enfants','9. Children')
+  +p('Allo s’adresse aux personnes majeures. Si vous pensez qu’un mineur nous a transmis des informations, contactez-nous pour que nous les supprimions.',
+     'Allo is intended for adults. If you believe a minor has given us information, contact us so we can delete it.')
+  +h('10. Modifications','10. Changes')
+  +p('Nous pouvons mettre à jour cette politique. La date de dernière mise à jour est indiquée en haut de cette page.',
+     'We may update this policy. The date of the last update is shown at the top of this page.')
+  +h('11. Nous contacter','11. Contact us')
+  +p('Pour toute question ou demande concernant vos données, écrivez-nous sur nos pages officielles :','For any question or request about your data, write to us on our official pages:')
+  +social();
+}
+var ov=null;
+function openPrivacy(){
+  if(!ov){
+    ov=document.createElement('div');ov.className='alp-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+    ov.innerHTML='<div class="alp-top"><button type="button" class="alp-back" aria-label="Retour">‹</button><div class="alp-ttl"></div></div><div class="alp-body"></div>';
+    ov.querySelector('.alp-back').addEventListener('click',closePrivacy);
+    document.body.appendChild(ov);
+  }
+  paintOverlay();
+  ov.classList.add('open');
+  ov.querySelector('.alp-body').scrollTop=0;
+}
+function closePrivacy(){ if(ov) ov.classList.remove('open'); }
+function paintOverlay(){
+  if(!ov) return;
+  ov.querySelector('.alp-ttl').textContent=L('Politique de confidentialité','Privacy policy');
+  ov.querySelector('.alp-body').innerHTML=policy();
+}
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closePrivacy(); });
+window.alloOpenPrivacy=openPrivacy;
+
+function link(){ return '<button type="button" class="alp-link" data-alp="open">🔒 '+L('Politique de confidentialité','Privacy policy')+'</button>'; }
+function paint(){
+  // écran de connexion / création de compte
+  var card=document.querySelector('#loginView .login-card');
+  if(card){
+    var f=card.querySelector('#alpLoginFoot');
+    if(!f){ f=document.createElement('div'); f.id='alpLoginFoot'; f.className='alp-foot'; card.appendChild(f); }
+    f.innerHTML=link()+social();
+  }
+  var btn=document.getElementById('btnDoRegister');
+  if(btn){
+    var c=document.getElementById('alpConsent');
+    if(!c){ c=document.createElement('p'); c.id='alpConsent'; c.className='alp-consent'; btn.parentNode.insertBefore(c,btn); }
+    c.innerHTML=L('En créant un compte, vous acceptez notre ','By creating an account, you accept our ')+'<button type="button" class="alp-link" data-alp="open">'+L('politique de confidentialité','privacy policy')+'</button>.';
+  }
+  // menu latéral
+  var sf=document.querySelector('#sidebar .sidebar-footer');
+  if(sf){
+    var s=sf.querySelector('#alpSide');
+    if(!s){ s=document.createElement('div'); s.id='alpSide'; s.className='alp-side'; sf.insertBefore(s,sf.firstChild); }
+    s.innerHTML='<button type="button" class="sidebar-item" data-alp="open"><span class="ico">🔒</span> <span>'+L('Confidentialité','Privacy')+'</span></button>'+social();
+  }
+  paintOverlay();
+}
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-alp="open"]'); if(!b) return;
+  e.preventDefault(); try{ closeSidebar(); }catch(x){} openPrivacy();
+});
+var _sl=window.setLang;
+if(typeof _sl==='function'){ window.setLang=function(){ var r=_sl.apply(this,arguments); try{ paint(); }catch(e){} return r; }; }
+function start(){
+  paint();
+  if(/[?&]privacy=1/.test(location.search)||location.hash==='#privacy') openPrivacy();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
 </body>
 </html>
