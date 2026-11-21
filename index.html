@@ -4657,6 +4657,166 @@ const alloEphemeralStorage = {
   try { if(window.indexedDB && indexedDB.deleteDatabase) indexedDB.deleteDatabase('allo_media_v1'); } catch (e) { window.__alloErr && window.__alloErr(e); }
 })();
 
+// ---------------------------------------------------------------
+// CATALOGUE HORS LIGNE : copie du dernier catalogue PUBLIC chargé (produits + boutiques
+// publiques + catégories). Jamais de compte, commande, solde ni catalogue privé d'entreprise.
+// Sert uniquement à afficher les produits quand le réseau est coupé.
+// ---------------------------------------------------------------
+const alloSnap = (function () {
+  let dbp = null;
+  function open() {
+    if (dbp) return dbp;
+    dbp = new Promise(function (res, rej) {
+      try {
+        const r = indexedDB.open('allo_catalog_v1', 1);
+        r.onupgradeneeded = function () { r.result.createObjectStore('kv'); };
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { rej(r.error); };
+      } catch (e) { rej(e); }
+    });
+    return dbp;
+  }
+  function run(mode, fn) {
+    return open().then(function (db) {
+      return new Promise(function (res, rej) {
+        const tx = db.transaction('kv', mode);
+        const q = fn(tx.objectStore('kv'));
+        tx.oncomplete = function () { res(q ? q.result : undefined); };
+        tx.onerror = function () { rej(tx.error); };
+        tx.onabort = function () { rej(tx.error); };
+      });
+    });
+  }
+  return {
+    get: function (key) { return run('readonly', function (st) { return st.get(key || 'catalog'); }).then(function (v) { return v || null; }).catch(function () { return null; }); },
+    set: function (v, key) { return run('readwrite', function (st) { return st.put(v, key || 'catalog'); }).then(function () { return true; }).catch(function () { return false; }); },
+    del: function (key) { return run('readwrite', function (st) { return st.delete(key || 'catalog'); }).then(function () { return true; }).catch(function () { return false; }); }
+  };
+})();
+
+let _alloSnapTimer = null;
+// Données propres au compte connecté (vendeur / entreprise) gardées pour la consultation hors ligne.
+const ALLO_ACCOUNT_KEYS = ['shops', 'companies', 'products', 'orders', 'walletTx', 'walletAccounts', 'notifications', 'userNotifs', 'wishlist', 'promoCodes', 'returns', 'paymentMethods', 'clients', 'companyClientRequests', 'companyClientPrices', 'reviews', 'subscriptions', 'messages'];
+
+function alloSaveSnapshotSoon() {
+  clearTimeout(_alloSnapTimer);
+  _alloSnapTimer = setTimeout(function () {
+    try {
+      if (window._alloNetDown || window._alloOfflineAccount || !window._alloLoadedOk) return;
+      if (!currentUser || currentUser.role === 'admin') return;
+      // 1) Catalogue PUBLIC (visiteurs)
+      const prods = (data.products || []).filter(function (p) {
+        if (!p || p.private || p.hidden || p.companyId) return false;
+        try { if (typeof isCompanyPrivateProduct === 'function' && isCompanyPrivateProduct(p)) return false; } catch (_) {}
+        return true;
+      });
+      const shops = (data.shops || []).filter(function (sh) { return sh && !sh.companyId && !sh.private && !sh.isCompanyCatalog; });
+      const cfg = {};
+      try {
+        ['categories', 'commissions', 'categoryImages', 'deliveryZones'].forEach(function (k) {
+          if (adminConfig && adminConfig[k] != null) cfg[k] = adminConfig[k];
+        });
+      } catch (_) {}
+      if (prods.length) {
+        alloSnap.set(JSON.parse(JSON.stringify({ v: 1, savedAt: Date.now(), products: prods, shops: shops, cfg: cfg })), 'catalog');
+      }
+      // 2) Compte connecté (vendeur / entreprise) : effacé à la déconnexion
+      if (isLoggedIn() && (currentUser.role === 'boutique' || currentUser.role === 'entreprise')) {
+        const slice = {};
+        ALLO_ACCOUNT_KEYS.forEach(function (k) { if (data[k] != null) slice[k] = data[k]; });
+        alloSnap.set(JSON.parse(JSON.stringify({ v: 1, savedAt: Date.now(), user: currentUser, data: slice, cfg: cfg })), 'account');
+      }
+    } catch (e) { window.__alloErr && window.__alloErr(e); }
+  }, 1500);
+}
+
+function alloApplySnapshot(snap) {
+  if (!snap || !Array.isArray(snap.products) || !snap.products.length) return false;
+  if ((data.products || []).length) return false;           // des données fraîches sont déjà là
+  data.products = snap.products;
+  if (!(data.shops || []).length) data.shops = Array.isArray(snap.shops) ? snap.shops : [];
+  try {
+    const c = snap.cfg || {};
+    Object.keys(c).forEach(function (k) { if (adminConfig) adminConfig[k] = c[k]; });
+  } catch (_) {}
+  window._alloFromSnapshot = true;
+  return true;
+}
+
+function alloNetErr(x) {
+  try {
+    const e = x && x.error;
+    if (!e) return false;
+    return /Retryable|fetch|network|load failed|timeout|abort/i.test(String(e.name || '') + ' ' + String(e.message || ''));
+  } catch (_) { return false; }
+}
+
+/** Rouvre le compte déjà connecté sur cet appareil avec ses dernières données (mode consultation). */
+async function alloRestoreAccount() {
+  try {
+    const snap = await alloSnap.get('account');
+    if (!snap || !snap.user || !snap.user.id) return false;
+    if (snap.user.role !== 'boutique' && snap.user.role !== 'entreprise') return false;
+    currentUser = snap.user;
+    const d = snap.data || {};
+    Object.keys(d).forEach(function (k) { data[k] = d[k]; });
+    try { const c = snap.cfg || {}; Object.keys(c).forEach(function (k) { if (adminConfig) adminConfig[k] = c[k]; }); } catch (_) {}
+    cart = [];
+    window._alloOfflineAccount = true;   // bloque toute synchronisation vers le serveur tant que les données ne sont pas fraîches
+    window._alloFromSnapshot = true;
+    window._alloDataLoaded = true;
+    window._alloNetDown = true;
+    return true;
+  } catch (e) { window.__alloErr && window.__alloErr(e); return false; }
+}
+
+async function alloTryOfflineAccount() {
+  if (!(await alloRestoreAccount())) return false;
+  authReady = true;
+  try { enterApp(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  try { netBanner(); alloScheduleRetry(); } catch (_) {}
+  return true;
+}
+
+/** Réseau revenu : on reprend la vraie session, on recharge les données fraîches, puis seulement on réautorise la synchronisation. */
+async function alloReconnectAccount() {
+  if (!sb) return false;
+  let r = null, sess = null;
+  try { r = await sb.auth.getSession(); sess = r && r.data && r.data.session; } catch (_) { return false; }
+  if (!sess || !sess.user) {
+    if (alloNetErr(r)) return false;                       // toujours injoignable
+    // Session terminée / révoquée : retour visiteur proprement.
+    window._alloOfflineAccount = false;
+    try { await alloSnap.del('account'); } catch (_) {}
+    ALLO_ACCOUNT_KEYS.forEach(function (k) { if (Array.isArray(data[k])) data[k] = []; });
+    currentUser = makeGuestUser();
+    authReady = true;
+    try { await sbLoadAllIntoData(); } catch (_) {}
+    try { enterApp(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+    return true;
+  }
+  let pr = null;
+  try { pr = await sb.from('profiles').select('*').eq('id', sess.user.id).maybeSingle(); } catch (_) { return false; }
+  if (!pr || pr.error || !pr.data) return false;           // pas encore joignable
+  const fresh = mapProfileToUser(pr.data);
+  if (!fresh || (fresh.role !== 'boutique' && fresh.role !== 'entreprise')) { location.reload(); return true; }
+  currentUser = fresh;
+  const ok = await sbLoadAllIntoData();
+  if (!ok) return false;                                    // garde le mode consultation
+  window._alloOfflineAccount = false;
+  window._alloNetDown = false;
+  try { renderAll(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+  try { startOrderRealtime(); } catch (e) { console.warn('[Allo] order realtime', e); }
+  try { startStockRealtime(); } catch (e) { console.warn('[Allo] stock realtime', e); }
+  try { startNotifRealtime(); } catch (e) { console.warn('[Allo] notif realtime', e); }
+  try { startReviewsRealtime(); } catch (e) { console.warn('[Allo] reviews realtime', e); }
+  try { startViewsRealtime(); } catch (e) { console.warn('[Allo] views realtime', e); }
+  try { loadProductViewCounts(); } catch (e) { console.warn('[Allo] load views', e); }
+  try { loadSocialStats(); } catch (e) { console.warn('[Allo] social stats', e); }
+  try { netBanner(); } catch (_) {}
+  return true;
+}
+
 let sb = null;
 // Supabase est la source de vérité unique pour les données métier.
 // Il n'existe plus de mode de secours local pour les comptes, boutiques ou produits.
@@ -4689,6 +4849,17 @@ function initSupabaseClient() {
       }
     });
     USE_SUPABASE = true;
+    // Toute déconnexion (volontaire ou session révoquée) efface la copie hors ligne du compte.
+    try {
+      const _alloSignOut = sb.auth.signOut.bind(sb.auth);
+      sb.auth.signOut = function () {
+        try { clearTimeout(_alloSnapTimer); alloSnap.del('account'); window._alloOfflineAccount = false; } catch (_) {}
+        return _alloSignOut.apply(null, arguments);
+      };
+      sb.auth.onAuthStateChange(function (ev) {
+        if (ev === 'SIGNED_OUT') { try { clearTimeout(_alloSnapTimer); alloSnap.del('account'); } catch (_) {} }
+      });
+    } catch (_) {}
     console.log('[Allo] Supabase connecté');
     return true;
   } catch (e) {
@@ -5824,6 +5995,22 @@ async function sbLoadAllIntoData() {
       sb.from('product_hashtags').select('*')
     ]);
 
+    // Réseau coupé ou erreur serveur : on GARDE les produits déjà affichés (jamais de liste vidée).
+    const _alloFail = (products && products.error) ? products : ((shops && shops.error) ? shops : null);
+    if (_alloFail) {
+      const _msg = String((_alloFail.error && _alloFail.error.message) || '');
+      if (navigator.onLine === false || /fetch|network|load failed|timeout|abort|offline/i.test(_msg)) {
+        window._alloNetDown = true;
+        try { netBanner(); } catch (_) {}
+        try { alloScheduleRetry(); } catch (_) {}
+      }
+      window._alloDataLoaded = true;
+      console.warn('[Allo] catalogue non rechargé, données conservées :', _msg);
+      return false;
+    }
+    window._alloNetDown = false;
+    window._alloLoadedOk = true;
+    try { netBanner(); } catch (_) {}
     data.companies = (companies.data || []).map(c => ({
       id: c.id, name: c.name, ownerId: c.owner_id, description: c.description
     }));
@@ -5898,6 +6085,7 @@ async function sbLoadAllIntoData() {
     }));
     // Produits + boutiques prêts : on affiche tout de suite, le reste (commandes, profils, quotas) continue en arrière-plan
     window._alloDataLoaded = true;
+    try { alloSaveSnapshotSoon(); } catch (_) {}
     if (!window._alloEarlyRendered) {
       window._alloEarlyRendered = true;
       try { if (typeof renderAll === 'function') renderAll(); } catch (e) { window.__alloErr && window.__alloErr(e); }
@@ -6177,12 +6365,18 @@ async function sbLoadAllIntoData() {
       console.log('[Allo] catalogue Supabase chargé:', data.shops.length, 'catalogues/boutiques,', data.products.length, 'produits');
     } catch (e) { console.warn(e); }
 
+    try { alloSaveSnapshotSoon(); } catch (_) {}
     // Vues, likes, abonnements : compteurs globaux + temps réel (aussi après une connexion).
     try { if (typeof loadSocialStats === 'function') loadSocialStats(); } catch (e) { console.warn('[Allo] social stats', e); }
     return true;
   } catch (e) {
     console.error('sbLoadAllIntoData', e);
     window._alloDataLoaded = true;
+    try {
+      if (navigator.onLine === false || /fetch|network|load failed|timeout|abort|offline/i.test(String(e && e.message))) {
+        window._alloNetDown = true; netBanner(); alloScheduleRetry();
+      }
+    } catch (_) {}
     return false;
   }
 }
@@ -7475,6 +7669,30 @@ function init() {
   // ALLO NATIONAL : Supabase est obligatoire. Aucun mode hors-ligne/local ne démarre.
   try { initSupabaseClient(); } catch (e) { console.warn(e); }
   if (!USE_SUPABASE || !sb) {
+    // SDK injoignable (démarrage hors ligne) : on affiche le dernier catalogue connu au lieu d'une erreur.
+    try {
+      alloSnap.get('catalog').then(async function (snap) {
+        if (await alloTryOfflineAccount()) {
+          window.addEventListener('online', function () { location.reload(); }, { once: true });
+          return;
+        }
+        if (snap && snap.products && snap.products.length) {
+          alloApplySnapshot(snap);
+          window._alloDataLoaded = true;
+          currentUser = makeGuestUser();
+          authReady = true;
+          try { enterApp(); } catch (e) { window.__alloErr && window.__alloErr(e); }
+          window._alloNetDown = true;
+          try { netBanner(); } catch (_) {}
+          window.addEventListener('online', function () { location.reload(); }, { once: true });
+        } else {
+          alloShowUnavailable();
+        }
+      });
+    } catch (_) { alloShowUnavailable(); }
+    return;
+  }
+  function alloShowUnavailable() {
     try {
       const content = document.getElementById('appContent');
       if (content) { content.classList.add('hidden'); content.style.display = 'none'; }
@@ -7488,7 +7706,6 @@ function init() {
         err.classList.add('show');
       }
     } catch (_) { window.__alloErr && window.__alloErr(_); }
-    return;
   }
   loadRegisteredUsers();
   loadAppData();
@@ -7498,6 +7715,12 @@ function init() {
     authReady = false;
     currentUser = makeGuestUser();
     try { enterApp(); } catch (e) { console.warn('[Allo] guest enterApp', e); }
+    // Affiche tout de suite le dernier catalogue connu (utile hors ligne ou réseau lent).
+    try {
+      alloSnap.get('catalog').then(function (snap) {
+        if (snap && alloApplySnapshot(snap)) { try { renderAll(); } catch (e) { window.__alloErr && window.__alloErr(e); } }
+      });
+    } catch (_) {}
     setTimeout(function () {
       if (!window._alloDataLoaded) { window._alloDataLoaded = true; try { renderAll(); } catch (e) { window.__alloErr && window.__alloErr(e); } }
     }, 12000);
@@ -7505,9 +7728,16 @@ function init() {
     // Restaurer ensuite la session persistante de l'appareil/navigateur.
     try {
       sb.auth.getSession().then(async function(res) {
+        // Hors ligne : on rouvre le compte déjà connecté sur cet appareil avec ses dernières données.
+        if (navigator.onLine === false || (!(res && res.data && res.data.session) && alloNetErr(res))) {
+          if (await alloTryOfflineAccount()) return;
+        }
         const sess = res && res.data && res.data.session;
         if (sess && sess.user) {
           const pr = await sb.from('profiles').select('*').eq('id', sess.user.id).maybeSingle();
+          if (!(pr && pr.data) && alloNetErr(pr)) {
+            if (await alloTryOfflineAccount()) return;
+          }
           if (pr && pr.data) {
             const allowedRoles = ['boutique','entreprise','admin','agent'];
             if (!allowedRoles.includes(String(pr.data.role || ''))) {
@@ -11203,6 +11433,14 @@ function setCatalogCat(cat) {
   if (typeof renderHomeProductsOnly === 'function') renderHomeProductsOnly();
 }
 
+// Ne touche pas au DOM si la grille est déjà identique (évite que les produits disparaissent/réapparaissent).
+function alloSetHomeHtml(el, html) {
+  if (el._alloLastHtml === html && el._alloLastDom === el.innerHTML) return false;
+  el.innerHTML = html;
+  el._alloLastHtml = html;
+  return true;
+}
+
 function renderHomeProductsOnly() {
   const el = document.getElementById('homeProducts');
   if (!el || !currentUser) return;
@@ -11224,7 +11462,7 @@ function renderHomeProductsOnly() {
     });
     window._catalogPage = res.page;
     let html = '';
-    if (!res.total && !window._alloDataLoaded) {
+    if (!res.total && (!window._alloDataLoaded || window._alloNetDown)) {
       html = alloProductsSkeleton();
     } else if (!res.total) {
       const catLabel = (activeCat && activeCat !== 'all') ? activeCat : '';
@@ -11245,8 +11483,9 @@ function renderHomeProductsOnly() {
       html += '</div>';
       html += searchPagerHTML(res.page, res.totalPages, res.total, 'setCatalogResultsPage');
     }
-    el.innerHTML = html;
+    alloSetHomeHtml(el, html);
     try { refreshAllProductViewCountsUI(); } catch (_) { window.__alloErr && window.__alloErr(_); }
+    el._alloLastDom = el.innerHTML;
     return;
   }
 
@@ -11267,7 +11506,7 @@ function renderHomeProductsOnly() {
   }
 
   let html = '';
-  if (!products.length && !window._alloDataLoaded) {
+  if (!products.length && (!window._alloDataLoaded || window._alloNetDown)) {
     html = alloProductsSkeleton();
   } else if (!products.length) {
     const catLabel = (activeCat && activeCat !== 'all') ? activeCat : '';
@@ -11283,8 +11522,9 @@ function renderHomeProductsOnly() {
     html += (window.alloAds && alloAds.cardsHTML) ? alloAds.cardsHTML(products, canAdd, 0, { ebooks: true }) : products.map(p => productCardHTML(p, canAdd)).join('');
     html += '</div>';
   }
-  el.innerHTML = html;
+  alloSetHomeHtml(el, html);
   try { refreshAllProductViewCountsUI(); } catch (_) { window.__alloErr && window.__alloErr(_); }
+  el._alloLastDom = el.innerHTML;
 }
 
 function updateSectionHeads() {
@@ -19131,6 +19371,9 @@ function alloRemoteQueueSync() {
 
 async function sbSyncRuntimeState() {
   if (!alloIsSupabaseMode()) return {ok:true, skipped:true};
+  // Compte rouvert hors ligne : les données affichées sont une copie ancienne. On n'écrit RIEN sur le serveur
+  // (soldes, commandes, produits) tant que les données fraîches ne sont pas rechargées.
+  if (window._alloOfflineAccount) return {ok:true, skipped:true, offline:true};
   if (_remoteSyncRunning) { _remoteSyncAgain = true; return {ok:true, queued:true}; }
   _remoteSyncRunning = true;
   try {
@@ -25964,7 +26207,19 @@ html body .order-role-badge{color:#ffb3c7!important}
 .fx-spark{display:flex;align-items:flex-end;gap:8px;height:80px;padding:6px 2px}.fx-spark div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}.fx-spark i{display:block;width:100%;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#9be7ff,#4f8bff)}.fx-spark small{font-size:10px;opacity:.65}
 .jcard-sq.apply{background:var(--a);border-color:var(--a);color:var(--on)}
 .jcard-sq.flag{border-color:rgba(255,120,110,.5);background:rgba(255,90,80,.12)}
-#fxNet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:99999;max-width:90vw;padding:8px 14px;border-radius:999px;background:#2a1a00;color:#ffd96b;font-size:12.5px;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+#fxNet{position:fixed;top:calc(env(safe-area-inset-top,0px) + 11px);left:62px;z-index:99999;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ffb45c;background:linear-gradient(180deg,rgba(40,52,92,.96),rgba(14,22,48,.96));border:1.5px solid currentColor;box-shadow:0 3px 12px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.18);opacity:0;transform:scale(.55);pointer-events:none;transition:opacity .28s ease,transform .28s cubic-bezier(.2,.9,.3,1.3),color .25s,border-color .25s}
+#fxNet.show{opacity:1;transform:scale(1)}
+#fxNet svg{width:20px;height:20px;overflow:visible}
+#fxNet .sl{display:none;stroke:#ff5b5b;stroke-width:2.6}
+#fxNet.off .a1,#fxNet.off .a2,#fxNet.off .a3{opacity:.4}
+#fxNet.off .sl{display:block}
+#fxNet.off .dot{animation:fxDot 1.3s ease-in-out infinite}
+#fxNet.on{color:#3ddc84}
+#fxNet.on .a1{animation:fxArc .9s ease-out both}
+#fxNet.on .a2{animation:fxArc .9s ease-out .12s both}
+#fxNet.on .a3{animation:fxArc .9s ease-out .24s both}
+@keyframes fxDot{0%,100%{opacity:1}50%{opacity:.15}}
+@keyframes fxArc{0%{opacity:0}100%{opacity:1}}
 .ds-on *,.ds-on *::before,.ds-on *::after{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
 .ds-on [class*="particle"],.ds-on [class*="sparkle"],.ds-on canvas.bg-fx{display:none !important}
 </style>
@@ -26474,12 +26729,48 @@ function saver(){try{return localStorage.getItem('allo_datasaver')==='1';}catch(
 function applySaver(){document.documentElement.classList.toggle('ds-on',saver());
   document.querySelectorAll('img:not([loading])').forEach(function(i){i.loading='lazy';i.decoding='async';if(saver())i.setAttribute('fetchpriority','low');});}
 function toggleSaver(){try{localStorage.setItem('allo_datasaver',saver()?'0':'1');}catch(e){err(e);}applySaver();paintTools();toast(saver()?T('Mode économie de données activé','Data saver on'):T('Mode économie de données désactivé','Data saver off'));}
+var FX_WIFI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="a3" d="M2 9a15 15 0 0 1 20 0"/><path class="a2" d="M5 12.5a10.5 10.5 0 0 1 14 0"/><path class="a1" d="M8.5 16a5.5 5.5 0 0 1 7 0"/><circle class="dot" cx="12" cy="19.6" r="1.3" fill="currentColor" stroke="none"/><path class="sl" d="M3.5 3.5l17 17"/></svg>';
 function netBanner(){
   var b=document.getElementById('fxNet');
-  if(navigator.onLine===false){if(!b){b=document.createElement('div');b.id='fxNet';b.textContent='📴 '+T('Hors ligne : les dernières données chargées restent affichées.','Offline: last loaded data stays visible.');document.body.appendChild(b);}}
-  else if(b)b.remove();
+  var off=navigator.onLine===false||!!window._alloNetDown;
+  if(!b){
+    if(!off||!document.body)return;
+    b=document.createElement('div');b.id='fxNet';b.setAttribute('role','status');b.innerHTML=FX_WIFI;
+    document.body.appendChild(b);void b.offsetWidth;
+  }
+  clearTimeout(b._t);
+  if(off){b.className='off show';b.setAttribute('aria-label',T('Hors ligne','Offline'));}
+  else if(b.classList.contains('off')){
+    b.className='on show';b.setAttribute('aria-label',T('Connecté','Online'));
+    b._t=setTimeout(function(){b.className='on';b._t=setTimeout(function(){if(b.parentNode)b.remove();},450);},1800);
+  }
 }
-window.addEventListener('online',netBanner);window.addEventListener('offline',netBanner);
+/* Reprise silencieuse : quand le réseau revient, on recharge sans vider l'écran. */
+var _alloRefreshing=false,_alloRetryT=null;
+async function alloSilentRefresh(){
+  if(_alloRefreshing||!USE_SUPABASE)return;
+  if(typeof sb==='undefined'||!sb||(typeof authReady!=='undefined'&&!authReady))return;
+  _alloRefreshing=true;
+  try{
+    if(window._alloOfflineAccount){await alloReconnectAccount();}
+    else{
+      var ok=await sbLoadAllIntoData();
+      if(ok){window._alloNetDown=false;netBanner();try{renderAll();}catch(e){err(e);}}
+    }
+  }catch(e){err(e);}
+  finally{_alloRefreshing=false;}
+}
+function alloScheduleRetry(){
+  if(_alloRetryT)return;
+  _alloRetryT=setInterval(function(){
+    if(!window._alloNetDown){clearInterval(_alloRetryT);_alloRetryT=null;return;}
+    if(navigator.onLine!==false)alloSilentRefresh();
+  },8000);
+}
+window.addEventListener('online',function(){netBanner();setTimeout(alloSilentRefresh,600);});
+window.addEventListener('offline',function(){netBanner();});
+/* Accessibles depuis le chargement des données (autre bloc de script). */
+window.netBanner=netBanner;window.alloScheduleRetry=alloScheduleRetry;window.alloSilentRefresh=alloSilentRefresh;
 (function(){try{var c=navigator.connection;if(c&&!localStorage.getItem('allo_datasaver')&&!localStorage.getItem('allo_ds_asked')&&(c.saveData||/(^|-)2g$/.test(c.effectiveType||''))){localStorage.setItem('allo_ds_asked','1');setTimeout(function(){toast(T('Connexion lente détectée : activez le mode économie de données dans votre profil.','Slow connection: turn on data saver in your profile.'));},6000);}}catch(e){}})();
 new MutationObserver(function(ms){if(!saver())return;ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1){(n.tagName==='IMG'?[n]:n.querySelectorAll?n.querySelectorAll('img'):[]).forEach(function(i){if(!i.hasAttribute('fetchpriority'))i.setAttribute('fetchpriority','low');if(!i.getAttribute('loading'))i.loading='lazy';});}});});}).observe(document.documentElement,{childList:true,subtree:true});
 
