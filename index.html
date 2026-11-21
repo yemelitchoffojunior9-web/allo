@@ -27558,9 +27558,24 @@ var _sv=window.switchView;if(typeof _sv==='function'){window.switchView=switchVi
     }catch(e){ pending=null; }
   }
   function handleOpen(search){ try{ var q=new URLSearchParams(search||''); if(!q.get('open'))return; pending={open:q.get('open'),peer:q.get('peer'),id:q.get('id')}; runPending(); }catch (e) { window.__alloErr && window.__alloErr(e); } }
+  // Appli ouverte : le service worker ne montre pas la notification (il prévient seulement la page).
+  // On l'affiche ici comme notification du téléphone, exactement comme quand l'appli est fermée.
+  async function showSystem(d){
+    try{
+      if(!supported()||Notification.permission!=='granted'||localStorage.getItem(OFF)) return;
+      var reg=await getReg(false); if(!reg) return;
+      var icon=''; try{ icon=alloIconSrc(); }catch(e){}
+      var o={body:d.body||'',tag:d.tag||undefined,renotify:!!d.tag,vibrate:[120,60,120],data:{url:d.url||'/',kind:d.kind}};
+      if(icon){ o.icon=icon; o.badge=icon; }
+      if(d.image) o.image=d.image;
+      await reg.showNotification(d.title||'Allo',o);
+    }catch(e){ window.__alloErr&&window.__alloErr(e); }
+  }
   if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message',function(e){
     var m=e.data||{}; if(m.type==='allo-push-open') handleOpen(m.url);
-    else if(m.type==='allo-push'&&m.payload&&(m.payload.kind==='product'||m.payload.kind==='raw')) toast((m.payload.title||'')+' — '+(m.payload.body||'')); });
+    else if(m.type==='allo-push'&&m.payload){
+      showSystem(m.payload);
+      if(m.payload.kind==='product'||m.payload.kind==='raw') toast((m.payload.title||'')+' — '+(m.payload.body||'')); } });
   if(location.search.indexOf('open=')>=0){ handleOpen(location.search); try{ history.replaceState(null,'',location.pathname+location.hash); }catch (e) { window.__alloErr && window.__alloErr(e); } }
   // Connexion / déconnexion
   setInterval(function(){ var id=logged()?String(currentUser.id):null; if(id!==lastUid){ var was=lastUid; lastUid=id; if(id) sync(); else { hideBanner(); closeWelcome(); if(was) dropLocalSub(); } } },2500);
